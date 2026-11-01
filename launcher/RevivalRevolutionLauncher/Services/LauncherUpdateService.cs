@@ -95,6 +95,10 @@ public sealed class LauncherUpdateService
         if (update.Sha256.Length != 64 || !update.Sha256.All(Uri.IsHexDigit))
             throw new InvalidDataException("SHA-256 do pacote inválido.");
 
+        EnsureSafeDirectoryPath(root, "Launcher/Downloads");
+        EnsureSafeDirectoryPath(root, "Launcher/UpdateStaging");
+        EnsureSafeDirectoryPath(root, "Launcher/UpdateBackup");
+        EnsureSafeDirectoryPath(root, "Launcher/Logs");
         var launcherDirectory = Path.Combine(root, "Launcher");
         var downloadsDirectory = Path.Combine(launcherDirectory, "Downloads");
         var staging = Path.Combine(launcherDirectory, "UpdateStaging");
@@ -276,6 +280,8 @@ public sealed class LauncherUpdateService
         }
 
         var target = Path.Combine(current, parts[^1]);
+        if (Directory.Exists(target))
+            throw new InvalidDataException($"O destino de arquivo já é uma pasta: {target}");
         if (File.Exists(target) &&
             (File.GetAttributes(target) & FileAttributes.ReparsePoint) != 0)
             throw new InvalidDataException($"O arquivo de destino é um link/reparse point: {target}");
