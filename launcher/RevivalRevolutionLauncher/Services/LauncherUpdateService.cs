@@ -185,6 +185,7 @@ public sealed class LauncherUpdateService
         ps.AppendLine("for ($i = 0; $i -lt 60 -and (Get-Process -Id $launcherPid -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }");
         ps.AppendLine("if (Get-Process -Id $launcherPid -ErrorAction SilentlyContinue) { throw 'Launcher ainda está em execução.' }");
         ps.AppendLine($"$stage = {PsQuote(staging)}");
+        ps.AppendLine($"$root = {PsQuote(root)}");
         ps.AppendLine($"$backup = {PsQuote(backup)}");
         ps.AppendLine("if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }");
         ps.AppendLine("New-Item -ItemType Directory -Force -Path $backup | Out-Null");
@@ -195,7 +196,7 @@ public sealed class LauncherUpdateService
             var source = Path.Combine(staging, relative.Replace('/', Path.DirectorySeparatorChar));
             var destination = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
             ps.AppendLine($"  $src = {PsQuote(source)}; $dst = {PsQuote(destination)}; $bak = Join-Path $backup {PsQuote(relative)}");
-            ps.AppendLine("  $processed.Add($dst)");
+            ps.AppendLine($"  $processed.Add({PsQuote(relative)})");
             ps.AppendLine("  if (Test-Path -LiteralPath $dst) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bak) | Out-Null; Move-Item -LiteralPath $dst -Destination $bak -Force }");
             ps.AppendLine("  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null");
             ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
@@ -203,7 +204,7 @@ public sealed class LauncherUpdateService
         ps.AppendLine("  Remove-Item -LiteralPath $backup -Recurse -Force");
         ps.AppendLine("  Remove-Item -LiteralPath $stage -Recurse -Force");
         ps.AppendLine("} catch {");
-        ps.AppendLine("  foreach ($dst in $processed.ToArray()) { $bak = Join-Path $backup ([IO.Path]::GetRelativePath((Split-Path -Parent $backup), $dst)); if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
+        ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
         ps.AppendLine("  throw");
         ps.AppendLine("}");
 
