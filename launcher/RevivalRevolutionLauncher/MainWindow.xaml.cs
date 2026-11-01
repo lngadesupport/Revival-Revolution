@@ -72,7 +72,7 @@ public partial class MainWindow : Window
         await RunBusyAsync("Preparando inicialização...", async token =>
         {
             python ??= await _python.InstallAsync(_root, CreateProgress(), token);
-            _gameInstallation.StartOffline(python, script, _root);
+            _gameLaunch.StartOffline(python, script, _root);
             Log("Inicialização offline iniciada. Os detalhes do processo estão em Launcher\\Logs.");
             FooterStatus.Text = "Jogo em inicialização.";
         });
