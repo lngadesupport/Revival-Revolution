@@ -20,6 +20,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        var version = typeof(MainWindow).Assembly.GetName().Version;
+        VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
         GameFolderBox.Text = _gameFolder ?? "Pasta não selecionada";
@@ -102,23 +104,52 @@ public partial class MainWindow : Window
         });
     }
 
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        // A checagem automática não bloqueia a abertura caso o GitHub esteja indisponível.
+        try
+        {
+            await CheckForUpdatesAsync(automatic: true);
+        }
+        catch (Exception ex)
+        {
+            Log("Não foi possível verificar atualizações automaticamente: " + ex.Message);
+        }
+    }
+
     private async void Updates_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
+        try { await CheckForUpdatesAsync(automatic: false); }
+        catch (Exception ex) { Log("ERRO ao atualizar: " + ex.Message); FooterStatus.Text = "Falha ao verificar/aplicar atualização."; }
+    }
+
+    private async Task CheckForUpdatesAsync(bool automatic)
+    {
         await RunBusyAsync("Verificando atualizações...", async token =>
         {
             var update = await _updates.CheckAsync(_root, token);
             if (update is null)
             {
-                Log("Nenhuma versão mais recente encontrada. Se o manifesto ainda usa a URL de exemplo, configure o servidor de atualizações.");
+                if (!automatic) Log("O launcher já está atualizado.");
                 return;
             }
-            Log($"Versão disponível: {update.Version}");
+
+            Log($"Nova versão disponível: {update.Version}");
             if (string.IsNullOrWhiteSpace(update.PackageUrl) || update.Files.Count == 0)
                 throw new InvalidDataException("Manifesto remoto incompleto: packageUrl/files ausentes.");
-            if (MessageBox.Show(this, $"Atualização {update.Version} disponível.\\n\\n{update.ReleaseNotes}\\n\\nBaixar e preparar agora?", "Atualização", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes) return;
+
+            var choice = MessageBox.Show(this,
+                $"A versão {update.Version} está disponível.\\n\\n{update.ReleaseNotes}\\n\\nDeseja baixar e instalar agora?",
+                "Atualização disponível", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (choice != MessageBoxResult.Yes)
+            {
+                Log("Atualização adiada pelo usuário.");
+                return;
+            }
+
             var script = await _updates.DownloadAndStageAsync(_root, update, CreateProgress(), token);
-            Log("Atualização preparada. O launcher será fechado para aplicar os arquivos.");
+            Log("Atualização verificada e preparada. O launcher será fechado para aplicar os arquivos.");
             var apply = new ProcessStartInfo("cmd.exe") { WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true };
             apply.ArgumentList.Add("/c");
             apply.ArgumentList.Add(script);
