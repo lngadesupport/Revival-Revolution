@@ -11,7 +11,7 @@ public partial class MainWindow : Window
     private readonly string _root = Path.GetFullPath(AppContext.BaseDirectory);
     private readonly LauncherConfigService _config = new();
     private readonly PythonRuntimeService _python = new();
-    private readonly GameInstallationService _gameInstallation = new();
+    private readonly GameLaunchService _gameLaunch = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly LauncherUpdateService _updates = new();
     private string? _gameFolder;
@@ -27,7 +27,7 @@ public partial class MainWindow : Window
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
     }
 
-    private bool IsValidFolder(string? folder) => _gameInstallation.IsValidGameFolder(folder);
+    private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
 
     private void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
