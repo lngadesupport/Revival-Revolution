@@ -1,0 +1,28 @@
+name: Build Windows launcher
+
+on:
+  push:
+    branches: [ main, feature/modern-wpf-launcher ]
+    paths:
+      - "launcher/RevivalRevolutionLauncher/**"
+      - ".github/workflows/build-launcher.yml"
+  pull_request:
+    paths:
+      - "launcher/RevivalRevolutionLauncher/**"
+      - ".github/workflows/build-launcher.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj
+      - name: Build
+        run: dotnet build .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --no-restore
