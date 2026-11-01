@@ -136,7 +136,10 @@ public partial class MainWindow : Window
             if (MessageBox.Show(this, $"Atualização {update.Version} disponível.\\n\\n{update.ReleaseNotes}\\n\\nBaixar e preparar agora?", "Atualização", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes) return;
             var script = await _updates.DownloadAndStageAsync(_root, update, CreateProgress(), token);
             Log("Atualização preparada. O launcher será fechado para aplicar os arquivos.");
-            Process.Start(new ProcessStartInfo("cmd.exe") { Arguments = $"/c \\"{script}\\"", WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true });
+            var apply = new ProcessStartInfo("cmd.exe") { WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true };
+            apply.ArgumentList.Add("/c");
+            apply.ArgumentList.Add(script);
+            Process.Start(apply);
             Dispatcher.Invoke(Close);
         });
     }
