@@ -119,6 +119,9 @@ public partial class MainWindow : Window
         await RunBusyAsync("Preparando inicialização...", async token =>
         {
             python ??= await _python.InstallAsync(_root, CreateProgress(), token);
+            // The legacy bootstrap resolves its runtime marker from its own working directory/game folder.
+            File.WriteAllText(Path.Combine(_distributionRoot!, "python-runtime.txt"), python);
+            File.WriteAllText(Path.Combine(_gameFolder!, "python-runtime.txt"), python);
             _config.SaveGameFolder(_root, _gameFolder!, _distributionRoot);
             _gameLaunch.StartOffline(python, script, _distributionRoot!);
             Log("Inicialização offline iniciada. Os detalhes do processo estão em Launcher\\Logs.");
