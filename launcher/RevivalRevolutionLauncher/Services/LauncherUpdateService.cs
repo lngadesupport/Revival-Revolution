@@ -45,10 +45,8 @@ public sealed class LauncherUpdateService
             throw new InvalidOperationException("O manifesto deve vir da Release mais recente do repositório oficial Revival-Revolution no GitHub.");
 
         using var response = await GetManifestAsync(uri, token);
-        if (response.Content.Headers.ContentLength is > 1_048_576)
-            throw new InvalidDataException("O manifesto de atualização excede 1 MB.");
-
-        using var manifest = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+        var manifestBytes = await ReadBoundedManifestAsync(response.Content, token);
+        using var manifest = JsonDocument.Parse(manifestBytes);
         var data = manifest.RootElement;
         var versionText = data.GetProperty("version").GetString() ?? "";
         if (!Version.TryParse(versionText, out var remoteVersion))
@@ -57,10 +55,21 @@ public sealed class LauncherUpdateService
         var localVersion = typeof(LauncherUpdateService).Assembly.GetName().Version ?? new Version(0, 0);
         if (remoteVersion <= localVersion) return null;
 
-        var files = data.GetProperty("files").EnumerateArray()
-            .Select(item => item.GetString() ?? "")
-            .Where(path => path.Length > 0)
-            .ToArray();
+        var fileElement = data.GetProperty("files");
+        if (fileElement.ValueKind != JsonValueKind.Array)
+            throw new InvalidDataException("A lista de arquivos da atualização não é um array.");
+
+        var files = fileElement.EnumerateArray().Select(item =>
+        {
+            if (item.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(item.GetString()))
+                throw new InvalidDataException("A lista de arquivos contém um caminho vazio ou inválido.");
+            var path = item.GetString()!;
+            ValidateRelativePath(path);
+            if (IsProtectedPath(path))
+                throw new InvalidDataException($"O manifesto tenta substituir um arquivo protegido: {path}");
+            return path;
+        }).ToArray();
+
         if (files.Length == 0 || files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Length)
             throw new InvalidDataException("A lista de arquivos da atualização está vazia ou contém duplicatas.");
 
@@ -107,6 +116,25 @@ public sealed class LauncherUpdateService
             if (Directory.Exists(staging)) Directory.Delete(staging, true);
             throw;
         }
+    }
+
+    private static async Task<byte[]> ReadBoundedManifestAsync(HttpContent content, CancellationToken token)
+    {
+        const int maxBytes = 1_048_576;
+        if (content.Headers.ContentLength is > maxBytes)
+            throw new InvalidDataException("O manifesto de atualização excede 1 MB.");
+
+        await using var input = await content.ReadAsStreamAsync(token);
+        using var output = new MemoryStream();
+        var buffer = new byte[8192];
+        int read;
+        while ((read = await input.ReadAsync(buffer.AsMemory(), token)) > 0)
+        {
+            if (output.Length + read > maxBytes)
+                throw new InvalidDataException("O manifesto de atualização excede 1 MB.");
+            await output.WriteAsync(buffer.AsMemory(0, read), token);
+        }
+        return output.ToArray();
     }
 
     private static async Task<HttpResponseMessage> GetManifestAsync(Uri uri, CancellationToken token)
