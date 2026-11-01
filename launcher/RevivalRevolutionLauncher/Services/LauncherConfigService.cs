@@ -37,6 +37,8 @@ public sealed class LauncherConfigService
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
             catch (JsonException) { }
+            catch (ArgumentException) { }
+            catch (NotSupportedException) { }
         }
 
         var bundledGame = Path.Combine(root, "Metal Revolution");
