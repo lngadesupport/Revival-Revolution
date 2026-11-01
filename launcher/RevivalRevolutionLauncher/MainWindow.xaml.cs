@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Text.Json;
 using System.Windows;
 using Microsoft.Win32;
 using RevivalRevolution.Services;
@@ -126,14 +125,18 @@ public partial class MainWindow : Window
         await RunBusyAsync("Verificando atualizações...", async token =>
         {
             var update = await _updates.CheckAsync(_root, token);
-            if (update is null) { Log("Manifesto launcher-update.json não configurado."); return; }
+            if (update is null)
+            {
+                Log("Nenhuma versão mais recente encontrada. Se o manifesto ainda usa a URL de exemplo, configure o servidor de atualizações.");
+                return;
+            }
             Log($"Versão disponível: {update.Version}");
             if (string.IsNullOrWhiteSpace(update.PackageUrl) || update.Files.Count == 0)
                 throw new InvalidDataException("Manifesto remoto incompleto: packageUrl/files ausentes.");
-            if (MessageBox.Show(this, $"Atualização {update.Version} disponível.\n\n{update.ReleaseNotes}\n\nBaixar e preparar agora?", "Atualização", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes) return;
+            if (MessageBox.Show(this, $"Atualização {update.Version} disponível.\\n\\n{update.ReleaseNotes}\\n\\nBaixar e preparar agora?", "Atualização", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes) return;
             var script = await _updates.DownloadAndStageAsync(_root, update, CreateProgress(), token);
             Log("Atualização preparada. O launcher será fechado para aplicar os arquivos.");
-            Process.Start(new ProcessStartInfo("cmd.exe") { Arguments = $"/c \"{script}\"", WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true });
+            Process.Start(new ProcessStartInfo("cmd.exe") { Arguments = $"/c \\"{script}\\"", WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true });
             Dispatcher.Invoke(Close);
         });
     }
