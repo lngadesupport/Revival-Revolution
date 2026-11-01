@@ -6,9 +6,18 @@
 *.suo
 *.cache
 
-# Launcher runtime/downloads and local game files
+# Launcher runtime, caches, updates and local configuration
 Launcher/Runtime/
 Launcher/Downloads/
 Launcher/Logs/
-Metal Revolution/
+Launcher/Config/
+Launcher/UpdateStaging/
+Launcher/UpdateBackup/
+Launcher/apply-update.cmd
 *.download
+launcher-config.json
+python-runtime.txt
+autopunch-config.json
+
+# Proprietary game distribution
+Metal Revolution/
