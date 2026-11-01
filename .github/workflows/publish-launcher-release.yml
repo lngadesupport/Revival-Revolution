@@ -17,12 +17,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Require release commit to be on main
+      - name: Require stable release commit to be on main
+        if: ${{ !contains(github.ref_name, '-') }}
         shell: pwsh
         run: |
           git fetch origin main
           git merge-base --is-ancestor $env:GITHUB_SHA origin/main
-          if ($LASTEXITCODE -ne 0) { throw "Stable/prerelease tags must point to a commit already merged into main." }
+          if ($LASTEXITCODE -ne 0) { throw "Stable release tags must point to a commit already merged into main." }
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -34,9 +35,8 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw "Tag must be vMAJOR.MINOR.PATCH (optional revision)." }
-          $parts = $version.Split('.')
-          if ($parts.Length -eq 3) { $assemblyVersion = "$version.0" } else { $assemblyVersion = $version }
+          if ($version -notmatch '^(\d+\.\d+\.\d+)(?:-([0-9A-Za-z.-]+))?$') { throw "Tag must be vMAJOR.MINOR.PATCH with an optional prerelease suffix." }
+          $assemblyVersion = "$($Matches[1]).0"
           "version=$version" >> $env:GITHUB_OUTPUT
           "assembly_version=$assemblyVersion" >> $env:GITHUB_OUTPUT
 
