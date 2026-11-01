@@ -212,6 +212,10 @@ public sealed class LauncherUpdateService
         var logs = Path.Combine(root, "Launcher", "Logs");
         Directory.CreateDirectory(logs);
         var script = Path.Combine(root, "Launcher", "apply-update.cmd");
+        foreach (var relative in files)
+            EnsureSafeDestination(root, relative);
+        EnsureSafeDirectoryPath(root, "Launcher/UpdateBackup");
+        EnsureSafeDirectoryPath(root, "Launcher/Logs");
         var ps = new StringBuilder();
         ps.AppendLine("$ErrorActionPreference = 'Stop'");
         ps.AppendLine($"$launcherPid = {Process.GetCurrentProcess().Id}");
@@ -255,6 +259,46 @@ public sealed class LauncherUpdateService
 
     private static string PsQuote(string value) => "'" + value.Replace("'", "''") + "'";
     private static string CmdQuote(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
+
+    private static void EnsureSafeDestination(string root, string relative)
+    {
+        EnsureSafeDirectoryPath(root, "");
+        var current = Path.GetFullPath(root);
+        var parts = relative.Replace('\\', '/').Split('/');
+        for (var i = 0; i < parts.Length - 1; i++)
+        {
+            current = Path.Combine(current, parts[i]);
+            if (File.Exists(current))
+                throw new InvalidDataException($"Um componente do destino não é uma pasta: {current}");
+            if (Directory.Exists(current) &&
+                (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"O destino contém um link/junction não permitido: {current}");
+        }
+
+        var target = Path.Combine(current, parts[^1]);
+        if (File.Exists(target) &&
+            (File.GetAttributes(target) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException($"O arquivo de destino é um link/reparse point: {target}");
+    }
+
+    private static void EnsureSafeDirectoryPath(string root, string relative)
+    {
+        var current = Path.GetFullPath(root);
+        if (!Directory.Exists(current) ||
+            (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("A pasta raiz do launcher está ausente ou é um link/reparse point.");
+
+        if (string.IsNullOrEmpty(relative)) return;
+        foreach (var part in relative.Replace('\\', '/').Split('/'))
+        {
+            current = Path.Combine(current, part);
+            if (File.Exists(current))
+                throw new InvalidDataException($"O caminho de atualização contém um arquivo onde deveria haver pasta: {current}");
+            if (Directory.Exists(current) &&
+                (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"O caminho de atualização contém um link/junction não permitido: {current}");
+        }
+    }
 
     private static void ValidateRelativePath(string path)
     {
