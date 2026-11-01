@@ -76,11 +76,13 @@ public sealed class ArchiveExtractionService
     {
         if (string.IsNullOrWhiteSpace(path) || path.StartsWith('/') || path.Contains(':') ||
             path.Split('/').Any(part => part.Length == 0 || part is "." or ".." ||
-                part.EndsWith(' ') || part.EndsWith('.') || ReservedNames.Contains(part.Split('.')[0])))
+                part.EndsWith(' ') || part.EndsWith('.') ||
+                part.Any(character => "<>:\"|?*".Contains(character)) ||
+                ReservedNames.Contains(part.Split('.')[0])))
             throw new InvalidDataException($"Caminho inseguro no ZIP: {entry.FullName}");
 
         var mode = (entry.ExternalAttributes >> 16) & 0xF000;
-        if (mode == 0xA000)
+        if (mode == 0xA000 || (entry.ExternalAttributes & (int)FileAttributes.ReparsePoint) != 0)
             throw new InvalidDataException($"Links simbólicos não são permitidos no ZIP: {entry.FullName}");
     }
 
