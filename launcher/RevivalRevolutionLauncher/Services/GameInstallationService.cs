@@ -4,22 +4,28 @@ namespace RevivalRevolution.Services;
 
 public sealed class GameInstallationService
 {
-    public bool IsValidGameFolder(string? folder)
-    {
-        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return false;
-        return File.Exists(Path.Combine(folder, "ufo.exe")) &&
-               Directory.Exists(Path.Combine(folder, "ufo_Data", "Managed"));
-    }
+    public bool IsValidGameFolder(string? folder) =>
+        !string.IsNullOrWhiteSpace(folder) &&
+        File.Exists(Path.Combine(folder, "ufo.exe")) &&
+        Directory.Exists(Path.Combine(folder, "ufo_Data", "Managed"));
 
-    public Task LaunchOfflineAsync(string pythonExe, string scriptPath, string workingDirectory)
+    public void StartOffline(string pythonExe, string scriptPath, string workingDirectory)
     {
-        var logs = Path.Combine(workingDirectory, "Launcher", "Logs");
-        Directory.CreateDirectory(logs);
-        var logPath = Path.Combine(logs, $"launcher-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+        if (!File.Exists(pythonExe)) throw new FileNotFoundException("Python portátil não encontrado.", pythonExe);
+        if (!File.Exists(scriptPath)) throw new FileNotFoundException("Script offline não encontrado.", scriptPath);
+        var logDirectory = Path.Combine(workingDirectory, "Launcher", "Logs");
+        Directory.CreateDirectory(logDirectory);
+        var logPath = Path.Combine(logDirectory, $"launcher-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+        var writeLock = new object();
 
-        var start = new ProcessStartInfo
+        void WriteLog(string message)
         {
-            FileName = pythonExe,
+            lock (writeLock)
+                File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+        }
+
+        var start = new ProcessStartInfo(pythonExe)
+        {
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -30,21 +36,25 @@ public sealed class GameInstallationService
         start.ArgumentList.Add(scriptPath);
 
         var process = new Process { StartInfo = start, EnableRaisingEvents = true };
-        process.OutputDataReceived += (_, e) =>
+        process.OutputDataReceived += (_, e) => { if (e.Data is not null) WriteLog(e.Data); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) WriteLog("ERROR: " + e.Data); };
+        process.Exited += (_, _) =>
         {
-            if (e.Data is not null) File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {e.Data}{Environment.NewLine}");
-        };
-        process.ErrorDataReceived += (_, e) =>
-        {
-            if (e.Data is not null) File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] ERROR: {e.Data}{Environment.NewLine}");
+            WriteLog($"Processo encerrado (código {process.ExitCode}).");
+            process.Dispose();
         };
 
-        if (!process.Start())
-            throw new InvalidOperationException("O Windows não conseguiu iniciar o processo Python.");
-
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-        File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] Inicialização solicitada.{Environment.NewLine}");
-        return Task.CompletedTask;
+        try
+        {
+            if (!process.Start()) throw new InvalidOperationException("O Windows não conseguiu iniciar o processo Python.");
+            WriteLog($"Inicialização solicitada (PID {process.Id}).");
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+        }
+        catch
+        {
+            process.Dispose();
+            throw;
+        }
     }
 }
