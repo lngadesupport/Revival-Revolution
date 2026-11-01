@@ -130,12 +130,18 @@ public partial class MainWindow : Window
     private async Task RunBusyAsync(string status, Func<CancellationToken,Task> operation)
     {
         if (_busy) return;
-        _busy = true; FooterStatus.Text = status;
+        _busy = true;
+        IsEnabled = false;
+        FooterStatus.Text = status;
         using var cts = new CancellationTokenSource();
         try { await operation(cts.Token); if (!IsVisible) return; FooterStatus.Text = "Operação concluída."; }
         catch (OperationCanceledException) { Log("Operação cancelada."); FooterStatus.Text = "Operação cancelada."; }
         catch (Exception ex) { Log("ERRO: " + ex.Message); FooterStatus.Text = "Operação terminou com erro."; }
-        finally { _busy = false; }
+        finally
+        {
+            _busy = false;
+            if (IsVisible) IsEnabled = true;
+        }
     }
 
     private IProgress<DownloadProgress> CreateProgress() => new Progress<DownloadProgress>(p =>
