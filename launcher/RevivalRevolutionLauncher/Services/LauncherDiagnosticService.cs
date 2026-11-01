@@ -16,16 +16,26 @@ public sealed class LauncherDiagnosticService
         "MetalImGuiOverlay.dll", "SDL3.dll"
     };
 
+    private readonly DistributionLocator _locator = new();
+
     public IReadOnlyList<DiagnosticItem> Run(string root, string? gameFolder, string? pythonPath)
     {
         var results = new List<DiagnosticItem>();
-        foreach (var name in Scripts) Check(results, name, Path.Combine(root, name));
+        var distribution = _locator.Find(root, gameFolder);
+        var scriptRoot = distribution ?? root;
+        foreach (var name in Scripts)
+            Check(results, name, Path.Combine(scriptRoot, name));
 
         foreach (var name in Libraries)
         {
-            var path = Path.Combine(root, name);
-            if (!File.Exists(path) && gameFolder is not null) path = Path.Combine(gameFolder, name);
-            Check(results, name, path);
+            var candidates = new[] { distribution, gameFolder, root }
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => Path.Combine(path!, name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var found = candidates.FirstOrDefault(File.Exists);
+            results.Add(new(name, found is not null,
+                found ?? "Não encontrado. Locais verificados: " + string.Join("; ", candidates)));
         }
 
         Check(results, "Python portátil", pythonPath);
@@ -33,6 +43,11 @@ public sealed class LauncherDiagnosticService
         var managed = gameFolder is null ? null : Path.Combine(gameFolder, "ufo_Data", "Managed");
         Check(results, "ufo_Data/Managed", managed, directory: true);
         CheckEmptyManagedLibraries(results, managed);
+        if (distribution is null)
+            results.Add(new("Raiz da distribuição", false,
+                "Não foi possível localizar offline_launcher.py na pasta do launcher nem na pasta acima do jogo."));
+        else
+            results.Add(new("Raiz da distribuição", true, distribution));
         return results;
     }
 
