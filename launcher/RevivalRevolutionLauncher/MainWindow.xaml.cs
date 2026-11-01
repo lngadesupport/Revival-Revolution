@@ -81,29 +81,16 @@ public partial class MainWindow : Window
         catch (Exception ex) { Log($"Falha ao iniciar: {ex.Message}"); }
     }
 
-    private async void Install_Click(object sender, RoutedEventArgs e)
+    private void Install_Click(object sender, RoutedEventArgs e)
     {
-        if (_busy) return;
-        var answer = MessageBox.Show(this,
-            "O processo baixará os dois pacotes configurados e extrairá os arquivos na pasta do launcher. Faça backup da instalação antes de continuar. Deseja prosseguir?",
-            "Instalar / reparar distribuição", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (answer != MessageBoxResult.Yes) return;
-        await RunBusyAsync("Baixando e preparando distribuição...", async token =>
-        {
-            await _installer.InstallAsync(_root, CreateProgress(), token);
-            Log("Pacotes baixados e extraídos. Iniciando verificação SHA-256...");
-            var results = await _installer.VerifyAsync(_root, token);
-            var invalid = results.Where(x => !x.IsValid).ToArray();
-            if (invalid.Length > 0)
-            {
-                Log($"Integridade: {invalid.Length} arquivo(s) ausente(s) ou alterado(s).");
-                await _installer.RepairAsync(_root, invalid, token);
-                Log("Reparo seletivo concluído e verificado.");
-            }
-            else Log($"Integridade aprovada: {results.Count} arquivo(s).");
-            var runtime = _python.FindRuntime(_root) ?? await _python.InstallAsync(_root, CreateProgress(), token);
-            Log($"Python portátil pronto: {runtime}");
-        });
+        MessageBox.Show(this,
+            "A instalação e o reparo automáticos estão temporariamente bloqueados por segurança. " +
+            "Os pacotes ZIP ainda não possuem hashes SHA-256 autenticados por um canal independente. " +
+            "Um manifesto de checksums dentro do próprio pacote não comprova sua origem. " +
+            "Nenhum arquivo será baixado, extraído ou sobrescrito. A inicialização de uma instalação existente continua disponível.",
+            "Instalação protegida", MessageBoxButton.OK, MessageBoxImage.Information);
+        Log("Instalação/reparo automático bloqueados até autenticação independente dos pacotes.");
+        FooterStatus.Text = "Instalação automática aguardando hashes confiáveis.";
     }
 
     private async void Diagnostics_Click(object sender, RoutedEventArgs e)
