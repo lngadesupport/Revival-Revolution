@@ -104,19 +104,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Preserve compatibility with the creator's known-working package. Some builds include
+        // zero-length managed placeholders; report them, but do not block the original bootstrap.
         var managedPath = Path.Combine(_gameFolder!, "ufo_Data", "Managed");
         var emptyManagedDlls = Directory.EnumerateFiles(managedPath, "*.dll")
             .Where(path => new FileInfo(path).Length == 0).Select(Path.GetFileName).ToArray();
         if (emptyManagedDlls.Length > 0)
-        {
-            var detail = string.Join(", ", emptyManagedDlls);
-            Log("Inicialização bloqueada: DLLs vazias em Managed: " + detail);
-            MessageBox.Show(this,
-                "A instalação do jogo contém DLLs vazias em ufo_Data\\Managed: " + detail +
-                ". Restaure esses arquivos de uma instalação íntegra antes de iniciar.",
-                "Instalação do jogo incompleta", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
+            Log("Aviso: DLLs vazias em Managed (mantendo o comportamento do launcher original): " +
+                string.Join(", ", emptyManagedDlls));
 
         var python = _python.FindRuntime(_root);
         if (python is null && MessageBox.Show(this, "O Python portátil não está instalado. Deseja baixá-lo agora?",
