@@ -1,15 +1,110 @@
-using System.Text;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace RevivalRevolution.Services;
 
-public sealed record LauncherUpdateInfo(string Version,string PackageUrl,string Sha256,string ReleaseNotes,IReadOnlyList<string> Files);
+public sealed record LauncherUpdateInfo(
+    string Version,
+    string PackageUrl,
+    string Sha256,
+    string ReleaseNotes,
+    IReadOnlyList<string> Files);
+
 public sealed class LauncherUpdateService
 {
-    private readonly DownloadService _downloads = new();
+    private const long MaxPackageBytes = 2L * 1024 * 1024 * 1024;
+    private const int MaxEntries = 50_000;
     private static readonly HttpClient ManifestHttp = new() { Timeout = TimeSpan.FromMinutes(2) };
+    private static readonly DownloadService Downloads = new();
+    private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+    private static readonly HashSet<string> ProtectedFiles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "launcher-update.json", "launcher-config.json", "python-runtime.txt", "autopunch-config.json",
+        "offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalNetplayBridge.cs",
+        "MetalOfflineBridgeImGui.cs", "SHA256SUMS.json"
+    };
+
+    public async Task<LauncherUpdateInfo?> CheckAsync(string root, CancellationToken token = default)
+    {
+        var config = Path.Combine(root, "launcher-update.json");
+        if (!File.Exists(config)) return null;
+
+        using var settings = JsonDocument.Parse(await File.ReadAllTextAsync(config, token));
+        var manifestUrl = settings.RootElement.GetProperty("manifestUrl").GetString();
+        if (!Uri.TryCreate(manifestUrl, UriKind.Absolute, out var uri) ||
+            uri.Scheme != Uri.UriSchemeHttps ||
+            uri.Host.Contains("SEU-DOMINIO", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Configure manifestUrl HTTPS válido em launcher-update.json.");
+
+        using var response = await GetManifestAsync(uri, token);
+        if (response.Content.Headers.ContentLength is > 1_048_576)
+            throw new InvalidDataException("O manifesto de atualização excede 1 MB.");
+
+        using var manifest = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+        var data = manifest.RootElement;
+        var versionText = data.GetProperty("version").GetString() ?? "";
+        if (!Version.TryParse(versionText, out var remoteVersion))
+            throw new InvalidDataException("A versão remota do launcher não é válida.");
+
+        var localVersion = typeof(LauncherUpdateService).Assembly.GetName().Version ?? new Version(0, 0);
+        if (remoteVersion <= localVersion) return null;
+
+        var files = data.GetProperty("files").EnumerateArray()
+            .Select(item => item.GetString() ?? "")
+            .Where(path => path.Length > 0)
+            .ToArray();
+        if (files.Length == 0 || files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Length)
+            throw new InvalidDataException("A lista de arquivos da atualização está vazia ou contém duplicatas.");
+
+        return new LauncherUpdateInfo(
+            versionText,
+            data.GetProperty("packageUrl").GetString() ?? "",
+            data.GetProperty("sha256").GetString() ?? "",
+            data.TryGetProperty("releaseNotes", out var notes) ? notes.GetString() ?? "" : "",
+            files);
+    }
+
+    public async Task<string> DownloadAndStageAsync(
+        string root,
+        LauncherUpdateInfo update,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken token)
+    {
+        if (!Uri.TryCreate(update.PackageUrl, UriKind.Absolute, out var packageUri) ||
+            packageUri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("packageUrl deve usar HTTPS.");
+        if (update.Sha256.Length != 64 || !update.Sha256.All(Uri.IsHexDigit))
+            throw new InvalidDataException("SHA-256 do pacote inválido.");
+
+        var launcherDirectory = Path.Combine(root, "Launcher");
+        var downloadsDirectory = Path.Combine(launcherDirectory, "Downloads");
+        var staging = Path.Combine(launcherDirectory, "UpdateStaging");
+        Directory.CreateDirectory(downloadsDirectory);
+
+        var zip = Path.Combine(downloadsDirectory, "launcher-update.zip");
+        await Downloads.DownloadAsync(packageUri.ToString(), zip, progress, token);
+        await VerifyPackageHashAsync(zip, update.Sha256, token);
+
+        if (Directory.Exists(staging)) Directory.Delete(staging, true);
+        Directory.CreateDirectory(staging);
+        try
+        {
+            ExtractAuthorizedFiles(zip, staging, update.Files, token);
+            return await CreateApplyScriptAsync(root, staging, update.Files, token);
+        }
+        catch
+        {
+            if (Directory.Exists(staging)) Directory.Delete(staging, true);
+            throw;
+        }
+    }
 
     private static async Task<HttpResponseMessage> GetManifestAsync(Uri uri, CancellationToken token)
     {
@@ -19,112 +114,134 @@ public sealed class LauncherUpdateService
             response.Dispose();
             throw new InvalidOperationException("O manifesto foi redirecionado para uma conexão sem HTTPS.");
         }
-        response.EnsureSuccessStatusCode();
-        return response;
+
+        try { response.EnsureSuccessStatusCode(); return response; }
+        catch { response.Dispose(); throw; }
     }
 
-    public async Task<LauncherUpdateInfo?> CheckAsync(string root,CancellationToken token=default)
+    private static async Task VerifyPackageHashAsync(string zip, string expectedHash, CancellationToken token)
     {
-        var config=Path.Combine(root,"launcher-update.json");
-        if(!File.Exists(config)) return null;
-        using var cfg=JsonDocument.Parse(await File.ReadAllTextAsync(config,token));
-        var url=cfg.RootElement.GetProperty("manifestUrl").GetString();
-        if(!Uri.TryCreate(url,UriKind.Absolute,out var uri) || uri.Scheme!="https" || uri.Host.Contains("SEU-DOMINIO",StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Configure manifestUrl HTTPS válido em launcher-update.json.");
-        using var response=await GetManifestAsync(uri,token);
-        using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
-        var e=doc.RootElement;
-        var versionText=e.GetProperty("version").GetString()??"0";
-        if(!Version.TryParse(versionText,out var remoteVersion))
-            throw new InvalidDataException("A versão remota do launcher não é válida.");
-        var localVersion=typeof(LauncherUpdateService).Assembly.GetName().Version??new Version(0,0);
-        if(remoteVersion<=localVersion) return null;
-        var files=e.GetProperty("files").EnumerateArray().Select(x=>x.GetString()??"").Where(x=>x.Length>0).ToArray();
-        return new(versionText,e.GetProperty("packageUrl").GetString()??"",
-            e.GetProperty("sha256").GetString()??"",e.TryGetProperty("releaseNotes",out var n)?n.GetString()??"": "",files);
+        await using var stream = File.OpenRead(zip);
+        var actualHash = Convert.ToHexString(await SHA256.HashDataAsync(stream, token));
+        if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Hash SHA-256 do pacote de atualização não confere.");
     }
 
-    public async Task<string> DownloadAndStageAsync(string root,LauncherUpdateInfo update,IProgress<DownloadProgress>? progress,CancellationToken token)
+    private static void ExtractAuthorizedFiles(
+        string zip,
+        string staging,
+        IReadOnlyList<string> requestedFiles,
+        CancellationToken token)
     {
-        if(!Uri.TryCreate(update.PackageUrl,UriKind.Absolute,out var uri)||uri.Scheme!="https") throw new InvalidOperationException("packageUrl deve usar HTTPS.");
-        if(update.Sha256.Length!=64||!update.Sha256.All(Uri.IsHexDigit)) throw new InvalidDataException("SHA-256 do pacote inválido.");
-        var downloads=Path.Combine(root,"Launcher","Downloads"); Directory.CreateDirectory(downloads);
-        var zip=Path.Combine(downloads,"launcher-update.zip");
-        await _downloads.DownloadAsync(uri.ToString(), zip, progress, token);
-        await using(var s=File.OpenRead(zip))
+        var allowed = requestedFiles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in allowed)
         {
-            var hash=Convert.ToHexString(await SHA256.HashDataAsync(s,token));
-            if(!hash.Equals(update.Sha256,StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Hash SHA-256 do pacote de atualização não confere.");
+            ValidateRelativePath(path);
+            if (IsProtectedPath(path))
+                throw new InvalidDataException($"O atualizador não pode substituir este arquivo protegido: {path}");
         }
-        var stage=Path.Combine(root,"Launcher","UpdateStaging");
-        if(Directory.Exists(stage)) Directory.Delete(stage,true);
-        Directory.CreateDirectory(stage);
-        using var archive=ZipFile.OpenRead(zip);
-        var allowed=update.Files.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach(var rel in allowed) ValidateRelativePath(rel);
-        if (archive.Entries.Count > 50_000 || archive.Entries.Where(x => !string.IsNullOrEmpty(x.Name)).Sum(x => x.Length) > 2L * 1024 * 1024 * 1024)
+
+        using var archive = ZipFile.OpenRead(zip);
+        if (archive.Entries.Count > MaxEntries ||
+            archive.Entries.Where(entry => !string.IsNullOrEmpty(entry.Name)).Sum(entry => entry.Length) > MaxPackageBytes)
             throw new InvalidDataException("O pacote de atualização excede os limites permitidos.");
-        var extracted=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach(var entry in archive.Entries.Where(x=>!string.IsNullOrEmpty(x.Name)))
+
+        var extracted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var prefix = Path.GetFullPath(staging).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        foreach (var entry in archive.Entries.Where(entry => !string.IsNullOrEmpty(entry.Name)))
         {
             token.ThrowIfCancellationRequested();
-            var rel=entry.FullName.Replace('\\','/');
-            ValidateRelativePath(rel);
-            if(!allowed.Contains(rel)) continue;
-            if (!extracted.Add(rel)) throw new InvalidDataException($"Arquivo duplicado no pacote de atualização: {rel}");
-            if(IsProtectedPath(rel))
-                throw new InvalidDataException("O atualizador não pode substituir arquivos do jogo/runtime/cache.");
-            var target=Path.GetFullPath(Path.Combine(stage,rel.Replace('/',Path.DirectorySeparatorChar)));
-            var prefix=Path.GetFullPath(stage)+Path.DirectorySeparatorChar;
-            if(!target.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Caminho de atualização fora da staging.");
+            var relative = entry.FullName.Replace('\\', '/');
+            ValidateRelativePath(relative);
+            if (!allowed.Contains(relative)) continue;
+            if (!extracted.Add(relative))
+                throw new InvalidDataException($"Arquivo duplicado no pacote de atualização: {relative}");
+            if (((entry.ExternalAttributes >> 16) & 0xF000) == 0xA000)
+                throw new InvalidDataException($"Links simbólicos não são permitidos: {relative}");
+
+            var target = Path.GetFullPath(Path.Combine(staging, relative.Replace('/', Path.DirectorySeparatorChar)));
+            if (!target.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Caminho fora da staging: {relative}");
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             entry.ExtractToFile(target, false);
         }
-        if(extracted.Count==0) throw new InvalidDataException("O pacote não contém nenhum arquivo autorizado pelo manifesto.");
-        foreach(var rel in allowed)
-            if(!extracted.Contains(rel)) throw new InvalidDataException($"Arquivo listado no manifesto não encontrado no pacote: {rel}");
 
-        static string PsQuote(string value) => "'" + value.Replace("'","''") + "'";
-        var ps=new StringBuilder();
-        foreach(var rel in extracted)
+        var missing = allowed.Except(extracted, StringComparer.OrdinalIgnoreCase).ToArray();
+        if (missing.Length > 0)
+            throw new InvalidDataException("Arquivos listados no manifesto não encontrados no pacote: " + string.Join(", ", missing));
+    }
+
+    private static async Task<string> CreateApplyScriptAsync(
+        string root,
+        string staging,
+        IReadOnlyList<string> files,
+        CancellationToken token)
+    {
+        var backup = Path.Combine(root, "Launcher", "UpdateBackup");
+        var script = Path.Combine(root, "Launcher", "apply-update.cmd");
+        var ps = new StringBuilder();
+        ps.AppendLine("$ErrorActionPreference = 'Stop'");
+        ps.AppendLine($"$launcherPid = {Process.GetCurrentProcess().Id}");
+        ps.AppendLine("for ($i = 0; $i -lt 60 -and (Get-Process -Id $launcherPid -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }");
+        ps.AppendLine("if (Get-Process -Id $launcherPid -ErrorAction SilentlyContinue) { throw 'Launcher ainda está em execução.' }");
+        ps.AppendLine($"$stage = {PsQuote(staging)}");
+        ps.AppendLine($"$backup = {PsQuote(backup)}");
+        ps.AppendLine("if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }");
+        ps.AppendLine("New-Item -ItemType Directory -Force -Path $backup | Out-Null");
+        ps.AppendLine("$processed = [System.Collections.Generic.List[string]]::new()");
+        ps.AppendLine("try {");
+        foreach (var relative in files)
         {
-            var source=Path.Combine(stage,rel.Replace('/',Path.DirectorySeparatorChar));
-            var dest=Path.Combine(root,rel.Replace('/',Path.DirectorySeparatorChar));
-            ps.AppendLine($"$src={PsQuote(source)}; $dst={PsQuote(dest)}; New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Copy-Item -LiteralPath $src -Destination $dst -Force");
+            var source = Path.Combine(staging, relative.Replace('/', Path.DirectorySeparatorChar));
+            var destination = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
+            ps.AppendLine($"  $src = {PsQuote(source)}; $dst = {PsQuote(destination)}; $bak = Join-Path $backup {PsQuote(relative)}");
+            ps.AppendLine("  $processed.Add($dst)");
+            ps.AppendLine("  if (Test-Path -LiteralPath $dst) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bak) | Out-Null; Move-Item -LiteralPath $dst -Destination $bak -Force }");
+            ps.AppendLine("  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null");
+            ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
-        ps.AppendLine($"Remove-Item -LiteralPath {PsQuote(stage)} -Recurse -Force -ErrorAction SilentlyContinue");
-        var encoded=Convert.ToBase64String(Encoding.Unicode.GetBytes(ps.ToString()));
-        var script=Path.Combine(root,"Launcher","apply-update.cmd");
-        await File.WriteAllTextAsync(script,"@echo off\r\ntimeout /t 2 /nobreak >nul\r\npowershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand "+encoded+"\r\ndel \"%~f0\"\r\n",token);
+        ps.AppendLine("  Remove-Item -LiteralPath $backup -Recurse -Force");
+        ps.AppendLine("  Remove-Item -LiteralPath $stage -Recurse -Force");
+        ps.AppendLine("} catch {");
+        ps.AppendLine("  foreach ($dst in $processed.ToArray()) { $bak = Join-Path $backup ([IO.Path]::GetRelativePath((Split-Path -Parent $backup), $dst)); if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
+        ps.AppendLine("  throw");
+        ps.AppendLine("}");
+
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(ps.ToString()));
+        var log = Path.Combine(root, "Launcher", "Logs", "update-error.log");
+        var command = "@echo off\r\ntimeout /t 2 /nobreak >nul\r\npowershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " +
+            encoded + "\r\nif errorlevel 1 (echo Falha ao aplicar atualizacao. Consulte o log. >> " + CmdQuote(log) +
+            " & exit /b 1)\r\ndel \"%~f0\"\r\n";
+        await File.WriteAllTextAsync(script, command, token);
         return script;
     }
+
+    private static string PsQuote(string value) => "'" + value.Replace("'", "''") + "'";
+    private static string CmdQuote(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
 
     private static void ValidateRelativePath(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("Caminho vazio no manifesto/pacote.");
-        var normalized = path.Replace('\\', '/');
-        var parts = normalized.Split('/');
-        var reserved = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
-        if (normalized.StartsWith('/') || normalized.Contains(':') ||
-            parts.Any(part => part.Length == 0 || part is "." or ".." || part.EndsWith(' ') || part.EndsWith('.') ||
-                part.Any(c => "<>:\"|?*".Contains(c)) || reserved.Contains(part.Split('.')[0])))
+        var parts = path.Replace('\\', '/').Split('/');
+        if (path.StartsWith('/') || path.Contains(':') ||
+            parts.Any(part => part.Length == 0 || part is "." or ".." ||
+                part.EndsWith(' ') || part.EndsWith('.') ||
+                part.Any(character => "<>\"|?*".Contains(character)) ||
+                ReservedNames.Contains(part.Split('.')[0])))
             throw new InvalidDataException($"Caminho inseguro no pacote de atualização: {path}");
     }
 
-    private static bool IsProtectedPath(string rel)
+    private static bool IsProtectedPath(string path)
     {
-        var path = rel.Replace('\\', '/');
-        return path.StartsWith("Metal Revolution/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("ufo_Data/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("Launcher/Downloads/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("Launcher/Runtime/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("Launcher/UpdateStaging/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("Launcher/Config/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("Launcher/Logs/", StringComparison.OrdinalIgnoreCase) ||
-            new[] { "launcher-update.json", "launcher-config.json", "python-runtime.txt", "autopunch-config.json",
-                "offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalNetplayBridge.cs",
-                "MetalOfflineBridgeImGui.cs", "SHA256SUMS.json" }.Contains(path, StringComparer.OrdinalIgnoreCase);
+        var normalized = path.Replace('\\', '/');
+        return normalized.StartsWith("Metal Revolution/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("ufo_Data/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/Downloads/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/Runtime/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/UpdateStaging/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/UpdateBackup/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/Config/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/Logs/", StringComparison.OrdinalIgnoreCase) ||
+            ProtectedFiles.Contains(normalized);
     }
-
 }
