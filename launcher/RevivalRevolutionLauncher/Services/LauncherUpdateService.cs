@@ -40,8 +40,9 @@ public sealed class LauncherUpdateService
         var manifestUrl = settings.RootElement.GetProperty("manifestUrl").GetString();
         if (!Uri.TryCreate(manifestUrl, UriKind.Absolute, out var uri) ||
             uri.Scheme != Uri.UriSchemeHttps ||
-            uri.Host.Contains("SEU-DOMINIO", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Configure manifestUrl HTTPS válido em launcher-update.json.");
+            !uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
+            !uri.AbsolutePath.Equals("/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("O manifesto deve vir da Release mais recente do repositório oficial Revival-Revolution no GitHub.");
 
         using var response = await GetManifestAsync(uri, token);
         if (response.Content.Headers.ContentLength is > 1_048_576)
@@ -78,8 +79,10 @@ public sealed class LauncherUpdateService
         CancellationToken token)
     {
         if (!Uri.TryCreate(update.PackageUrl, UriKind.Absolute, out var packageUri) ||
-            packageUri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidOperationException("packageUrl deve usar HTTPS.");
+            packageUri.Scheme != Uri.UriSchemeHttps ||
+            !packageUri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
+            !packageUri.AbsolutePath.Equals("/lngadesupport/Revival-Revolution/releases/latest/download/RevivalRevolution-win-x64.zip", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("O pacote deve vir da Release mais recente do repositório oficial Revival-Revolution no GitHub.");
         if (update.Sha256.Length != 64 || !update.Sha256.All(Uri.IsHexDigit))
             throw new InvalidDataException("SHA-256 do pacote inválido.");
 
@@ -204,7 +207,9 @@ public sealed class LauncherUpdateService
             ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
         ps.AppendLine("} catch {");
+        ps.AppendLine("  $failure = $_.Exception.ToString()");
         ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
+        ps.AppendLine("  Set-Content -LiteralPath " + PsQuote(Path.Combine(logs, "update-error.log")) + " -Value $failure -Encoding UTF8");
         ps.AppendLine("  throw");
         ps.AppendLine("}");
         ps.AppendLine("Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue");
@@ -213,7 +218,7 @@ public sealed class LauncherUpdateService
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(ps.ToString()));
         var log = Path.Combine(root, "Launcher", "Logs", "update-error.log");
         var command = "@echo off\r\ntimeout /t 2 /nobreak >nul\r\npowershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " +
-            encoded + "\r\nif errorlevel 1 (echo Falha ao aplicar atualizacao. Consulte o log. >> " + CmdQuote(log) +
+            encoded + "\r\nif errorlevel 1 (echo Falha ao aplicar atualizacao. Consulte o log: " + CmdQuote(log) +
             " & exit /b 1)\r\ndel \"%~f0\"\r\n";
         await File.WriteAllTextAsync(script, command, token);
         return script;
