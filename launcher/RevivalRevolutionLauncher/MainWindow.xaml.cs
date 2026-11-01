@@ -36,9 +36,16 @@ public partial class MainWindow : Window
 
     private void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Title = "Selecione ufo.exe", Filter = "Executável do jogo (ufo.exe)|ufo.exe", CheckFileExists = true };
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Selecione a pasta Metal Revolution",
+            Multiselect = false,
+            FolderName = _gameFolder is not null && Directory.Exists(_gameFolder)
+                ? _gameFolder
+                : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+        };
         if (dialog.ShowDialog(this) != true) return;
-        var folder = Path.GetDirectoryName(dialog.FileName)!;
+        var folder = dialog.FolderName;
         if (!IsValidFolder(folder))
         {
             MessageBox.Show(this, "A pasta selecionada não contém ufo.exe e ufo_Data\\Managed.", "Instalação inválida", MessageBoxButton.OK, MessageBoxImage.Warning);
