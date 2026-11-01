@@ -1,0 +1,45 @@
+# Revival Revolution Launcher
+
+Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre .NET 8.
+
+## Funcionalidades no código
+
+- Interface WPF escura com identidade visual preta/vermelha.
+- Seleção e persistência da pasta que contém `ufo.exe` e `ufo_Data/Managed`.
+- Inicialização do fluxo offline original via `offline_launcher.py`.
+- Download do runtime Python embeddable x64, sem instalação global.
+- Download dos pacotes Pixeldrain configurados no serviço e extração ZIP com proteção contra Zip Slip.
+- Verificação SHA-256 e tentativa de reparo seletivo com base em `SHA256SUMS.json`.
+- Diagnóstico básico de scripts, bridges, DLLs, Python e instalação.
+- Atualizador por manifesto HTTPS, hash do pacote e staging antes da aplicação.
+
+## Build
+
+No Windows com .NET 8 SDK:
+
+```powershell
+dotnet build .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj -c Release
+```
+
+Publicação self-contained:
+
+```powershell
+dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
+```
+
+## Configuração do mantenedor
+
+- Confirme que os IDs Pixeldrain em `GamePackageInstallerService.cs` apontam para ZIPs válidos e que ambos devem ser extraídos na raiz selecionada.
+- Confirme os caminhos de entrada do `SHA256SUMS.json` contra os nomes internos reais dos ZIPs. O reparo seletivo exige correspondência exata dos caminhos.
+- Configure `launcher-update.json` com URL HTTPS real. O manifesto remoto deve conter `version`, `packageUrl`, `sha256`, `releaseNotes` e `files`.
+- O pacote de atualização deve conter somente arquivos do launcher. Não inclua executáveis, DLLs, assets ou dados proprietários do jogo.
+- O hash SHA-256 detecta corrupção, mas não substitui assinatura digital/autenticidade do publicador.
+
+## Limites conhecidos
+
+- O runtime embeddable pode exigir dependências do Visual C++ Redistributable x64 em máquinas sem esse componente.
+- O instalador e o reparador ainda precisam ser exercitados contra os ZIPs reais e o manifesto real antes de uma release.
+- O multiplayer continua experimental e depende das bridges/scripts da distribuição.
+- O workflow de CI compila em Windows; não significa que os testes de integração do jogo foram aprovados.
+
+O launcher não redistribui o jogo nem substitui os scripts/bridges originais.
