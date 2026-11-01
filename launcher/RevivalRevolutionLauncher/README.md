@@ -7,7 +7,7 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre .NE
 - Interface WPF escura com identidade visual preta/vermelha.
 - Seleção e persistência da pasta que contém `ufo.exe` e `ufo_Data/Managed`.
 - Inicialização do fluxo offline original via `offline_launcher.py`.
-- Download do runtime Python embeddable x64, sem instalação global.
+- Download do runtime Python 3.13.17 embeddable x64, sem instalação global, com validação SHA-256 antes da extração.
 - Download dos pacotes Pixeldrain configurados no serviço e extração ZIP com proteção contra Zip Slip.
 - Verificação SHA-256 e tentativa de reparo seletivo com base em `SHA256SUMS.json`.
 - Diagnóstico básico de scripts, bridges, DLLs, Python e instalação.
@@ -37,7 +37,7 @@ dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.cs
 
 ## Limites conhecidos
 
-- O runtime embeddable pode exigir dependências do Visual C++ Redistributable x64 em máquinas sem esse componente.
+- O runtime embeddable pode exigir dependências do Visual C++ Redistributable x64 em máquinas sem esse componente. O projeto fixa Python 3.13.17, última versão da série 3.13 com binários oficiais para Windows; 3.13.18 é uma atualização somente de código-fonte.
 - O instalador e o reparador ainda precisam ser exercitados contra os ZIPs reais e o manifesto real antes de uma release.
 - O multiplayer continua experimental e depende das bridges/scripts da distribuição.
 - O workflow de CI compila em Windows; não significa que os testes de integração do jogo foram aprovados.
