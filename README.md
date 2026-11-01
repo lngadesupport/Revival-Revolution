@@ -21,7 +21,7 @@
 ## Estrutura
 
 - `launcher/RevivalRevolutionLauncher/` — projeto C# / WPF (.NET 8).
-- `launcher/RevivalRevolutionLauncher/Services/` — serviços de download, instalação, integridade, runtime, diagnóstico e atualização.
+- `launcher/RevivalRevolutionLauncher/Services/` — serviços de download, extração segura, configuração, runtime, inicialização, diagnóstico e atualização.
 - `launcher/RevivalRevolutionLauncher/Properties/PublishProfiles/` — perfil de publicação Windows x64 self-contained.
 - `docs/` — documentação técnica e avisos de compatibilidade.
 
@@ -46,7 +46,7 @@ O pacote self-contained inclui o runtime .NET necessário. O SDK só é necessá
 1. Obter e publicar hashes SHA-256 confiáveis dos pacotes de distribuição por canal independente dos ZIPs.
 2. Conferir o formato e os caminhos de `SHA256SUMS.json` contra os ZIPs reais.
 3. Hospedar o manifesto e o pacote de atualização em HTTPS e substituir o endereço de exemplo em `launcher-update.json`.
-4. Executar build, instalação, reparo, inicialização offline e diagnóstico em Windows x64.
+4. Executar build, preparação do Python portátil, inicialização offline e diagnóstico em Windows x64. A instalação/reparação automática só deve ser reativada após autenticação dos pacotes.
 5. Testar multiplayer em duas máquinas independentes. O rollback/netplay não deve ser anunciado como universalmente compatível.
 
 ## Preservação e propriedade intelectual
