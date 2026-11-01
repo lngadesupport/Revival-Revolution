@@ -23,7 +23,7 @@ A distribuição original inclui scripts Python, bridges gerenciadas e nativas, 
 - `DownloadService`: downloads HTTPS retomáveis com validação de redirecionamento.
 - `ArchiveExtractionService`: extração ZIP com limites de tamanho, proteção contra traversal, links e colisões.
 - `PythonRuntimeService`: runtime Python 3.13.17, verificação SHA-256, extração em staging e teste de inicialização antes da troca.
-- `GameInstallationService`: validação da pasta e execução do script offline com logs.
+- `GameLaunchService`: validação da pasta e execução do script offline com logs.
 - `LauncherUpdateService`: validação do manifesto, hash do pacote, staging e aplicação com backup/rollback.
 - `LauncherDiagnosticService`: verificação de arquivos essenciais e DLLs vazias.
 
