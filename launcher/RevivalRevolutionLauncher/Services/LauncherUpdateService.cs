@@ -42,31 +42,59 @@ public sealed class LauncherUpdateService
         Directory.CreateDirectory(stage);
         using var archive=ZipFile.OpenRead(zip);
         var allowed=update.Files.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach(var rel in allowed) ValidateRelativePath(rel);
+        var extracted=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach(var entry in archive.Entries.Where(x=>!string.IsNullOrEmpty(x.Name)))
         {
             token.ThrowIfCancellationRequested();
             var rel=entry.FullName.Replace('\\','/');
+            ValidateRelativePath(rel);
             if(!allowed.Contains(rel)) continue;
-            if(rel.StartsWith('/')||rel.Split('/').Any(p=>p==".."||p==".")) throw new InvalidDataException("Caminho inseguro no pacote de atualização.");
-            if(rel.StartsWith("Metal Revolution/",StringComparison.OrdinalIgnoreCase)||rel.StartsWith("ufo_Data/",StringComparison.OrdinalIgnoreCase)||rel.StartsWith("Launcher/Downloads/",StringComparison.OrdinalIgnoreCase))
+            if(IsProtectedPath(rel))
                 throw new InvalidDataException("O atualizador não pode substituir arquivos do jogo/runtime/cache.");
             var target=Path.GetFullPath(Path.Combine(stage,rel.Replace('/',Path.DirectorySeparatorChar)));
             var prefix=Path.GetFullPath(stage)+Path.DirectorySeparatorChar;
             if(!target.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Caminho de atualização fora da staging.");
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             entry.ExtractToFile(target,true);
+            extracted.Add(rel);
         }
-        var script=Path.Combine(root,"Launcher","apply-update.cmd");
-        var lines=new List<string> { "@echo off","timeout /t 2 /nobreak >nul" };
-        foreach(var rel in update.Files)
+        if(extracted.Count==0) throw new InvalidDataException("O pacote não contém nenhum arquivo autorizado pelo manifesto.");
+        foreach(var rel in allowed)
+            if(!extracted.Contains(rel)) throw new InvalidDataException($"Arquivo listado no manifesto não encontrado no pacote: {rel}");
+
+        // Use an encoded PowerShell payload so paths cannot inject CMD metacharacters.
+        static string PsQuote(string value) => "'" + value.Replace("'","''") + "'";
+        var ps=new StringBuilder();
+        foreach(var rel in extracted)
         {
             var source=Path.Combine(stage,rel.Replace('/',Path.DirectorySeparatorChar));
-            if(File.Exists(source)) { var dest=Path.Combine(root,rel.Replace('/',Path.DirectorySeparatorChar)); lines.Add($"if exist \"{source}\" copy /y \"{source}\" \"{dest}\" >nul"); }
+            var dest=Path.Combine(root,rel.Replace('/',Path.DirectorySeparatorChar));
+            ps.AppendLine($"$src={PsQuote(source)}; $dst={PsQuote(dest)}; New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
-        lines.Add($"rmdir /s /q \"{stage}\""); lines.Add("del \"%~f0\"");
-        await File.WriteAllLinesAsync(script,lines,token);
+        ps.AppendLine($"Remove-Item -LiteralPath {PsQuote(stage)} -Recurse -Force -ErrorAction SilentlyContinue");
+        var encoded=Convert.ToBase64String(Encoding.Unicode.GetBytes(ps.ToString()));
+        var script=Path.Combine(root,"Launcher","apply-update.cmd");
+        await File.WriteAllTextAsync(script,"@echo off\r\ntimeout /t 2 /nobreak >nul\r\npowershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand "+encoded+"\r\ndel \"%~f0\"\r\n",token);
         return script;
     }
+
+    private static void ValidateRelativePath(string path)
+    {
+        if(string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("Caminho vazio no manifesto/pacote.");
+        var normalized=path.Replace('\\','/');
+        if(normalized.StartsWith('/') || normalized.Contains(':') ||
+           normalized.Split('/').Any(p=>p.Length==0 || p=="." || p=="..") ||
+           normalized.Any(c=>!(char.IsLetterOrDigit(c)||c is '/' or '.' or '_' or '-')))
+            throw new InvalidDataException($"Caminho inseguro no pacote de atualização: {path}");
+    }
+
+    private static bool IsProtectedPath(string rel) =>
+        rel.StartsWith("Metal Revolution/",StringComparison.OrdinalIgnoreCase) ||
+        rel.StartsWith("ufo_Data/",StringComparison.OrdinalIgnoreCase) ||
+        rel.StartsWith("Launcher/Downloads/",StringComparison.OrdinalIgnoreCase) ||
+        rel.StartsWith("Launcher/Runtime/",StringComparison.OrdinalIgnoreCase) ||
+        rel.StartsWith("Launcher/UpdateStaging/",StringComparison.OrdinalIgnoreCase);
 
     private static async Task DownloadAsync(string url,string path,IProgress<DownloadProgress>? progress,CancellationToken token)
     {
