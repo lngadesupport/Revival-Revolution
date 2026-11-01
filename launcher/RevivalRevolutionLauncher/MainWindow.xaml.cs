@@ -27,10 +27,7 @@ public partial class MainWindow : Window
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
     }
 
-    private static bool IsValidFolder(string? folder) =>
-        !string.IsNullOrWhiteSpace(folder) &&
-        File.Exists(Path.Combine(folder, "ufo.exe")) &&
-        Directory.Exists(Path.Combine(folder, "ufo_Data", "Managed"));
+    private bool IsValidFolder(string? folder) => _gameInstallation.IsValidGameFolder(folder);
 
     private void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -96,13 +93,12 @@ public partial class MainWindow : Window
     private async void Diagnostics_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        await RunBusyAsync("Executando diagnóstico...", async token =>
+        await RunBusyAsync("Executando diagnóstico...", token =>
         {
-            var python = _python.FindRuntime(_root);
-            var items = _diagnostics.Run(_root, _gameFolder, python);
+            var items = _diagnostics.Run(_root, _gameFolder, _python.FindRuntime(_root));
             foreach (var item in items) Log($"{(item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
             FooterStatus.Text = $"Diagnóstico: {items.Count(x => x.Passed)}/{items.Count} verificações aprovadas.";
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         });
     }
 
@@ -127,7 +123,7 @@ public partial class MainWindow : Window
             apply.ArgumentList.Add("/c");
             apply.ArgumentList.Add(script);
             Process.Start(apply);
-            Dispatcher.Invoke(Close);
+            Close();
         });
     }
 
