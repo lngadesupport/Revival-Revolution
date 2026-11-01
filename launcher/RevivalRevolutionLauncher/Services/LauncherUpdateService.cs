@@ -234,6 +234,7 @@ public sealed class LauncherUpdateService
             ps.AppendLine("  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null");
             ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
+        ps.AppendLine($"  Start-Process -FilePath {PsQuote(Path.Combine(root, "RevivalRevolution.exe"))} -WorkingDirectory {PsQuote(root)}");
         ps.AppendLine("} catch {");
         ps.AppendLine("  $failure = $_.Exception.ToString()");
         ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
