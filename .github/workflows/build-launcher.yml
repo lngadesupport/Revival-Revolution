@@ -6,6 +6,7 @@ on:
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - ".github/workflows/build-launcher.yml"
+      - ".github/workflows/publish-launcher-release.yml"
   pull_request:
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
@@ -33,7 +34,10 @@ jobs:
         run: |
           $publish = ".\\artifacts\\RevivalRevolution-win-x64"
           if (!(Test-Path (Join-Path $publish "RevivalRevolution.exe"))) { throw "Launcher executable missing from publish output." }
-          if (!(Test-Path (Join-Path $publish "launcher-update.json"))) { throw "Updater configuration missing from publish output." }
+          $configPath = Join-Path $publish "launcher-update.json"
+          if (!(Test-Path $configPath)) { throw "Updater configuration missing from publish output." }
+          $config = Get-Content $configPath -Raw | ConvertFrom-Json
+          if ($config.manifestUrl -ne "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json") { throw "Updater manifest URL is not the official GitHub Releases endpoint." }
       - name: Upload Windows launcher artifact
         uses: actions/upload-artifact@v4
         with:
