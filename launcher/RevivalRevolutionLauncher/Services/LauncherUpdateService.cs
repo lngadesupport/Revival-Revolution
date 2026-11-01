@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Reflection;
 
 namespace RevivalRevolution.Services;
 
@@ -21,8 +22,13 @@ public sealed class LauncherUpdateService
         using var response=await Http.GetAsync(uri,token); response.EnsureSuccessStatusCode();
         using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
         var e=doc.RootElement;
+        var versionText=e.GetProperty("version").GetString()??"0";
+        if(!Version.TryParse(versionText,out var remoteVersion))
+            throw new InvalidDataException("A versão remota do launcher não é válida.");
+        var localVersion=typeof(LauncherUpdateService).Assembly.GetName().Version??new Version(0,0);
+        if(remoteVersion<=localVersion) return null;
         var files=e.GetProperty("files").EnumerateArray().Select(x=>x.GetString()??"").Where(x=>x.Length>0).ToArray();
-        return new(e.GetProperty("version").GetString()??"0",e.GetProperty("packageUrl").GetString()??"",
+        return new(versionText,e.GetProperty("packageUrl").GetString()??"",
             e.GetProperty("sha256").GetString()??"",e.TryGetProperty("releaseNotes",out var n)?n.GetString()??"": "",files);
     }
 
@@ -64,7 +70,6 @@ public sealed class LauncherUpdateService
         foreach(var rel in allowed)
             if(!extracted.Contains(rel)) throw new InvalidDataException($"Arquivo listado no manifesto não encontrado no pacote: {rel}");
 
-        // Use an encoded PowerShell payload so paths cannot inject CMD metacharacters.
         static string PsQuote(string value) => "'" + value.Replace("'","''") + "'";
         var ps=new StringBuilder();
         foreach(var rel in extracted)
@@ -102,7 +107,7 @@ public sealed class LauncherUpdateService
         var part=path+".download"; var offset=File.Exists(part)?new FileInfo(part).Length:0L;
         using var req=new HttpRequestMessage(HttpMethod.Get,url); if(offset>0) req.Headers.Range=new(offset,null);
         using var res=await Http.SendAsync(req,HttpCompletionOption.ResponseHeadersRead,token);
-        if(offset>0&&res.StatusCode==System.Net.HttpStatusCode.RequestedRangeNotSatisfiable){File.Delete(part);offset=0;throw new IOException("Servidor rejeitou retomada; tente novamente.");}
+        if(offset>0&&res.StatusCode==System.Net.HttpStatusCode.RequestedRangeNotSatisfiable){File.Delete(part);throw new IOException("Servidor rejeitou retomada; tente novamente.");}
         res.EnsureSuccessStatusCode(); var append=offset>0&&res.StatusCode==System.Net.HttpStatusCode.PartialContent;
         if(!append)offset=0;
         var total=append?res.Content.Headers.ContentRange?.Length:res.Content.Headers.ContentLength;
