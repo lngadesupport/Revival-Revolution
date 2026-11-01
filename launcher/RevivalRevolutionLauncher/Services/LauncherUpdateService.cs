@@ -178,6 +178,8 @@ public sealed class LauncherUpdateService
         CancellationToken token)
     {
         var backup = Path.Combine(root, "Launcher", "UpdateBackup");
+        var logs = Path.Combine(root, "Launcher", "Logs");
+        Directory.CreateDirectory(logs);
         var script = Path.Combine(root, "Launcher", "apply-update.cmd");
         var ps = new StringBuilder();
         ps.AppendLine("$ErrorActionPreference = 'Stop'");
