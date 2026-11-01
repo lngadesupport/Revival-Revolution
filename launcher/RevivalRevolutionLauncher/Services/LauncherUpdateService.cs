@@ -45,6 +45,7 @@ public sealed class LauncherUpdateService
             throw new InvalidOperationException("O manifesto deve vir da Release mais recente do repositório oficial Revival-Revolution no GitHub.");
 
         using var response = await GetManifestAsync(uri, token);
+        if (response is null) return null; // No stable release has been published yet.
         var manifestBytes = await ReadBoundedManifestAsync(response.Content, token);
         using var manifest = JsonDocument.Parse(manifestBytes);
         var data = manifest.RootElement;
@@ -141,9 +142,14 @@ public sealed class LauncherUpdateService
         return output.ToArray();
     }
 
-    private static async Task<HttpResponseMessage> GetManifestAsync(Uri uri, CancellationToken token)
+    private static async Task<HttpResponseMessage?> GetManifestAsync(Uri uri, CancellationToken token)
     {
         var response = await ManifestHttp.GetAsync(uri, token);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            response.Dispose();
+            return null;
+        }
         if (response.RequestMessage?.RequestUri?.Scheme != Uri.UriSchemeHttps)
         {
             response.Dispose();
