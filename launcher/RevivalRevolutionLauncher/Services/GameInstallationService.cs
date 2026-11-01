@@ -15,13 +15,18 @@ public sealed class GameInstallationService
         if (!File.Exists(scriptPath)) throw new FileNotFoundException("Script offline não encontrado.", scriptPath);
         var logDirectory = Path.Combine(workingDirectory, "Launcher", "Logs");
         Directory.CreateDirectory(logDirectory);
-        var logPath = Path.Combine(logDirectory, $"launcher-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+        var logPath = Path.Combine(logDirectory, $"launcher-{DateTime.Now:yyyyMMdd-HHmmss-fff}.log");
         var writeLock = new object();
 
         void WriteLog(string message)
         {
-            lock (writeLock)
-                File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+            try
+            {
+                lock (writeLock)
+                    File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         var start = new ProcessStartInfo(pythonExe)
@@ -46,9 +51,12 @@ public sealed class GameInstallationService
             process.BeginErrorReadLine();
             _ = Task.Run(() =>
             {
-                process.WaitForExit();
-                WriteLog($"Processo encerrado (código {process.ExitCode}).");
-                process.Dispose();
+                try
+                {
+                    process.WaitForExit();
+                    WriteLog($"Processo encerrado (código {process.ExitCode}).");
+                }
+                finally { process.Dispose(); }
             });
         }
         catch
