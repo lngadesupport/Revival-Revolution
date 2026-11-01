@@ -12,7 +12,7 @@ public sealed class LauncherUpdateService
     private readonly DownloadService _downloads = new();
     private static readonly HttpClient ManifestHttp = new() { Timeout = TimeSpan.FromMinutes(2) };
 
-    private static async Task<HttpResponseMessage> _downloadsHttpGet(Uri uri, CancellationToken token)
+    private static async Task<HttpResponseMessage> GetManifestAsync(Uri uri, CancellationToken token)
     {
         var response = await ManifestHttp.GetAsync(uri, token);
         if (response.RequestMessage?.RequestUri?.Scheme != Uri.UriSchemeHttps)
@@ -103,7 +103,7 @@ public sealed class LauncherUpdateService
     private static void ValidateRelativePath(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("Caminho vazio no manifesto/pacote.");
-        var normalized = path.Replace('\\\\', '/');
+        var normalized = path.Replace('\\', '/');
         var parts = normalized.Split('/');
         var reserved = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
@@ -115,7 +115,7 @@ public sealed class LauncherUpdateService
 
     private static bool IsProtectedPath(string rel)
     {
-        var path = rel.Replace('\\\\', '/');
+        var path = rel.Replace('\\', '/');
         return path.StartsWith("Metal Revolution/", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("ufo_Data/", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("Launcher/Downloads/", StringComparison.OrdinalIgnoreCase) ||
