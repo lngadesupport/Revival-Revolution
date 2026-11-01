@@ -12,6 +12,7 @@ public partial class MainWindow : Window
     private readonly LauncherConfigService _config = new();
     private readonly PythonRuntimeService _python = new();
     private readonly GamePackageInstallerService _installer = new();
+    private readonly GameInstallationService _gameInstallation = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly LauncherUpdateService _updates = new();
     private string? _gameFolder;
@@ -54,31 +55,31 @@ public partial class MainWindow : Window
         if (_busy) return;
         if (!IsValidFolder(_gameFolder))
         {
-            MessageBox.Show(this, "Escolha primeiro a pasta correta do jogo.", "Pasta não configurada", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "Escolha primeiro a pasta correta do jogo.", "Pasta não configurada",
+                MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
+
         var script = Path.Combine(_root, "offline_launcher.py");
-        if (!File.Exists(script)) { Log("offline_launcher.py não encontrado na raiz da distribuição."); return; }
+        if (!File.Exists(script))
+        {
+            Log("offline_launcher.py não encontrado na raiz da distribuição.");
+            FooterStatus.Text = "Script de inicialização ausente.";
+            return;
+        }
+
         var python = _python.FindRuntime(_root);
-        if (python is null)
+        if (python is null && MessageBox.Show(this, "O Python portátil não está instalado. Deseja baixá-lo agora?",
+            "Runtime necessário", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        await RunBusyAsync("Preparando inicialização...", async token =>
         {
-            var answer = MessageBox.Show(this, "O Python portátil não está instalado. Deseja baixá-lo agora?", "Runtime necessário", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (answer != MessageBoxResult.Yes) return;
-            await RunBusyAsync("Preparando Python portátil...", async token =>
-            {
-                python = await _python.InstallAsync(_root, CreateProgress(), token);
-            });
-            if (python is null) return;
-        }
-        try
-        {
-            var psi = new ProcessStartInfo(python) { WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true };
-            psi.ArgumentList.Add("-u"); psi.ArgumentList.Add(script);
-            Process.Start(psi);
-            Log("Inicialização offline solicitada ao script original.");
-            FooterStatus.Text = "Inicialização enviada ao offline_launcher.py.";
-        }
-        catch (Exception ex) { Log($"Falha ao iniciar: {ex.Message}"); }
+            python ??= await _python.InstallAsync(_root, CreateProgress(), token);
+            _gameInstallation.StartOffline(python, script, _root);
+            Log("Inicialização offline iniciada. Os detalhes do processo estão em Launcher\\Logs.");
+            FooterStatus.Text = "Jogo em inicialização.";
+        });
     }
 
     private void Install_Click(object sender, RoutedEventArgs e)
