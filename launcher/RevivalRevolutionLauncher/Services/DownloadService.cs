@@ -1,128 +1,81 @@
-using System.Net.Http;
 using System.Net;
 using System.Net.Http.Headers;
 
 namespace RevivalRevolution.Services;
 
-public sealed class DownloadProgress
+public sealed record DownloadProgress(string FileName, long BytesReceived, long? TotalBytes, bool IsResuming = false)
 {
-    public string FileName { get; init; } = "";
-    public long BytesReceived { get; init; }
-    public long? TotalBytes { get; init; }
     public double? Percent => TotalBytes is > 0 ? BytesReceived * 100d / TotalBytes.Value : null;
-    public bool IsResuming { get; init; }
 }
 
 public sealed class DownloadService
 {
     private static readonly HttpClient Client = new(new HttpClientHandler
     {
-        AutomaticDecompression = DecompressionMethods.None
-    })
-    {
-        Timeout = Timeout.InfiniteTimeSpan
-    };
+        AutomaticDecompression = DecompressionMethods.None,
+        AllowAutoRedirect = true
+    }) { Timeout = Timeout.InfiniteTimeSpan };
 
-    public async Task DownloadAsync(string url, string destination, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+    public Task DownloadAsync(string url, string destination, IProgress<DownloadProgress>? progress, CancellationToken token)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
             throw new ArgumentException("A URL de download deve usar HTTPS.", nameof(url));
-        await DownloadHttpAsync(uri, destination, progress, cancellationToken);
+        return DownloadAsync(uri, destination, progress, token);
     }
 
-    private static async Task DownloadHttpAsync(Uri uri, string destination, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+    public Task DownloadPixeldrainAsync(string fileId, string destination, IProgress<DownloadProgress>? progress, CancellationToken token)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
-        var partial = destination + ".download";
-        var existing = File.Exists(partial) ? new FileInfo(partial).Length : 0L;
-        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        if (existing > 0) request.Headers.Range = new RangeHeaderValue(existing, null);
-        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        if (existing > 0 && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
-        {
-            File.Delete(partial);
-            throw new IOException("O servidor rejeitou a retomada; execute o download novamente.");
-        }
-        response.EnsureSuccessStatusCode();
-        var append = existing > 0 && response.StatusCode == HttpStatusCode.PartialContent;
-        if (!append) existing = 0;
-        var total = append && response.Content.Headers.ContentRange?.Length is long full ? full : response.Content.Headers.ContentLength;
-        await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await using (var output = new FileStream(partial, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, FileOptions.Asynchronous))
-        {
-            var buffer = new byte[1024 * 1024]; long received = existing; int read;
-            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
-            {
-                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken); received += read;
-                progress?.Report(new DownloadProgress { FileName = Path.GetFileName(destination), BytesReceived = received, TotalBytes = total, IsResuming = append });
-            }
-            await output.FlushAsync(cancellationToken);
-        }
-        if (total is long expected && new FileInfo(partial).Length != expected)
-            throw new IOException("Download incompleto; execute novamente para retomar.");
-        File.Move(partial, destination, true);
-    }
-
-    public async Task DownloadPixeldrainAsync(
-        string fileId,
-        string destination,
-        IProgress<DownloadProgress>? progress,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(fileId) || fileId.Any(c => !char.IsLetterOrDigit(c)))
+        if (string.IsNullOrWhiteSpace(fileId) || fileId.Any(c => !char.IsAsciiLetterOrDigit(c)))
             throw new ArgumentException("Identificador Pixeldrain inválido.", nameof(fileId));
+        return DownloadAsync(new Uri($"https://pixeldrain.com/api/file/{fileId}?download"), destination, progress, token);
+    }
 
-        var url = $"https://pixeldrain.com/api/file/{fileId}?download";
+    private static async Task DownloadAsync(Uri uri, string destination, IProgress<DownloadProgress>? progress, CancellationToken token)
+    {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
         var partial = destination + ".download";
-        var existing = File.Exists(partial) ? new FileInfo(partial).Length : 0L;
+        var offset = File.Exists(partial) ? new FileInfo(partial).Length : 0L;
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        if (existing > 0) request.Headers.Range = new RangeHeaderValue(existing, null);
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        if (offset > 0) request.Headers.Range = new RangeHeaderValue(offset, null);
+        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
-        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.RequestMessage?.RequestUri?.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("O servidor redirecionou o download para uma conexão que não usa HTTPS.");
 
-        var append = existing > 0 && response.StatusCode == HttpStatusCode.PartialContent;
-        if (existing > 0 && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+        if (offset > 0 && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
         {
             File.Delete(partial);
-            await DownloadPixeldrainAsync(fileId, destination, progress, cancellationToken);
-            return;
+            throw new IOException("O servidor rejeitou a retomada. O arquivo parcial foi descartado; tente novamente.");
         }
+
         response.EnsureSuccessStatusCode();
-        if (existing > 0 && !append) existing = 0;
+        var append = offset > 0 && response.StatusCode == HttpStatusCode.PartialContent;
+        if (append && response.Content.Headers.ContentRange?.From != offset)
+            throw new IOException("O servidor respondeu com um intervalo diferente do solicitado.");
+        if (!append) offset = 0;
 
-        var responseLength = response.Content.Headers.ContentLength;
         var total = append && response.Content.Headers.ContentRange?.Length is long fullLength
-            ? fullLength
-            : responseLength;
+            ? fullLength : response.Content.Headers.ContentLength;
 
-        await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await using (var output = new FileStream(partial,
-            append ? FileMode.Append : FileMode.Create,
+        await using var input = await response.Content.ReadAsStreamAsync(token);
+        await using (var output = new FileStream(partial, append ? FileMode.Append : FileMode.Create,
             FileAccess.Write, FileShare.None, 1024 * 1024, FileOptions.Asynchronous))
         {
             var buffer = new byte[1024 * 1024];
-            long received = existing;
+            var received = offset;
             int read;
-            while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+            while ((read = await input.ReadAsync(buffer.AsMemory(), token)) > 0)
             {
-                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                await output.WriteAsync(buffer.AsMemory(0, read), token);
                 received += read;
-                progress?.Report(new DownloadProgress
-                {
-                    FileName = Path.GetFileName(destination),
-                    BytesReceived = received,
-                    TotalBytes = total,
-                    IsResuming = append
-                });
+                progress?.Report(new(Path.GetFileName(destination), received, total, append));
             }
-            await output.FlushAsync(cancellationToken);
+            await output.FlushAsync(token);
         }
 
-        var finalLength = new FileInfo(partial).Length;
-        if (total is long expected && finalLength != expected)
-            throw new IOException($"Download incompleto: recebidos {finalLength} de {expected} bytes. Execute novamente para continuar.");
+        if (total is long expected && new FileInfo(partial).Length != expected)
+            throw new IOException("Download incompleto; execute novamente para retomar.");
 
         File.Move(partial, destination, true);
     }
