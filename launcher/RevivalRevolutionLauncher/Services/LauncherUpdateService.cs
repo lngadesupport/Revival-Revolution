@@ -198,17 +198,17 @@ public sealed class LauncherUpdateService
             var source = Path.Combine(staging, relative.Replace('/', Path.DirectorySeparatorChar));
             var destination = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
             ps.AppendLine($"  $src = {PsQuote(source)}; $dst = {PsQuote(destination)}; $bak = Join-Path $backup {PsQuote(relative)}");
+            ps.AppendLine($"  if (Test-Path -LiteralPath $dst) {{ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bak) | Out-Null; Move-Item -LiteralPath $dst -Destination $bak -Force }}");
             ps.AppendLine($"  $processed.Add({PsQuote(relative)})");
-            ps.AppendLine("  if (Test-Path -LiteralPath $dst) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bak) | Out-Null; Move-Item -LiteralPath $dst -Destination $bak -Force }");
             ps.AppendLine("  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null");
             ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
-        ps.AppendLine("  Remove-Item -LiteralPath $backup -Recurse -Force");
-        ps.AppendLine("  Remove-Item -LiteralPath $stage -Recurse -Force");
         ps.AppendLine("} catch {");
         ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
         ps.AppendLine("  throw");
         ps.AppendLine("}");
+        ps.AppendLine("Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue");
+        ps.AppendLine("Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue");
 
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(ps.ToString()));
         var log = Path.Combine(root, "Launcher", "Logs", "update-error.log");
