@@ -62,6 +62,7 @@ public sealed class LauncherDiagnosticService
     private static void Check(List<DiagnosticItem> list, string name, string? path, bool directory = false)
     {
         var exists = path is not null && (directory ? Directory.Exists(path) : File.Exists(path));
-        list.Add(new(name, exists, exists ? path! : path ?? "Caminho não configurado"));
+        var detail = exists ? path! : path is null ? "Caminho não configurado" : "Não encontrado: " + path;
+        list.Add(new(name, exists, detail));
     }
 }
