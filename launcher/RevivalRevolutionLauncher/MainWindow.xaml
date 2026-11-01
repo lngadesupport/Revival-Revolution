@@ -58,7 +58,7 @@
 
         <DockPanel Grid.Row="0" Margin="0,0,0,22">
             <StackPanel>
-                <TextBlock Text="REVIVAL REVOLUTION" FontSize="25" FontWeight="Bold" LetterSpacing="1"/>
+                <TextBlock Text="REVIVAL REVOLUTION" FontSize="25" FontWeight="Bold"/>
                 <TextBlock Text="METAL REVOLUTION  •  COMMUNITY LAUNCHER"
                            Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="1,5,0,0"/>
             </StackPanel>
@@ -172,7 +172,7 @@
         <DockPanel Grid.Row="2" Margin="2,15,2,0">
             <TextBlock Text="REVIVAL REVOLUTION  •  WINDOWS X64" Foreground="#687487"
                        FontSize="9" VerticalAlignment="Center"/>
-            <TextBlock Grid.Column="1" x:Name="FooterStatus"
+            <TextBlock x:Name="FooterStatus"
                        Text="Selecione a pasta que contém ufo.exe."
                        Foreground="{StaticResource MutedBrush}" FontSize="10"
                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
