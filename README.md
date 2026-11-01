@@ -12,11 +12,10 @@
 
 - Oferece um launcher Windows com interface WPF moderna, tema escuro e detalhes vermelhos.
 - Prepara um runtime Python portátil para executar os scripts do pacote sem exigir instalação global de Python.
-- Baixa os pacotes de distribuição configurados pelo mantenedor e extrai arquivos ZIP com proteção contra caminhos maliciosos.
-- Verifica arquivos por SHA-256 e permite reparar arquivos ausentes ou alterados quando o manifesto corresponde ao pacote.
 - Executa o fluxo offline existente por meio de `offline_launcher.py`.
 - Reúne diagnósticos para arquivos, scripts, DLLs, runtime e instalação.
 - Prepara um mecanismo de atualização do launcher baseado em manifesto HTTPS.
+- Mantém instalação/reparo automático de pacotes do jogo desabilitados até que hashes SHA-256 dos arquivos ZIP sejam autenticados por canal independente. Um manifesto de checksums dentro do próprio ZIP não prova a autenticidade do pacote.
 - Documenta a integração multiplayer comunitária, que permanece experimental e depende das bridges/scripts já presentes na distribuição.
 
 ## Estrutura
@@ -44,7 +43,7 @@ O pacote self-contained inclui o runtime .NET necessário. O SDK só é necessá
 
 ## Configuração antes de uma versão pública
 
-1. Conferir os IDs e o formato real dos pacotes de distribuição antes de habilitar a instalação automática.
+1. Obter e publicar hashes SHA-256 confiáveis dos pacotes de distribuição por canal independente dos ZIPs.
 2. Conferir o formato e os caminhos de `SHA256SUMS.json` contra os ZIPs reais.
 3. Hospedar o manifesto e o pacote de atualização em HTTPS e substituir o endereço de exemplo em `launcher-update.json`.
 4. Executar build, instalação, reparo, inicialização offline e diagnóstico em Windows x64.
@@ -64,4 +63,4 @@ Os scripts, bridges e DLLs existentes da distribuição não devem ser substitu�
 
 ## Estado de validação
 
-O código foi preparado para .NET 8 WPF. A compilação e os testes finais precisam ser executados em Windows com o SDK instalado. Não declare uma versão como pronta para distribuição até que o workflow completo seja validado com os pacotes reais e a instalação-alvo.
+O código WPF foi compilado com sucesso pelo workflow Windows do GitHub Actions no commit registrado na PR. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. Não declare uma versão como pronta para distribuição até que esses testes sejam concluídos.
