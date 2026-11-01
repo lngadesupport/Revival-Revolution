@@ -41,11 +41,11 @@ dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.cs
 
 O pacote self-contained inclui o runtime .NET necessário. O SDK só é necessário na máquina que compila. O single-file não é forçado por causa das particularidades de WPF e componentes nativos.
 
-## Configuração antes de uma versão pública
+## Atualizações do launcher\n\nO launcher consulta automaticamente as GitHub Releases ao iniciar. Para publicar uma versão, crie uma tag `vX.Y.Z` sobre um commit já integrado à `main`; o workflow publica o ZIP self-contained e o manifesto com SHA-256. Tags com sufixo, como `v0.7.0-rc.1`, são publicadas como pré-lançamentos e não substituem a Release estável mais recente. Consulte `launcher/RevivalRevolutionLauncher/README.md` para o procedimento.\n\n## Configuração antes de uma versão pública
 
 1. Obter e publicar hashes SHA-256 confiáveis dos pacotes de distribuição por canal independente dos ZIPs.
 2. Conferir o formato e os caminhos de `SHA256SUMS.json` contra os ZIPs reais.
-3. Hospedar o manifesto e o pacote de atualização em HTTPS e substituir o endereço de exemplo em `launcher-update.json`.
+3. O atualizador consulta o manifesto oficial em `https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json`; publique versões com tags `vX.Y.Z` somente depois que o commit estiver integrado à `main`.
 4. Executar build, preparação do Python portátil, inicialização offline e diagnóstico em Windows x64. A instalação/reparação automática só deve ser reativada após autenticação dos pacotes.
 5. Testar multiplayer em duas máquinas independentes. O rollback/netplay não deve ser anunciado como universalmente compatível.
 
