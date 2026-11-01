@@ -13,6 +13,8 @@ public partial class MainWindow : Window
     private readonly PythonRuntimeService _python = new();
     private readonly GameLaunchService _gameLaunch = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
+    private readonly DistributionLocator _distributionLocator = new();
+    private string? _distributionRoot;
     private readonly LauncherUpdateService _updates = new();
     private string? _gameFolder;
     private bool _busy;
@@ -24,6 +26,7 @@ public partial class MainWindow : Window
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
+        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
         GameFolderBox.Text = _gameFolder ?? "Pasta não selecionada";
         Log("Revival Revolution Launcher iniciado.");
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
@@ -42,8 +45,9 @@ public partial class MainWindow : Window
             return;
         }
         _gameFolder = folder;
+        _distributionRoot = _distributionLocator.Find(_root, folder);
         GameFolderBox.Text = folder;
-        _config.SaveGameFolder(_root, folder);
+        _config.SaveGameFolder(_root, folder, _distributionRoot);
         FooterStatus.Text = "Pasta do jogo salva.";
         Log($"Pasta selecionada: {folder}");
     }
@@ -58,11 +62,52 @@ public partial class MainWindow : Window
             return;
         }
 
-        var script = Path.Combine(_root, "offline_launcher.py");
-        if (!File.Exists(script))
+        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        if (_distributionRoot is null)
         {
-            Log("offline_launcher.py não encontrado na raiz da distribuição.");
-            FooterStatus.Text = "Script de inicialização ausente.";
+            Log("Distribuição incompleta: não encontrei offline_launcher.py junto ao launcher nem na pasta acima do jogo.");
+            FooterStatus.Text = "Arquivos de inicialização ausentes.";
+            MessageBox.Show(this,
+                "Não encontrei os scripts da distribuição (offline_launcher.py, inject_offline.py e inject_overlay.py). " +
+                "Mantenha esses arquivos na pasta do launcher ou na pasta que contém a pasta do jogo.",
+                "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var script = Path.Combine(_distributionRoot, "offline_launcher.py");
+        var requiredScripts = new[] { "inject_offline.py", "inject_overlay.py" };
+        var missingScripts = requiredScripts.Where(name => !File.Exists(Path.Combine(_distributionRoot, name))).ToArray();
+        if (missingScripts.Length > 0)
+        {
+            Log("Scripts essenciais ausentes: " + string.Join(", ", missingScripts));
+            MessageBox.Show(this, "A distribuição está incompleta. Faltam: " + string.Join(", ", missingScripts),
+                "Arquivos ausentes", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var offlineBridge = new[] {
+            Path.Combine(_distributionRoot, "MetalOfflineBridgeImGuiV3.dll"),
+            Path.Combine(_gameFolder!, "MetalOfflineBridgeImGuiV3.dll")
+        }.FirstOrDefault(File.Exists);
+        if (offlineBridge is null)
+        {
+            Log("MetalOfflineBridgeImGuiV3.dll não encontrado na distribuição nem na pasta do jogo.");
+            MessageBox.Show(this, "A bridge offline (MetalOfflineBridgeImGuiV3.dll) não foi encontrada. Não é seguro iniciar.",
+                "Dependência ausente", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var managedPath = Path.Combine(_gameFolder!, "ufo_Data", "Managed");
+        var emptyManagedDlls = Directory.EnumerateFiles(managedPath, "*.dll")
+            .Where(path => new FileInfo(path).Length == 0).Select(Path.GetFileName).ToArray();
+        if (emptyManagedDlls.Length > 0)
+        {
+            var detail = string.Join(", ", emptyManagedDlls);
+            Log("Inicialização bloqueada: DLLs vazias em Managed: " + detail);
+            MessageBox.Show(this,
+                "A instalação do jogo contém DLLs vazias em ufo_Data\\Managed: " + detail +
+                ". Restaure esses arquivos de uma instalação íntegra antes de iniciar.",
+                "Instalação do jogo incompleta", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -74,7 +119,8 @@ public partial class MainWindow : Window
         await RunBusyAsync("Preparando inicialização...", async token =>
         {
             python ??= await _python.InstallAsync(_root, CreateProgress(), token);
-            _gameLaunch.StartOffline(python, script, _root);
+            _config.SaveGameFolder(_root, _gameFolder!, _distributionRoot);
+            _gameLaunch.StartOffline(python, script, _distributionRoot!);
             Log("Inicialização offline iniciada. Os detalhes do processo estão em Launcher\\Logs.");
             FooterStatus.Text = "Jogo em inicialização.";
         });
@@ -98,6 +144,7 @@ public partial class MainWindow : Window
         await RunBusyAsync("Executando diagnóstico...", async token =>
         {
             var python = _python.FindRuntime(_root);
+            _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
             var items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python), token);
             foreach (var item in items) Log($"{(item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
             FooterStatus.Text = $"Diagnóstico: {items.Count(x => x.Passed)}/{items.Count} verificações aprovadas.";
