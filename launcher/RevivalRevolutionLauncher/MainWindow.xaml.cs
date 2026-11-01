@@ -8,7 +8,7 @@ namespace RevivalRevolution;
 
 public partial class MainWindow : Window
 {
-    private readonly string _root = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+    private readonly string _root = Path.GetFullPath(AppContext.BaseDirectory);
     private readonly LauncherConfigService _config = new();
     private readonly PythonRuntimeService _python = new();
     private readonly GameInstallationService _gameInstallation = new();
@@ -93,12 +93,12 @@ public partial class MainWindow : Window
     private async void Diagnostics_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        await RunBusyAsync("Executando diagnóstico...", token =>
+        await RunBusyAsync("Executando diagnóstico...", async token =>
         {
-            var items = _diagnostics.Run(_root, _gameFolder, _python.FindRuntime(_root));
+            var python = _python.FindRuntime(_root);
+            var items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python), token);
             foreach (var item in items) Log($"{(item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
             FooterStatus.Text = $"Diagnóstico: {items.Count(x => x.Passed)}/{items.Count} verificações aprovadas.";
-            return Task.CompletedTask;
         });
     }
 
