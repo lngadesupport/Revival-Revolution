@@ -35,21 +35,21 @@ public sealed class GameInstallationService
         start.ArgumentList.Add("-u");
         start.ArgumentList.Add(scriptPath);
 
-        var process = new Process { StartInfo = start, EnableRaisingEvents = true };
+        var process = new Process { StartInfo = start };
         process.OutputDataReceived += (_, e) => { if (e.Data is not null) WriteLog(e.Data); };
         process.ErrorDataReceived += (_, e) => { if (e.Data is not null) WriteLog("ERROR: " + e.Data); };
-        process.Exited += (_, _) =>
-        {
-            WriteLog($"Processo encerrado (código {process.ExitCode}).");
-            process.Dispose();
-        };
-
         try
         {
             if (!process.Start()) throw new InvalidOperationException("O Windows não conseguiu iniciar o processo Python.");
             WriteLog($"Inicialização solicitada (PID {process.Id}).");
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
+            _ = Task.Run(() =>
+            {
+                process.WaitForExit();
+                WriteLog($"Processo encerrado (código {process.ExitCode}).");
+                process.Dispose();
+            });
         }
         catch
         {
