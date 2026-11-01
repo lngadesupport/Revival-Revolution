@@ -3,8 +3,12 @@ using System.Net.Http.Headers;
 
 namespace RevivalRevolution.Services;
 
-public sealed record DownloadProgress(string FileName, long BytesReceived, long? TotalBytes, bool IsResuming = false)
+public sealed class DownloadProgress
 {
+    public string FileName { get; init; } = "";
+    public long BytesReceived { get; init; }
+    public long? TotalBytes { get; init; }
+    public bool IsResuming { get; init; }
     public double? Percent => TotalBytes is > 0 ? BytesReceived * 100d / TotalBytes.Value : null;
 }
 
@@ -69,7 +73,7 @@ public sealed class DownloadService
             {
                 await output.WriteAsync(buffer.AsMemory(0, read), token);
                 received += read;
-                progress?.Report(new(Path.GetFileName(destination), received, total, append));
+                progress?.Report(new() { FileName = Path.GetFileName(destination), BytesReceived = received, TotalBytes = total, IsResuming = append });
             }
             await output.FlushAsync(token);
         }
