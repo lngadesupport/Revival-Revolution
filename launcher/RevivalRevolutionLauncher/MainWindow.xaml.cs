@@ -11,7 +11,6 @@ public partial class MainWindow : Window
     private readonly string _root = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
     private readonly LauncherConfigService _config = new();
     private readonly PythonRuntimeService _python = new();
-    private readonly GamePackageInstallerService _installer = new();
     private readonly GameInstallationService _gameInstallation = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly LauncherUpdateService _updates = new();
