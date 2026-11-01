@@ -140,7 +140,7 @@ public partial class MainWindow : Window
                 throw new InvalidDataException("Manifesto remoto incompleto: packageUrl/files ausentes.");
 
             var choice = MessageBox.Show(this,
-                $"A versão {update.Version} está disponível.\\n\\n{update.ReleaseNotes}\\n\\nDeseja baixar e instalar agora?",
+                $"A versão {update.Version} está disponível.\n\n{update.ReleaseNotes}\n\nDeseja baixar e instalar agora?",
                 "Atualização disponível", MessageBoxButton.YesNo, MessageBoxImage.Information);
             if (choice != MessageBoxResult.Yes)
             {
