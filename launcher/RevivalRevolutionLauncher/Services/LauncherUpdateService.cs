@@ -2,7 +2,6 @@ using System.Text;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Reflection;
 
 namespace RevivalRevolution.Services;
 
@@ -32,7 +31,7 @@ public sealed class LauncherUpdateService
         var url=cfg.RootElement.GetProperty("manifestUrl").GetString();
         if(!Uri.TryCreate(url,UriKind.Absolute,out var uri) || uri.Scheme!="https" || uri.Host.Contains("SEU-DOMINIO",StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Configure manifestUrl HTTPS válido em launcher-update.json.");
-        using var response=await _downloadsHttpGet(uri,token);
+        using var response=await GetManifestAsync(uri,token);
         using var doc=JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
         var e=doc.RootElement;
         var versionText=e.GetProperty("version").GetString()??"0";
