@@ -27,7 +27,7 @@ public sealed class LauncherUpdateService
     private static readonly HashSet<string> ProtectedFiles = new(StringComparer.OrdinalIgnoreCase)
     {
         "launcher-update.json", "launcher-config.json", "python-runtime.txt", "autopunch-config.json",
-        "offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalNetplayBridge.cs",
+        "Launcher/apply-update.cmd", "offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalNetplayBridge.cs",
         "MetalOfflineBridgeImGui.cs", "SHA256SUMS.json"
     };
 
