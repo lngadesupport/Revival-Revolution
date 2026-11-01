@@ -27,17 +27,16 @@ public sealed class LauncherConfigService
             {
                 if (!File.Exists(path)) continue;
                 var model = JsonSerializer.Deserialize<ConfigModel>(File.ReadAllText(path));
-                if (!string.IsNullOrWhiteSpace(model?.game_folder))
-                {
-                    var configured = Environment.ExpandEnvironmentVariables(model.game_folder);
-                    if (Path.IsPathRooted(configured) && Directory.Exists(configured))
-                        return configured;
-                }
+                var configured = model?.game_folder;
+                if (string.IsNullOrWhiteSpace(configured)) continue;
+
+                configured = Environment.ExpandEnvironmentVariables(configured);
+                if (Path.IsPathRooted(configured) && Directory.Exists(configured))
+                    return Path.GetFullPath(configured);
             }
-            catch
-            {
-                // A damaged or foreign-PC config is ignored; the user can select the folder.
-            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            catch (JsonException) { }
         }
 
         var bundledGame = Path.Combine(root, "Metal Revolution");
@@ -46,15 +45,22 @@ public sealed class LauncherConfigService
 
     public void SaveGameFolder(string root, string folder)
     {
-        var directory = Path.GetDirectoryName(ConfigPath(root))!;
-        Directory.CreateDirectory(directory);
-        var json = JsonSerializer.Serialize(new ConfigModel { game_folder = folder },
+        if (!Directory.Exists(folder)) throw new DirectoryNotFoundException(folder);
+        var json = JsonSerializer.Serialize(
+            new ConfigModel { game_folder = Path.GetFullPath(folder) },
             new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(ConfigPath(root), json);
 
-        // The existing Python bootstrap reads launcher-config.json from its own directory.
-        // Keep that compatibility file updated while the new launcher owns the UI.
-        var legacyPath = Path.Combine(root, "launcher-config.json");
-        File.WriteAllText(legacyPath, json);
+        WriteAtomic(ConfigPath(root), json);
+        // The original Python bootstrap still reads this compatibility file.
+        WriteAtomic(Path.Combine(root, "launcher-config.json"), json);
+    }
+
+    private static void WriteAtomic(string path, string content)
+    {
+        var directory = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(directory);
+        var temporary = path + ".tmp";
+        File.WriteAllText(temporary, content);
+        File.Move(temporary, path, true);
     }
 }
