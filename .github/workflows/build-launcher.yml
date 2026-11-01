@@ -28,6 +28,12 @@ jobs:
         run: dotnet build .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --no-restore
       - name: Publish self-contained Windows x64
         run: dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\RevivalRevolution-win-x64
+      - name: Verify published files
+        shell: pwsh
+        run: |
+          $publish = ".\\artifacts\\RevivalRevolution-win-x64"
+          if (!(Test-Path (Join-Path $publish "RevivalRevolution.exe"))) { throw "Launcher executable missing from publish output." }
+          if (!(Test-Path (Join-Path $publish "launcher-update.json"))) { throw "Updater configuration missing from publish output." }
       - name: Upload Windows launcher artifact
         uses: actions/upload-artifact@v4
         with:
