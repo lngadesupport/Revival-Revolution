@@ -24,7 +24,7 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $version = "\${{ github.ref_name }}".TrimStart('v')
+          $version = "${{ github.ref_name }}".TrimStart('v')
           if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw "Tag must be vMAJOR.MINOR.PATCH (optional revision)." }
           $parts = $version.Split('.')
           if ($parts.Length -eq 3) { $assemblyVersion = "$version.0" } else { $assemblyVersion = $version }
@@ -37,7 +37,7 @@ jobs:
       - name: Publish self-contained Windows x64 and package
         shell: pwsh
         run: |
-          dotnet publish ./launcher/RevivalRevolutionLauncher/RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=\${{ steps.version.outputs.version }} -p:AssemblyVersion=\${{ steps.version.outputs.assembly_version }} -p:FileVersion=\${{ steps.version.outputs.assembly_version }} -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o ./artifacts/RevivalRevolution-win-x64
+          dotnet publish ./launcher/RevivalRevolutionLauncher/RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=${{ steps.version.outputs.version }} -p:AssemblyVersion=${{ steps.version.outputs.assembly_version }} -p:FileVersion=${{ steps.version.outputs.assembly_version }} -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o ./artifacts/RevivalRevolution-win-x64
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
           $publish = (Resolve-Path ./artifacts/RevivalRevolution-win-x64).Path
           if (!(Test-Path (Join-Path $publish "RevivalRevolution.exe"))) { throw "Launcher executable missing." }
@@ -46,7 +46,7 @@ jobs:
           $hash = (Get-FileHash "./artifacts/RevivalRevolution-win-x64.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           $files = Get-ChildItem $publish -File -Recurse | ForEach-Object { $_.FullName.Substring($publish.Length + 1).Replace('\','/') } | Sort-Object
           $manifest = [ordered]@{
-            version = "\${{ steps.version.outputs.version }}"
+            version = "${{ steps.version.outputs.version }}"
             packageUrl = "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/RevivalRevolution-win-x64.zip"
             sha256 = $hash
             releaseNotes = "Consulte as notas desta versão nas Releases do GitHub."
@@ -57,9 +57,9 @@ jobs:
       - name: Publish GitHub Release and updater assets
         uses: softprops/action-gh-release@v2
         with:
-          name: Revival Revolution Launcher \${{ steps.version.outputs.version }}
+          name: Revival Revolution Launcher ${{ steps.version.outputs.version }}
           generate_release_notes: true
-          make_latest: \${{ !contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
           files: |
             artifacts/RevivalRevolution-win-x64.zip
             artifacts/launcher-update.json
