@@ -1,0 +1,14 @@
+# Visual Studio / .NET
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.cache
+
+# Launcher runtime/downloads and local game files
+Launcher/Runtime/
+Launcher/Downloads/
+Launcher/Logs/
+Metal Revolution/
+*.download
