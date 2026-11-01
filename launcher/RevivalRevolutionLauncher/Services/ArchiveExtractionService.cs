@@ -4,6 +4,11 @@ namespace RevivalRevolution.Services;
 
 public sealed class ArchiveExtractionService
 {
+    private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
     private const int MaxEntries = 100_000;
     private const long MaxEntryBytes = 4L * 1024 * 1024 * 1024;
     private const long MaxTotalBytes = 20L * 1024 * 1024 * 1024;
@@ -71,7 +76,7 @@ public sealed class ArchiveExtractionService
     {
         if (string.IsNullOrWhiteSpace(path) || path.StartsWith('/') || path.Contains(':') ||
             path.Split('/').Any(part => part.Length == 0 || part is "." or ".." ||
-                part.EndsWith(' ') || part.EndsWith('.')))
+                part.EndsWith(' ') || part.EndsWith('.') || ReservedNames.Contains(part.Split('.')[0])))
             throw new InvalidDataException($"Caminho inseguro no ZIP: {entry.FullName}");
 
         var mode = (entry.ExternalAttributes >> 16) & 0xF000;
