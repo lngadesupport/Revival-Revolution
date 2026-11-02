@@ -173,8 +173,8 @@ public sealed class LauncherSettingsWindow : Window
         });
 
         AddSectionTitle(about, "CRÉDITOS");
-        AddCredit(about, "CRIADOR ORIGINAL", "@NC_KuroRaiden (Twitter / X)",
-            "https://twitter.com/NC_KuroRaiden");
+        AddCredit(about, "CRIADOR ORIGINAL DO PROJETO COMUNITÁRIO", "@NC_KuroRaiden (Twitter / X)",
+            "https://x.com/NC_KuroRaiden");
         AddCredit(about, "LAUNCHER • DESENVOLVIMENTO E MANUTENÇÃO", "@lngadesupport (GitHub)",
             "https://github.com/lngadesupport");
 
@@ -189,7 +189,7 @@ public sealed class LauncherSettingsWindow : Window
         });
         about.Children.Add(new TextBlock
         {
-            Text = "Projeto comunitário independente. Os créditos do criador original são mantidos; este launcher é uma interface complementar e não reivindica a autoria do jogo.",
+            Text = "Projeto comunitário independente. Os créditos do criador original são mantidos; este launcher é uma interface complementar e não reivindica a autoria do jogo Metal Revolution, desenvolvido por NEXT Studios.",
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 18, 0, 0),
             FontSize = 10,
