@@ -22,12 +22,12 @@ este servidor HTTP de desenvolvimento diretamente à internet.
   rating inicial e token bearer mostrado uma única vez.
 - `GET /v1/me` — próprio perfil (UUID, nickname, rating, avatar e estado online).
 - `POST /v1/account/rotate-token` — gera uma nova credencial e invalida imediatamente a anterior; guarde a resposta em armazenamento privado.
-- `GET /v1/players/{player_id}` — perfil público de outro jogador por UUID, incluindo avatar e estado online.
+- `GET /v1/players/{player_id}` — perfil público de outro jogador por UUID, incluindo estado online e indicador de foto.\n- `GET /v1/players/{player_id}/avatar` — recupera a foto sob demanda; listas não carregam imagens base64 em massa.
 - `POST /v1/profile` — atualiza `display_name` e/ou `avatar_data`.
   Avatar aceita data URL base64 PNG/JPEG/WebP de até 256 KiB; a assinatura
   binária é validada e enviar null limpa a foto.
-- `GET /v1/players/search?q=...` — busca jogadores por nickname (mínimo 2 caracteres), com avatar e estado online.
-- `GET /v1/friends` — amigos aceitos, solicitações recebidas e enviadas, com avatar e estado online.
+- `GET /v1/players/search?q=...` — busca jogadores por nickname (mínimo 2 caracteres), com indicador de foto e estado online.
+- `GET /v1/friends` — amigos aceitos, solicitações recebidas e enviadas, com indicador de foto e estado online.
 - `POST /v1/friends/request` — JSON `{"player_id":"UUID"}`; cria solicitação
   ou aceita automaticamente uma solicitação recíproca.
 - `POST /v1/friends/accept` — aceita solicitação recebida.
