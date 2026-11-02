@@ -46,10 +46,18 @@ O launcher não redistribui o jogo nem substitui os scripts/bridges originais.
 
 ## Publicar uma atualização pelo GitHub
 
-1. Atualize a versão em `Version`, `AssemblyVersion` e `FileVersion` do projeto, mantendo a versão do assembly em quatro partes (por exemplo, `0.7.0.0`).
+1. Atualize a versão em `Version`, `AssemblyVersion` e `FileVersion` do projeto, mantendo a versão do assembly em quatro partes (por exemplo, `0.7.2.0`).
 2. Faça merge da alteração aprovada na branch principal.
 3. Crie e envie uma tag estável no commit que deseja publicar, por exemplo: `git tag v0.6.1` e `git push origin v0.6.1`.
 4. O workflow `.github/workflows/publish-launcher-release.yml` compila o launcher self-contained em Windows x64, gera o ZIP, calcula SHA-256 e publica o ZIP e `launcher-update.json` como assets da GitHub Release.
 5. Ao abrir, instalações anteriores consultam o manifesto da Release mais recente e oferecem a atualização. O usuário confirma o download e a aplicação; o jogo e seus arquivos não são atualizados.
 
 A tag deve apontar para código já compilado e testado. O workflow exige a permissão `contents: write` fornecida pelo GitHub Actions. Releases preliminares não devem ser usadas para promover versões estáveis.
+
+
+## Versão 0.7.2
+
+- Refinamento do fluxo de atualização: aplicação em segundo plano, limpeza de staging após a substituição e reinicialização automática do launcher.
+- Em caso de falha durante a aplicação, o atualizador restaura os arquivos anteriores e tenta reabrir a versão restaurada; consulte `Launcher/Logs/update-error.log` se houver erro.
+- Layout com centro livre para preservar a arte de fundo e controles compactos nos cantos.
+- A versão 0.7.2 não altera nem repara arquivos proprietários do jogo; o fluxo offline original permanece preservado.
