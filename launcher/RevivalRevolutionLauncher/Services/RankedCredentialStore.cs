@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace RevivalRevolution.Services;
@@ -59,6 +60,12 @@ public sealed class RankedCredentialStore
         {
             return null;
         }
+    }
+
+    public bool HasStoredToken()
+    {
+        var stored = ReadStored();
+        return stored is not null && !string.IsNullOrWhiteSpace(stored.ProtectedToken);
     }
 
     public string LoadServerUrl()
