@@ -422,8 +422,10 @@ public partial class MainWindow : Window
             var python = _python.FindRuntime(_root);
             _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
             var items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python), token);
-            foreach (var item in items) Log($"{(item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
-            FooterStatus.Text = $"Diagnóstico: {items.Count(x => x.Passed)}/{items.Count} verificações aprovadas.";
+            foreach (var item in items)
+                Log($"{(item.Optional ? "INFO" : item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
+            var required = items.Where(item => !item.Optional).ToArray();
+            FooterStatus.Text = $"Diagnóstico: {required.Count(item => item.Passed)}/{required.Length} verificações essenciais aprovadas.";
         });
     }
 
