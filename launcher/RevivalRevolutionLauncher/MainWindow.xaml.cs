@@ -413,6 +413,27 @@ public partial class MainWindow : Window
         catch (Exception ex) { Log("ERRO ao atualizar: " + ex.Message); FooterStatus.Text = "Falha ao verificar/aplicar atualização."; }
     }
 
+    private void ShowUpdateProgress(string version)
+    {
+        UpdateVersionText.Text = $"Versão {version} pronta para instalação";
+        UpdateStageText.Text = "Conectando ao servidor oficial...";
+        UpdateProgressDetail.Text = "Aguardando início do download...";
+        UpdatePercentText.Text = "—";
+        UpdateProgressBar.Value = 0;
+        UpdateProgressBar.IsIndeterminate = true;
+        UpdateOverlay.Visibility = Visibility.Visible;
+        UpdateOverlay.Opacity = 0;
+        var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
+            TimeSpan.FromMilliseconds(260))
+        {
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            }
+        };
+        UpdateOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
+    }
+
     private async Task CheckForUpdatesAsync(bool automatic)
     {
         await RunBusyAsync("Verificando atualizações...", async token =>
@@ -437,7 +458,42 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var script = await _updates.DownloadAndStageAsync(_root, update, CreateProgress(), token);
+            ShowUpdateProgress(update.Version);
+            string script;
+            try
+            {
+                var progress = new Progress<DownloadProgress>(p =>
+                {
+                    UpdateProgressDetail.Text = $"{p.FileName}: {p.BytesReceived / 1048576d:F1} MB";
+                    if (p.Percent is double percent)
+                    {
+                        UpdateProgressBar.IsIndeterminate = false;
+                        UpdateProgressBar.Value = Math.Clamp(percent, 0, 100);
+                        UpdatePercentText.Text = $"{percent:F0}%";
+                        UpdateStageText.Text = "Baixando pacote de atualização...";
+                    }
+                    else
+                    {
+                        UpdateProgressBar.IsIndeterminate = true;
+                        UpdatePercentText.Text = "—";
+                    }
+                });
+
+                UpdateStageText.Text = "Baixando pacote de atualização...";
+                script = await _updates.DownloadAndStageAsync(_root, update, progress, token);
+                UpdateProgressBar.IsIndeterminate = false;
+                UpdateProgressBar.Value = 100;
+                UpdatePercentText.Text = "100%";
+                UpdateStageText.Text = "Download verificado e arquivos preparados.";
+                UpdateProgressDetail.Text = "SHA-256 validado • Preparação concluída";
+            }
+            catch
+            {
+                UpdateOverlay.Visibility = Visibility.Collapsed;
+                UpdateOverlay.Opacity = 0;
+                throw;
+            }
+
             Log("Atualização verificada e preparada. O launcher será fechado para aplicar os arquivos.");
             var apply = new ProcessStartInfo("cmd.exe") { WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true };
             apply.ArgumentList.Add("/c");
