@@ -2,181 +2,176 @@
         Loaded="Window_Loaded"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Revival Revolution" Height="760" Width="1220"
-        MinHeight="650" MinWidth="960" WindowStartupLocation="CenterScreen"
-        Background="#090B10" Foreground="#F4F5F7">
+        Title="Revival Revolution" Height="810" Width="1440"
+        MinHeight="700" MinWidth="1100" WindowStartupLocation="CenterScreen"
+        Background="#080911" Foreground="#FFFFFF">
     <Window.Resources>
-        <SolidColorBrush x:Key="PanelBrush" Color="#121722"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#9AA4B5"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#C52F3D"/>
+        <SolidColorBrush x:Key="Glass" Color="#B00A0B17"/>
+        <SolidColorBrush x:Key="Muted" Color="#C5C4D2"/>
+        <SolidColorBrush x:Key="Red" Color="#D52D3B"/>
         <Style TargetType="Button">
-            <Setter Property="Background" Value="#202A39"/>
-            <Setter Property="Foreground" Value="#F4F5F7"/>
-            <Setter Property="BorderBrush" Value="#344052"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#7610182A"/>
+            <Setter Property="BorderBrush" Value="#66FFFFFF"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="13,9"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="0,5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2B3749"/>
-                    <Setter Property="BorderBrush" Value="#596A82"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#151C27"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.45"/>
-                    <Setter Property="Cursor" Value="Arrow"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#B02B3149"/>
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#FFE04A58"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#DD9D1F2C"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
-            <Setter Property="BorderBrush" Value="#E04B57"/>
-            <Setter Property="Padding" Value="22,12"/>
+        <Style x:Key="PlayButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#D5C21D2C"/>
+            <Setter Property="BorderBrush" Value="#FFFF6671"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Padding" Value="35,16"/>
+            <Setter Property="FontSize" Value="42"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0"/>
         </Style>
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#090B10"/>
-            <Setter Property="Foreground" Value="#F4F5F7"/>
-            <Setter Property="BorderBrush" Value="#344052"/>
+            <Setter Property="Background" Value="#7F080A13"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="CaretBrush" Value="#F4F5F7"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="26">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid ClipToBounds="True">
+        <Image x:Name="HeroBackground" Stretch="UniformToFill" Opacity="0.96"/>
+        <Rectangle Fill="#38050916"/>
+        <Rectangle>
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#AA070914" Offset="0"/>
+                    <GradientStop Color="#22080B1C" Offset="0.48"/>
+                    <GradientStop Color="#C9080710" Offset="1"/>
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
 
-        <DockPanel Grid.Row="0" Margin="0,0,0,22">
-            <StackPanel>
-                <TextBlock Text="REVIVAL REVOLUTION" FontSize="25" FontWeight="Bold"/>
-                <TextBlock Text="METAL REVOLUTION  •  COMMUNITY LAUNCHER"
-                           Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="1,5,0,0"/>
-            </StackPanel>
-            <Border DockPanel.Dock="Right" Background="#171E2A" BorderBrush="#303A4A"
-                    BorderThickness="1" CornerRadius="6" Padding="11,6" VerticalAlignment="Center">
-                <TextBlock x:Name="VersionLabel" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
-            </Border>
-        </DockPanel>
-
-        <Grid Grid.Row="1">
+        <Grid Margin="28">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="218"/>
+                <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{StaticResource PanelBrush}" CornerRadius="12"
-                    Padding="12" Margin="0,0,18,0">
+            <Border Grid.Column="0" Background="#B30A0B18" BorderBrush="#33FFFFFF"
+                    BorderThickness="1" CornerRadius="16" Padding="16">
                 <DockPanel LastChildFill="True">
-                    <StackPanel DockPanel.Dock="Bottom" Margin="8,12,8,4">
-                        <Separator Background="#303A4A" Margin="0,0,0,12"/>
-                        <TextBlock Text="PROJETO COMUNITÁRIO" Foreground="#E04B57"
-                                   FontSize="10" FontWeight="Bold"/>
-                        <TextBlock Text="Preservamos o fluxo original do jogo e suas bridges. Nenhum componente proprietário é substituído."
-                                   Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
-                                   FontSize="11" LineHeight="17" Margin="0,7,0,0"/>
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,5">
+                        <Button Content="LINK DISCORD" Click="Discord_Click" HorizontalContentAlignment="Center"
+                                Background="#55202B43" Margin="0,0,0,4"/>
+                        <TextBlock Text="REVIVAL REVOLUTION" FontSize="9" Foreground="#AEB2C2"
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="NAVEGAÇÃO" Foreground="{StaticResource MutedBrush}"
-                                   FontSize="10" Margin="8,8,0,12"/>
-                        <Button Content="INÍCIO" Click="Home_Click" HorizontalContentAlignment="Left"/>
-                        <Button Content="INSTALAÇÃO" Click="Install_Click" HorizontalContentAlignment="Left"/>
-                        <Button Content="MULTIPLAYER" Click="Multiplayer_Click" HorizontalContentAlignment="Left"/>
-                        <Button Content="DIAGNÓSTICOS" Click="Diagnostics_Click" HorizontalContentAlignment="Left"/>
-                        <Button Content="ATUALIZAÇÕES" Click="Updates_Click" HorizontalContentAlignment="Left"/>
+                        <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="#AEB2C2"
+                                   Margin="8,4,0,16"/>
+                        <Button Content="OFFLINE" Click="Launch_Click" FontSize="22" Padding="13,13"/>
+                        <Button Content="ONLINE" Click="Multiplayer_Click" FontSize="22" Padding="13,13"/>
+                        <Button Content="PRIVATE MATCH" Click="PrivateMatch_Click" FontSize="16" Padding="13,13"/>
+                        <Button Content="MOD LIST" Click="ModList_Click" FontSize="22" Padding="13,13"/>
+                        <Separator Background="#55FFFFFF" Margin="4,20,4,14"/>
+                        <Button Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="11"/>
+                        <Button Content="ATUALIZAÇÕES" Click="Updates_Click" FontSize="11"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
 
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-                <StackPanel>
-                    <Border Background="{StaticResource PanelBrush}" CornerRadius="12"
-                            Padding="26" Margin="0,0,0,16">
-                        <StackPanel>
-                            <TextBlock Text="BEM-VINDO DE VOLTA" Foreground="#E04B57"
-                                       FontWeight="Bold" FontSize="11"/>
-                            <TextBlock Text="Sua revolução começa aqui." FontSize="30"
-                                       FontWeight="Bold" Margin="0,9,0,5"/>
-                            <TextBlock Text="Prepare e inicie sua instalação local de Metal Revolution."
-                                       Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
-                            <TextBlock Text="PASTA DO JOGO" Foreground="{StaticResource MutedBrush}"
-                                       FontSize="10" FontWeight="Bold" Margin="0,26,0,7"/>
-                            <DockPanel LastChildFill="True">
-                                <Button DockPanel.Dock="Right" Content="ESCOLHER PASTA"
-                                        Click="ChooseFolder_Click" Margin="8,0,0,0"/>
-                                <TextBox x:Name="GameFolderBox" IsReadOnly="True"
-                                         VerticalContentAlignment="Center"/>
-                            </DockPanel>
-                            <WrapPanel Margin="0,17,0,0">
-                                <Button Content="JOGAR OFFLINE" Style="{StaticResource AccentButton}"
-                                        Click="Launch_Click" Margin="0,0,8,0"/>
-                                <Button Content="VERIFICAR INSTALAÇÃO" Click="Diagnostics_Click" Margin="0"/>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
+            <Grid Grid.Column="1" Margin="22,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                    <Grid Margin="0,0,0,16">
+                <DockPanel Grid.Row="0" LastChildFill="False">
+                    <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
+                        <TextBlock Text="METAL" FontSize="34" FontWeight="Black" HorizontalAlignment="Right"
+                                   Foreground="White" CharacterSpacing="90"/>
+                        <TextBlock Text="R E V O L U T I O N" FontSize="9" FontWeight="Bold"
+                                   HorizontalAlignment="Right" Foreground="#E7E5EC" Margin="0,-3,2,0"/>
+                    </StackPanel>
+                    <Border Background="#9B090A12" CornerRadius="6" Padding="12,7"
+                            VerticalAlignment="Center" BorderBrush="#44FFFFFF" BorderThickness="1">
+                        <TextBlock x:Name="VersionLabel" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF"/>
+                    </Border>
+                </DockPanel>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="190"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="12,0,0,18">
+                        <Border Background="#B30B0B14" CornerRadius="8" Padding="12,7" HorizontalAlignment="Stretch">
+                            <TextBlock Text="JOGO PREPARADO" FontSize="15" FontWeight="Black"
+                                       HorizontalAlignment="Center"/>
+                        </Border>
+                        <Button Content="PLAY" Style="{StaticResource PlayButton}" Click="Launch_Click"
+                                HorizontalContentAlignment="Center" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Row="2" Margin="0,0,210,0">
+                    <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="170"/>
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Background="{StaticResource PanelBrush}"
-                                CornerRadius="12" Padding="19" Margin="0,0,8,0">
-                            <StackPanel>
-                                <TextBlock Text="INSTALAÇÃO PROTEGIDA" FontWeight="Bold"/>
-                                <TextBlock Text="Downloads e reparos estão temporariamente desativados até que os pacotes tenham hashes autenticados por uma fonte independente. Sua instalação atual não será sobrescrita."
-                                           Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
-                                           Margin="0,9,0,0" FontSize="11" LineHeight="17"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Grid.Column="1" Background="{StaticResource PanelBrush}"
-                                CornerRadius="12" Padding="19" Margin="8,0,0,0">
-                            <StackPanel>
-                                <TextBlock Text="MULTIPLAYER EXPERIMENTAL" FontWeight="Bold"/>
-                                <TextBlock Text="A conexão depende das bridges e dos scripts originais. Compatibilidade entre máquinas e estabilidade online ainda precisam de testes."
-                                           Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"
-                                           Margin="0,9,0,0" FontSize="11" LineHeight="17"/>
-                            </StackPanel>
-                        </Border>
+                        <TextBox x:Name="GameFolderBox" IsReadOnly="True" VerticalContentAlignment="Center"
+                                 Text="CAMINHO DA PASTA" Background="#A0080A15" BorderBrush="#33FFFFFF"
+                                 Margin="0,0,8,0"/>
+                        <Button Grid.Column="1" Content="SELECIONE A PASTA" Click="ChooseFolder_Click"
+                                HorizontalContentAlignment="Center" FontSize="10" Margin="0"/>
                     </Grid>
-
-                    <Border Background="{StaticResource PanelBrush}" CornerRadius="12" Padding="19">
+                    <Border Background="#A0090A14" BorderBrush="#33FFFFFF" BorderThickness="1"
+                            CornerRadius="9" Padding="10">
                         <StackPanel>
-                            <DockPanel>
-                                <TextBlock Text="ATIVIDADE" FontWeight="Bold"/>
-                                <TextBlock Text="LOG DO LAUNCHER" DockPanel.Dock="Right"
-                                           Foreground="{StaticResource MutedBrush}" FontSize="9"
-                                           VerticalAlignment="Center"/>
-                            </DockPanel>
+                            <TextBlock Text="LOG" FontSize="10" FontWeight="Bold" Foreground="#DAD8E2"
+                                       Margin="0,0,0,6"/>
                             <TextBox x:Name="LogBox" IsReadOnly="True" TextWrapping="Wrap"
-                                     AcceptsReturn="True" MinHeight="135" MaxHeight="260"
-                                     Background="#090B10" Foreground="#D9DEE8"
-                                     BorderBrush="#303A4A" Margin="0,12,0,0"
+                                     AcceptsReturn="True" MinHeight="76" MaxHeight="130"
+                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                     Foreground="#E6E4EC" FontSize="10"
                                      VerticalScrollBarVisibility="Auto"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
-            </ScrollViewer>
+            </Grid>
         </Grid>
 
-        <DockPanel Grid.Row="2" Margin="2,15,2,0">
-            <TextBlock Text="REVIVAL REVOLUTION  •  WINDOWS X64" Foreground="#687487"
-                       FontSize="9" VerticalAlignment="Center"/>
-            <TextBlock x:Name="FooterStatus"
-                       Text="Selecione a pasta que contém ufo.exe."
-                       Foreground="{StaticResource MutedBrush}" FontSize="10"
-                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
-        </DockPanel>
+        <TextBlock x:Name="FooterStatus" Text="Selecione a pasta do jogo para começar."
+                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,30,12"
+                   Foreground="#D1CEDA" FontSize="10" />
     </Grid>
 </Window>
