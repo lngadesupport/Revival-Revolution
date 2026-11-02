@@ -621,11 +621,9 @@ public partial class MainWindow : Window
     private void Multiplayer_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("online");
-        FooterStatus.Text = "ONLINE — modo experimental.";
-        MessageBox.Show(this,
-            "O modo online ainda está em integração. As bridges e os scripts originais serão preservados; esta opção não inicia uma sessão até a validação do fluxo de rede.",
-            "Online experimental", MessageBoxButton.OK, MessageBoxImage.Information);
-        Log("Acesso ao modo Online solicitado; integração de sessão ainda pendente.");
+        var window = new RankedWindow { Owner = this };
+        window.ShowDialog();
+        Log("Painel Ranked aberto; matchmaking conectado ao backend configurado pelo usuário.");
     }
 
     private void PrivateMatch_Click(object sender, RoutedEventArgs e)
