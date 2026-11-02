@@ -78,18 +78,17 @@ public partial class MainWindow : Window
         };
         if (dialog.ShowDialog(this) != true) return;
         var folder = dialog.FolderName;
-        if (!IsValidFolder(folder))
-        {
-            MessageBox.Show(this, "A pasta selecionada não contém ufo.exe e ufo_Data\\Managed.", "Instalação inválida", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
         _gameFolder = folder;
         _distributionRoot = _distributionLocator.Find(_root, folder);
         GameFolderBox.Text = folder;
         _config.SaveGameFolder(_root, folder, _distributionRoot);
         RefreshGameState();
-        FooterStatus.Text = "Pasta do jogo salva.";
-        Log($"Pasta selecionada: {folder}");
+        FooterStatus.Text = IsValidFolder(folder)
+            ? "Pasta do jogo salva e validada."
+            : "Pasta salva, mas a instalação não passou na validação.";
+        Log(IsValidFolder(folder)
+            ? $"Pasta selecionada e validada: {folder}"
+            : $"Pasta selecionada, mas inválida: {folder}");
     }
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
@@ -419,18 +418,21 @@ public partial class MainWindow : Window
 
     private void ToggleWindowState()
     {
-        if (WindowState == WindowState.Maximized)
-        {
-            WindowState = WindowState.Normal;
-            MaximizeButton.Content = "\\uE922";
-            MaximizeButton.ToolTip = "Maximizar";
-        }
-        else
-        {
-            WindowState = WindowState.Maximized;
-            MaximizeButton.Content = "\\uE923";
-            MaximizeButton.ToolTip = "Restaurar";
-        }
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+        UpdateWindowChrome();
+    }
+
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+        => UpdateWindowChrome();
+
+    private void UpdateWindowChrome()
+    {
+        if (MaximizeButton is null) return;
+        var maximized = WindowState == WindowState.Maximized;
+        MaximizeButton.Content = char.ConvertFromUtf32(maximized ? 0xE923 : 0xE922);
+        MaximizeButton.ToolTip = maximized ? "Restaurar" : "Maximizar";
     }
 
     private void CloseWindow_Click(object sender, RoutedEventArgs e)
