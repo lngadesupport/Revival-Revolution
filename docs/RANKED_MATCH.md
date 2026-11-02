@@ -14,7 +14,7 @@ privada do usuário, nunca em arquivos públicos ou logs.
 - Solicitações de amizade, aceite, recusa, lista de amigos e remoção.
 - Bloqueio/desbloqueio de jogadores; bloquear encerra amizade e impede novos
   pedidos entre as duas contas.
-- Presença aproximada, baseada na última atividade autenticada (90 segundos).
+- Presença aproximada, baseada na última atividade autenticada (90 segundos), com heartbeat.
 - Leaderboard ordenado pelo rating atual.
 - O nickname não é único; a identidade é sempre o UUID.
 - Alterar nickname/avatar não altera UUID, rating ou relações de amizade.
@@ -60,11 +60,10 @@ A análise estática feita pelo workflow de CI confirmou:
 
 Essa inspeção prova que existem pontos de reflexão e componentes de overlay,
 mas não prova que o painel atual aceite novas abas nem que os tipos sociais
-existam no jogo. O próximo passo é executar a inspeção em runtime documentada em
- [RUNTIME_INSPECTION.md](RUNTIME_INSPECTION.md) e usar o mecanismo de reflexão já existente
-e, se possível, usar o próprio mecanismo de reflexão em execução para descobrir
-as classes reais sem depender de uma cópia estática de `Assembly-CSharp.dll`.
-
+existam no jogo. O bridge já oferece um comando somente leitura chamado
+`inspect`, que consulta as telas ativas em runtime sem precisar carregar uma
+cópia estática de `Assembly-CSharp.dll`. O procedimento está documentado em
+[RUNTIME_INSPECTION.md](RUNTIME_INSPECTION.md).
 O relatório pode ser baixado na execução do workflow
 “Inspect native game integration binaries”.
 
