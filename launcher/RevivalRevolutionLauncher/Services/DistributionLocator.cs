@@ -73,6 +73,17 @@ public sealed class DistributionLocator
             : null;
     }
 
+    public string? FindFile(string root, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return null;
+        foreach (var file in SearchFiles(Path.GetFullPath(root)))
+        {
+            if (Path.GetFileName(file).Equals(fileName, StringComparison.OrdinalIgnoreCase))
+                return file;
+        }
+        return null;
+    }
+
     public bool IsInsideDirectory(string candidatePath, string parentDirectory)
     {
         var relative = Path.GetRelativePath(Path.GetFullPath(parentDirectory), Path.GetFullPath(candidatePath));

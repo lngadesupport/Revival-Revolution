@@ -48,7 +48,9 @@ public sealed class LauncherDiagnosticService
                 .Select(path => Path.Combine(path!, name))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var found = candidates.FirstOrDefault(File.Exists);
+            var found = candidates
+                .Select(path => _locator.FindFile(path!, name))
+                .FirstOrDefault(path => path is not null);
             results.Add(new("Essencial offline: " + name, found is not null,
                 found ?? "Não encontrado. Locais verificados: " + string.Join("; ", candidates)));
         }
@@ -60,7 +62,9 @@ public sealed class LauncherDiagnosticService
                 .Select(path => Path.Combine(path!, name))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var found = candidates.FirstOrDefault(File.Exists);
+            var found = candidates
+                .Select(path => _locator.FindFile(path!, name))
+                .FirstOrDefault(path => path is not null);
             results.Add(new("Opcional online: " + name, true,
                 found ?? "Não instalado; não é necessário para iniciar no modo offline.", Optional: true));
         }

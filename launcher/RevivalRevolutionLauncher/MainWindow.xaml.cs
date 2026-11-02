@@ -241,10 +241,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var offlineBridge = new[] {
-            Path.Combine(_distributionRoot, "MetalOfflineBridgeImGuiV3.dll"),
-            Path.Combine(_gameFolder!, "MetalOfflineBridgeImGuiV3.dll")
-        }.FirstOrDefault(File.Exists);
+        var offlineBridge = _distributionLocator.FindFile(_gameFolder!, "MetalOfflineBridgeImGuiV3.dll")
+            ?? _distributionLocator.FindFile(_root, "MetalOfflineBridgeImGuiV3.dll");
         if (offlineBridge is null)
         {
             Log("MetalOfflineBridgeImGuiV3.dll não encontrado na distribuição nem na pasta do jogo.");
