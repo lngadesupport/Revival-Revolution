@@ -37,7 +37,7 @@ este servidor HTTP de desenvolvimento diretamente à internet.
 - `POST /v1/players/block` e `POST /v1/players/unblock` — bloqueia/desbloqueia;
   bloquear remove a amizade e impede novas solicitações entre as contas.
 - `POST /v1/presence/heartbeat` — confirma atividade autenticada.
-- `GET /v1/leaderboard?limit=100` — classificação por rating atual, com avatar e estado online.
+- `GET /v1/leaderboard?limit=100` — classificação por rating atual, com indicador de foto e estado online.
 - `POST /v1/queue/join` — JSON `{"region":"sa-east"}`.
 - `GET /v1/queue` — posição/estado da fila.
 - `POST /v1/queue/leave` — sai da fila.
