@@ -131,13 +131,78 @@
                     </Border>
                 </DockPanel>
 
-                <Grid Grid.Row="1">
+                <Grid Grid.Row="1" Margin="0,22,0,24">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="190"/>
+                        <ColumnDefinition Width="230"/>
                     </Grid.ColumnDefinitions>
-                    <Grid Grid.Column="0"/>
-                    <Grid Grid.Column="1"/>
+                    <Border Grid.Column="0" Background="#9B090A12" BorderBrush="#44FFFFFF"
+                            BorderThickness="1" CornerRadius="16" Padding="28" Margin="0,0,18,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="REVIVAL REVOLUTION" FontFamily="Segoe UI" FontSize="11"
+                                           FontWeight="Bold" Foreground="#FFE04A58"/>
+                                <TextBlock Text="SUA ARENA. SEU COMBATE." FontSize="42" FontWeight="Black"
+                                           Foreground="White" Margin="0,8,0,2"/>
+                                <TextBlock Text="Launcher da comunidade • Inicialização offline preservada"
+                                           FontFamily="Segoe UI" FontSize="12" Foreground="#D0CED8"/>
+                            </StackPanel>
+                            <Grid Grid.Row="1" VerticalAlignment="Center" Margin="0,24,0,18">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="#66161A2A" BorderBrush="#44FFFFFF" BorderThickness="1"
+                                        CornerRadius="10" Padding="16" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <TextBlock Text="MODO OFFLINE" FontFamily="Segoe UI" FontSize="10"
+                                                   FontWeight="Bold" Foreground="#BFC0CC"/>
+                                        <TextBlock Text="PRONTO PARA JOGAR" FontSize="22" FontWeight="Bold"
+                                                   Foreground="#FFFFFF" Margin="0,5,0,0"/>
+                                        <TextBlock Text="Usa os scripts e bridges originais da distribuição."
+                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C8C6D2"
+                                                   TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="1" Background="#66161A2A" BorderBrush="#44FFFFFF"
+                                        BorderThickness="1" CornerRadius="10" Padding="16" Margin="8,0,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="INTEGRIDADE" FontFamily="Segoe UI" FontSize="10"
+                                                   FontWeight="Bold" Foreground="#BFC0CC"/>
+                                        <TextBlock x:Name="DashboardIntegrityStatus" Text="AGUARDANDO"
+                                                   FontSize="22" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,5,0,0"/>
+                                        <TextBlock Text="Diagnóstico local disponível. Reparos seguem protegidos."
+                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C8C6D2"
+                                                   TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                            <TextBlock Grid.Row="2" Text="Selecione a instalação do jogo para habilitar o botão PLAY."
+                                       FontFamily="Segoe UI" FontSize="11" Foreground="#D0CED8"/>
+                        </Grid>
+                    </Border>
+                    <Border Grid.Column="1" Background="#A0090A14" BorderBrush="#44FFFFFF"
+                            BorderThickness="1" CornerRadius="16" Padding="16">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="ACESSO RÁPIDO" FontFamily="Segoe UI" FontSize="10"
+                                       FontWeight="Bold" Foreground="#BFC0CC" Margin="0,0,0,14"/>
+                            <Button Content="LOCALIZAR JOGO" Click="ChooseFolder_Click"
+                                    HorizontalContentAlignment="Center" FontSize="12" Padding="10,13"/>
+                            <Button Content="RODAR DIAGNÓSTICO" Click="Diagnostics_Click"
+                                    HorizontalContentAlignment="Center" FontSize="11" Padding="10,13"/>
+                            <Separator Background="#55FFFFFF" Margin="2,12"/>
+                            <TextBlock Text="RECURSOS" FontFamily="Segoe UI" FontSize="9"
+                                       FontWeight="Bold" Foreground="#AEB2C2" Margin="0,4,0,6"/>
+                            <TextBlock Text="• Offline disponível\n• Online experimental\n• Private Match em integração\n• Catálogo de mods pendente"
+                                       FontFamily="Segoe UI" FontSize="10" Foreground="#C8C6D2"
+                                       TextWrapping="Wrap" LineHeight="19"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
 
                 <Grid Grid.Row="2" Margin="0,0,0,0">
