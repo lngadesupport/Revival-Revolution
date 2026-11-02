@@ -20,8 +20,11 @@ public partial class MainWindow : Window
     private readonly LauncherUpdateService _updates = new();
     private string? _gameFolder;
     private bool _busy;
-    private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private bool _gameRunning;
+    private bool _launchPending;
+    private DateTime _launchRequestedAt;
+    private const int LaunchDetectionTimeoutSeconds = 45;
 
     public MainWindow()
     {
@@ -157,8 +160,10 @@ public partial class MainWindow : Window
             File.WriteAllText(Path.Combine(_gameFolder!, "python-runtime.txt"), python);
             _config.SaveGameFolder(_root, _gameFolder!, _distributionRoot);
             _gameLaunch.StartOffline(python, script, _distributionRoot!);
-            Log("Inicialização offline iniciada. Os detalhes do processo estão em Launcher\\Logs.");
-            FooterStatus.Text = "Jogo em inicialização; aguardando ufo.exe.";
+            _launchPending = true;
+            _launchRequestedAt = DateTime.UtcNow;
+            Log("Inicialização offline iniciada. Aguardando o processo ufo.exe; o PLAY ficará bloqueado por até 45 segundos.");
+            RefreshGameState();
         });
     }
 
@@ -171,13 +176,29 @@ public partial class MainWindow : Window
             try
             {
                 var actualExe = process.MainModule?.FileName;
-                if (!string.IsNullOrWhiteSpace(actualExe) &&
-                    string.Equals(Path.GetFullPath(actualExe), expectedExe, StringComparison.OrdinalIgnoreCase))
-                    return true;
+                // If Windows exposes the executable path, only this selected installation counts.
+                if (!string.IsNullOrWhiteSpace(actualExe))
+                {
+                    if (string.Equals(Path.GetFullPath(actualExe), expectedExe, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    continue;
+                }
+
+                // Fail safe: if the process exists but Windows hides its path, keep PLAY locked.
+                return true;
             }
-            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
+            catch (System.ComponentModel.Win32Exception)
             {
-                // Sem acesso ao caminho do processo, não presumimos que seja esta instalação.
+                // Access denied is not proof that the game is closed.
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                // The process exited while being inspected; continue with the remaining processes.
+            }
+            catch (NotSupportedException)
+            {
+                return true;
             }
             finally { process.Dispose(); }
         }
@@ -188,12 +209,28 @@ public partial class MainWindow : Window
     {
         var valid = IsValidFolder(_gameFolder);
         _gameRunning = valid && IsGameRunning();
+
+        if (_gameRunning)
+            _launchPending = false;
+        else if (_launchPending && DateTime.UtcNow - _launchRequestedAt >= TimeSpan.FromSeconds(LaunchDetectionTimeoutSeconds))
+        {
+            _launchPending = false;
+            Log("O processo ufo.exe não foi detectado após 45 segundos. PLAY liberado; confira o log de inicialização se o jogo não abriu.");
+        }
+
         if (_gameRunning)
         {
             GameStateLabel.Text = "JOGO ABERTO";
             GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(35, 130, 75));
             PlayButton.IsEnabled = false;
             FooterStatus.Text = "O jogo está em execução. PLAY bloqueado.";
+        }
+        else if (_launchPending)
+        {
+            GameStateLabel.Text = "INICIANDO...";
+            GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(190, 125, 35));
+            PlayButton.IsEnabled = false;
+            FooterStatus.Text = "Aguardando abertura do jogo...";
         }
         else if (valid)
         {
