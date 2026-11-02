@@ -20,6 +20,10 @@ public sealed class LauncherUpdateService
     private const long MaxPackageBytes = 2L * 1024 * 1024 * 1024;
     private const int MaxEntries = 50_000;
     private static readonly HttpClient ManifestHttp = new() { Timeout = TimeSpan.FromMinutes(2) };
+    private static readonly HashSet<string> TrustedReleaseHosts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "github.com", "release-assets.githubusercontent.com"
+    };
     private static readonly DownloadService Downloads = new();
     private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -110,7 +114,7 @@ public sealed class LauncherUpdateService
 
         var zip = Path.Combine(downloadsDirectory, "launcher-update.zip");
         stageProgress?.Report(new("download", "Baixando pacote oficial do GitHub..."));
-        await Downloads.DownloadAsync(packageUri.ToString(), zip, progress, token);
+        await Downloads.DownloadAsync(packageUri.ToString(), zip, progress, token, TrustedReleaseHosts);
 
         stageProgress?.Report(new("verify", "Conferindo a integridade SHA-256 do pacote..."));
         await VerifyPackageHashAsync(zip, update.Sha256, token);
@@ -158,10 +162,12 @@ public sealed class LauncherUpdateService
             response.Dispose();
             return null;
         }
-        if (response.RequestMessage?.RequestUri?.Scheme != Uri.UriSchemeHttps)
+        var finalUri = response.RequestMessage?.RequestUri;
+        if (finalUri is null || finalUri.Scheme != Uri.UriSchemeHttps ||
+            !TrustedReleaseHosts.Contains(finalUri.Host))
         {
             response.Dispose();
-            throw new InvalidOperationException("O manifesto foi redirecionado para uma conexão sem HTTPS.");
+            throw new InvalidOperationException("O manifesto foi redirecionado para um host que não pertence ao GitHub Releases oficial.");
         }
 
         try { response.EnsureSuccessStatusCode(); return response; }
