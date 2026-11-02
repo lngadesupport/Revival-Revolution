@@ -125,11 +125,16 @@ public sealed class GoogleDriveDistributionDownloader
         if (LooksLikeHtml(bytes) || mediaType.Contains("html", StringComparison.OrdinalIgnoreCase))
         {
             var html = Encoding.UTF8.GetString(bytes);
-            var confirm = Regex.Match(html, @"[?&]confirm=([0-9A-Za-z_-]+)");
+            var confirm = Regex.Match(html, @"[?&]confirm=([0-9A-Za-z_-]+)", RegexOptions.IgnoreCase);
             if (!confirm.Success)
+                confirm = Regex.Match(html, @"name=[""']confirm[""'][^>]*value=[""'](?<token>[0-9A-Za-z_-]+)[""']", RegexOptions.IgnoreCase);
+            if (!confirm.Success)
+                confirm = Regex.Match(html, @"value=[""'](?<token>[0-9A-Za-z_-]+)[""'][^>]*name=[""']confirm[""']", RegexOptions.IgnoreCase);
+            var token = confirm.Groups["token"].Success ? confirm.Groups["token"].Value : confirm.Groups[1].Value;
+            if (!confirm.Success || string.IsNullOrWhiteSpace(token))
                 throw new InvalidDataException("O Google Drive não forneceu o arquivo diretamente (pode exigir acesso público ou confirmação).");
 
-            var confirmedUrl = $"https://drive.google.com/uc?export=download&confirm={Uri.EscapeDataString(confirm.Groups[1].Value)}&id={Uri.EscapeDataString(fileId)}";
+            var confirmedUrl = $"https://drive.google.com/uc?export=download&confirm={Uri.EscapeDataString(token)}&id={Uri.EscapeDataString(fileId)}";
             using var confirmedResponse = await client.GetAsync(confirmedUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             confirmedResponse.EnsureSuccessStatusCode();
             bytes = await ReadBoundedAsync(confirmedResponse.Content, cancellationToken);
