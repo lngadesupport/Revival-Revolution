@@ -41,7 +41,11 @@ dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.cs
 
 O pacote self-contained inclui o runtime .NET necessário. O SDK só é necessário na máquina que compila. O single-file não é forçado por causa das particularidades de WPF e componentes nativos.
 
-## Atualizações do launcher\n\nO launcher consulta automaticamente as GitHub Releases ao iniciar. Para publicar uma versão, crie uma tag `vX.Y.Z` sobre um commit já integrado à `main`; o workflow publica o ZIP self-contained e o manifesto com SHA-256. Tags com sufixo, como `v0.7.0-rc.1`, são publicadas como pré-lançamentos e não substituem a Release estável mais recente. Consulte `launcher/RevivalRevolutionLauncher/README.md` para o procedimento.\n\n## Configuração antes de uma versão pública
+## Atualizações do launcher
+
+O launcher consulta automaticamente as GitHub Releases ao iniciar. Para publicar uma versão, crie uma tag `vX.Y.Z` sobre um commit já integrado à `main`; o workflow publica o ZIP self-contained e o manifesto com SHA-256. Tags com sufixo, como `v0.7.0-rc.1`, são publicadas como pré-lançamentos e não substituem a Release estável mais recente. Consulte `launcher/RevivalRevolutionLauncher/README.md` para o procedimento.
+
+## Configuração antes de uma versão pública
 
 1. Obter e publicar hashes SHA-256 confiáveis dos pacotes de distribuição por canal independente dos ZIPs.
 2. Conferir o formato e os caminhos de `SHA256SUMS.json` contra os ZIPs reais.
