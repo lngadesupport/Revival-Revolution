@@ -115,10 +115,13 @@
 
                 <DockPanel Grid.Row="0" LastChildFill="False">
                     <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
-                        <TextBlock Text="METAL" FontSize="34" FontWeight="Black" HorizontalAlignment="Right"
-                                   Foreground="White" CharacterSpacing="90"/>
-                        <TextBlock Text="R E V O L U T I O N" FontSize="9" FontWeight="Bold"
-                                   HorizontalAlignment="Right" Foreground="#E7E5EC" Margin="0,-3,2,0"/>
+                        <Image x:Name="MetalLogo" Width="190" Height="64" Stretch="Uniform" Visibility="Collapsed"/>
+                        <StackPanel x:Name="LogoFallback">
+                            <TextBlock Text="METAL" FontSize="34" FontWeight="Black" HorizontalAlignment="Right"
+                                       Foreground="White"/>
+                            <TextBlock Text="R E V O L U T I O N" FontSize="9" FontWeight="Bold"
+                                       HorizontalAlignment="Right" Foreground="#E7E5EC" Margin="0,-3,2,0"/>
+                        </StackPanel>
                     </StackPanel>
                     <Border Background="#9B090A12" CornerRadius="6" Padding="12,7"
                             VerticalAlignment="Center" BorderBrush="#44FFFFFF" BorderThickness="1">
