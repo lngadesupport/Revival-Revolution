@@ -41,7 +41,7 @@ def make_handler(store: RankedStore):
             except ValueError:
                 raise ValueError("invalid content length")
             if not 0 < size <= 400000:
-                raise ValueError("request body must be 1..4096 bytes")
+                raise ValueError("request body must be 1..400000 bytes")
             try:
                 value = json.loads(self.rfile.read(size))
             except (json.JSONDecodeError, UnicodeDecodeError):
@@ -57,20 +57,36 @@ def make_handler(store: RankedStore):
             return store.authenticate(header[7:].strip())
 
         def do_GET(self):
-            path = urlparse(self.path).path
+            parsed = urlparse(self.path)
+            path = parsed.path
             if path == "/health":
                 return self._json(200, {"ok": True, "service": "revival-ranked", "version": "0.1"})
             player = self._player()
             if player is None:
                 return self._json(401, {"error": "authentication_required"})
+            player_id = player["player_id"]
             if path == "/v1/me":
-                return self._json(200, store.player_profile(player["player_id"]))
+                return self._json(200, social.profile(player_id))
+            if path == "/v1/friends":
+                return self._json(200, social.friends(player_id))
+            if path == "/v1/players/search":
+                query = parse_qs(parsed.query)
+                try:
+                    return self._json(200, {"players": social.search_players(query.get("q", [""])[0])})
+                except ValueError as exc:
+                    return self._json(400, {"error": "invalid_request", "message": str(exc)})
+            if path == "/v1/leaderboard":
+                query = parse_qs(parsed.query)
+                try:
+                    limit = int(query.get("limit", ["100"])[0])
+                except ValueError:
+                    return self._json(400, {"error": "invalid_request", "message": "limit must be an integer"})
+                return self._json(200, {"entries": social.leaderboard(limit)})
             if path == "/v1/queue":
-                return self._json(200, store.queue_status(player["player_id"]))
+                return self._json(200, store.queue_status(player_id))
             if path == "/v1/match":
-                return self._json(200, {"match": store.current_match(player["player_id"])})
+                return self._json(200, {"match": store.current_match(player_id)})
             return self._json(404, {"error": "not_found"})
-
         def do_POST(self):
             path = urlparse(self.path).path
             try:
