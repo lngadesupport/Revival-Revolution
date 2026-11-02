@@ -356,7 +356,7 @@ public partial class MainWindow : Window
     {
         var buttons = new (string Key, System.Windows.Controls.Button Button)[]
         {
-            ("offline", OfflineNavButton), ("online", OnlineNavButton),
+            ("offline", OfflineNavButton),
             ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
             ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton),
             ("settings", SettingsNavButton)
@@ -617,14 +617,6 @@ public partial class MainWindow : Window
     }
 
     private void Home_Click(object sender, RoutedEventArgs e) => FooterStatus.Text = "Página inicial.";
-
-    private void Multiplayer_Click(object sender, RoutedEventArgs e)
-    {
-        SetActiveNavigation("online");
-        var window = new RankedWindow { Owner = this };
-        window.ShowDialog();
-        Log("Painel Ranked aberto; matchmaking conectado ao backend configurado pelo usuário.");
-    }
 
     private void PrivateMatch_Click(object sender, RoutedEventArgs e)
     {
