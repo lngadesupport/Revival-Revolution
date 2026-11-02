@@ -180,5 +180,17 @@ class RankedApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(body["error"], "invalid_request")
 
+    def test_token_rotation_invalidates_old_token(self):
+        player = self.register("TOKEN-ROTATION")
+        status, rotated = self.request("POST", "/v1/account/rotate-token", {}, player["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(rotated["player_id"], player["player_id"])
+        self.assertNotEqual(rotated["token"], player["token"])
+        status, _ = self.request("GET", "/v1/me", token=player["token"])
+        self.assertEqual(status, 401)
+        status, profile = self.request("GET", "/v1/me", token=rotated["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(profile["player_id"], player["player_id"])
+
 if __name__ == "__main__":
     unittest.main()
