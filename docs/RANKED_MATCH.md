@@ -2,16 +2,16 @@
 
 ## Identidade
 
-O launcher usa o hostname do Windows apenas como nome público. A identidade
-competitiva é um UUID emitido pelo servidor e associado a um token aleatório.
-O token deve ser mantido no perfil privado do usuário e nunca ser registrado
-em logs ou incluído no repositório.
+A identidade é um UUID emitido pelo servidor e associada a um token aleatório.
+O nickname é editável e não é único; UUID não muda quando o jogador altera
+nickname ou avatar. O cliente dentro do jogo deve guardar o token em área
+privada do usuário, nunca em arquivos públicos ou logs.
 
 ## Etapas
 
 1. Identidade, perfil e fila 1v1 persistidos em SQLite.
-2. Integração WPF: registrar, restaurar credencial local, consultar perfil,
-   entrar/sair da fila e apresentar a partida encontrada.
+2. Integração do cliente dentro do jogo/Community Panel com a API social e Ranked;
+   o launcher não apresenta telas de perfil, amigos ou ranking.
 3. Ticket de partida de uso limitado para autorizar a abertura do P2P.
 4. Resultado verificável pela bridge e política de desconexão/reconexão.
 5. ELO, histórico, leaderboard, operação em VPS Linux e monitoramento.
@@ -56,7 +56,7 @@ Não altere rating com base apenas no resultado informado pelos clientes.
 - Perfil com UUID permanente, nickname editável e avatar base64 limitado a 256 KiB.
 - Busca de jogadores por nickname.
 - Solicitações de amizade, aceite, lista de amigos e remoção.
-- Presença aproximada por última atividade (janela de 90 segundos).
+- Presença aproximada por última atividade (janela de 90 segundos), com heartbeat autenticado.\n- Recusa de pedidos, bloqueio e desbloqueio de jogadores; bloquear remove amizade existente.
 - Endpoint de leaderboard por rating.
 - O nickname não é único; a identidade é sempre o UUID.
 - Alterar nickname/avatar não altera UUID, rating ou relações de amizade.
