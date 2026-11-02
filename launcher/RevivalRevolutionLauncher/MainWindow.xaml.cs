@@ -28,7 +28,6 @@ public partial class MainWindow : Window
     private DateTime _launchRequestedAt;
     private const int LaunchDetectionTimeoutSeconds = 45;
     private string _lastGameStateFooterStatus = string.Empty;
-    private string _lastDashboardState = string.Empty;
 
     public MainWindow()
     {
@@ -311,22 +310,7 @@ public partial class MainWindow : Window
             SetGameStateFooter("A pasta selecionada não passou na validação.");
         }
 
-        var dashboardState = _gameRunning ? "EM EXECUÇÃO"
-            : _launchPending ? "INICIANDO"
-            : valid ? "VALIDADA"
-            : string.IsNullOrWhiteSpace(_gameFolder) ? "NÃO CONFIGURADA" : "INVÁLIDA";
-        DashboardLocalStatus.Text = dashboardState;
-        DashboardLocalStatus.Foreground = new SolidColorBrush(_gameRunning || valid
-            ? Color.FromRgb(120, 225, 155)
-            : string.IsNullOrWhiteSpace(_gameFolder)
-                ? Color.FromRgb(210, 205, 220)
-                : Color.FromRgb(255, 125, 135));
-        if (!string.Equals(_lastDashboardState, dashboardState, StringComparison.Ordinal))
-        {
-            _lastDashboardState = dashboardState;
-            FadeStateChange(GameStateBorder);
-            FadeStateChange(DashboardLocalStatus);
-        }
+
     }
 
     private static void FadeStateChange(UIElement element)
