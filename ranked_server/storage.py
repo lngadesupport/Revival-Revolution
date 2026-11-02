@@ -113,6 +113,19 @@ class RankedStore:
             db.execute("UPDATE players SET last_seen=? WHERE player_id=?", (now, row["player_id"]))
             return {**dict(row), "last_seen": now}
 
+    def rotate_token(self, player_id: str) -> dict:
+        """Replace a player's bearer token; the previous token stops working immediately."""
+        token = secrets.token_urlsafe(32)
+        now = self.clock()
+        with self.transaction() as db:
+            result = db.execute(
+                "UPDATE players SET token_hash=?,last_seen=? WHERE player_id=?",
+                (self._token_hash(token), now, player_id),
+            )
+            if result.rowcount == 0:
+                raise ValueError("unknown player")
+        return {"player_id": player_id, "token": token}
+
     def join_queue(self, player_id: str, region: str = "global", *, base_window: int = 100, step: int = 50, widen_seconds: int = 10) -> dict | None:
         region = str(region).strip().lower()
         if not region or len(region) > 24 or not all(c.isalnum() or c in "-_" for c in region):
