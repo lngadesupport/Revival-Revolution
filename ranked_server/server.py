@@ -10,12 +10,15 @@ import argparse
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from .storage import RankedStore
+from .social import SocialStore
 
 
 def make_handler(store: RankedStore):
+    social = SocialStore(store.database, clock=store.clock)
+
     class Handler(BaseHTTPRequestHandler):
         server_version = "RevivalRanked/0.1"
 
@@ -37,7 +40,7 @@ def make_handler(store: RankedStore):
                 size = int(self.headers.get("Content-Length", "0"))
             except ValueError:
                 raise ValueError("invalid content length")
-            if not 0 < size <= 4096:
+            if not 0 < size <= 400000:
                 raise ValueError("request body must be 1..4096 bytes")
             try:
                 value = json.loads(self.rfile.read(size))
@@ -80,6 +83,21 @@ def make_handler(store: RankedStore):
                 if player is None:
                     return self._json(401, {"error": "authentication_required"})
                 player_id = player["player_id"]
+                if path == "/v1/profile":
+                    result = social.update_profile(
+                        player_id,
+                        display_name=body.get("display_name"),
+                        avatar_data=body.get("avatar_data"),
+                        update_avatar="avatar_data" in body,
+                    )
+                    return self._json(200, result)
+                if path == "/v1/friends/request":
+                    result = social.request_friend(player_id, body.get("player_id"))
+                    return self._json(201 if result["status"] == "pending" else 200, result)
+                if path == "/v1/friends/accept":
+                    return self._json(200, social.accept_friend(player_id, body.get("player_id")))
+                if path == "/v1/friends/remove":
+                    return self._json(200, {"removed": social.remove_friend(player_id, body.get("player_id"))})
                 if path == "/v1/queue/join":
                     result = store.join_queue(player_id, body.get("region", "global"))
                     if result:
