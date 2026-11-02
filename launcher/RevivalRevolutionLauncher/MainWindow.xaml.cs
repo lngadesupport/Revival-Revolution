@@ -27,9 +27,31 @@ public partial class MainWindow : Window
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
-        GameFolderBox.Text = _gameFolder ?? "Pasta não selecionada";
+        GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
+        LoadVisualAssets();
         Log("Revival Revolution Launcher iniciado.");
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
+    }
+
+    private void LoadVisualAssets()
+    {
+        var assets = Path.Combine(_root, "Assets");
+        var background = Path.Combine(assets, "metal-revolution-background.jpg");
+        var logo = Path.Combine(assets, "metal-revolution-logo.png");
+
+        if (File.Exists(background))
+            HeroBackground.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(background));
+        else
+            Log("Arte de fundo opcional ausente: Assets\\metal-revolution-background.jpg");
+
+        if (File.Exists(logo))
+        {
+            MetalLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(logo));
+            MetalLogo.Visibility = Visibility.Visible;
+            LogoFallback.Visibility = Visibility.Collapsed;
+        }
+        else
+            Log("Logo PNG opcional ausente: Assets\\metal-revolution-logo.png");
     }
 
     private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
@@ -240,5 +262,37 @@ public partial class MainWindow : Window
         LogBox.ScrollToEnd();
     }
     private void Home_Click(object sender, RoutedEventArgs e) => FooterStatus.Text = "Página inicial.";
-    private void Multiplayer_Click(object sender, RoutedEventArgs e) => FooterStatus.Text = "Multiplayer experimental: utilize as bridges e scripts existentes. Compatibilidade entre máquinas ainda precisa de validação.";
+
+    private void Multiplayer_Click(object sender, RoutedEventArgs e)
+    {
+        FooterStatus.Text = "ONLINE — modo experimental.";
+        MessageBox.Show(this,
+            "O modo online ainda está em integração. As bridges e os scripts originais serão preservados; esta opção não inicia uma sessão até a validação do fluxo de rede.",
+            "Online experimental", MessageBoxButton.OK, MessageBoxImage.Information);
+        Log("Acesso ao modo Online solicitado; integração de sessão ainda pendente.");
+    }
+
+    private void PrivateMatch_Click(object sender, RoutedEventArgs e)
+    {
+        FooterStatus.Text = "PRIVATE MATCH — aguardando integração.";
+        MessageBox.Show(this,
+            "Partidas privadas ainda não estão conectadas à interface. Nenhuma sessão foi iniciada.",
+            "Private Match", MessageBoxButton.OK, MessageBoxImage.Information);
+        Log("Private Match selecionado; fluxo de sala privada ainda pendente.");
+    }
+
+    private void ModList_Click(object sender, RoutedEventArgs e)
+    {
+        FooterStatus.Text = "MOD LIST — catálogo ainda não integrado.";
+        MessageBox.Show(this,
+            "A lista de mods será integrada em uma etapa própria. Por enquanto, o launcher não altera nem instala mods.",
+            "Mod List", MessageBoxButton.OK, MessageBoxImage.Information);
+        Log("Mod List selecionada; catálogo ainda não integrado.");
+    }
+
+    private void Discord_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(this, "O endereço do Discord ainda não foi configurado.", "Discord",
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
 }
