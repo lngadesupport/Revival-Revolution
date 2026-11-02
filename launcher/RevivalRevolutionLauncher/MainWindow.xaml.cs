@@ -45,8 +45,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
-            Log("Não foi possível copiar os scripts offline na inicialização: " + ex.Message);
+            _distributionRoot = null;
+            Log("Não foi possível preparar a pasta OfflineScripts na inicialização: " + ex.Message);
         }
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
@@ -159,8 +159,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _distributionRoot = _distributionLocator.Find(_root, folder);
-            Log("Não foi possível copiar os scripts offline para a pasta do launcher: " + ex.Message);
+            _distributionRoot = null;
+            Log("Não foi possível copiar os scripts offline para a pasta do jogo: " + ex.Message);
             MessageBox.Show(this,
                 "Os scripts foram encontrados na pasta do jogo, mas não foi possível copiá-los para a pasta do launcher. " +
                 "Verifique as permissões e tente novamente.\n\n" + ex.Message,
@@ -461,7 +461,7 @@ public partial class MainWindow : Window
         if (_busy) return;
         await RunBusyAsync("Executando diagnóstico...", async token =>
         {
-            var python = _python.FindRuntime(_root);
+            var python = _python.FindRuntime(_gameFolder ?? _root);
             _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
             var items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python), token);
             foreach (var item in items)

@@ -45,21 +45,19 @@ public sealed class LauncherDiagnosticService
         {
             var candidates = new[] { distribution, gameFolder, root }
                 .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Select(path => Path.Combine(path!, name))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var found = candidates
                 .Select(path => _locator.FindFile(path!, name))
                 .FirstOrDefault(path => path is not null);
             results.Add(new("Essencial offline: " + name, found is not null,
-                found ?? "Não encontrado. Locais verificados: " + string.Join("; ", candidates)));
+                found ?? "Não encontrado. Pastas verificadas: " + string.Join("; ", candidates)));
         }
 
         foreach (var name in OptionalOnlineLibraries)
         {
             var candidates = new[] { distribution, gameFolder, root }
                 .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Select(path => Path.Combine(path!, name))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var found = candidates
