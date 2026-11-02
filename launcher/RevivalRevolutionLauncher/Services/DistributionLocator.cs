@@ -8,7 +8,8 @@ public sealed class DistributionLocator
 {
     private static readonly string[] RequiredBootstrapFiles =
     {
-        "offline_launcher.py", "inject_offline.py", "inject_overlay.py"
+        "offline_launcher.py", "inject_offline.py", "inject_overlay.py",
+        "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll"
     };
 
     private static readonly HashSet<string> IgnoredDirectoryNames = new(StringComparer.OrdinalIgnoreCase)

@@ -16,12 +16,12 @@ public sealed class LauncherDiagnosticService
 
     private static readonly string[] RequiredOfflineLibraries =
     {
-        "MetalOfflineBridgeImGuiV3.dll"
+        "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll"
     };
 
     private static readonly string[] OptionalOnlineLibraries =
     {
-        "MetalNetplayBridgeV32.dll", "MetalImGuiOverlay.dll", "SDL3.dll"
+        "SDL3.dll"
     };
 
     private readonly DistributionLocator _locator = new();
