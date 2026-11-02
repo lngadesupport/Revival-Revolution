@@ -14,7 +14,7 @@ public sealed class DistributionLocator
     private static readonly string[] SearchFolderNames =
     {
         "Distribution", "distribution", "Scripts", "scripts", "Launcher", "launcher",
-        "Offline", "offline", "Bootstrap", "bootstrap"
+        "Offline", "offline", "OfflineScripts", "Bootstrap", "bootstrap"
     };
 
     public string? Find(string launcherRoot, string? gameFolder)
