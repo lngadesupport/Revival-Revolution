@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private bool _launchPending;
     private DateTime _launchRequestedAt;
     private const int LaunchDetectionTimeoutSeconds = 45;
+    private string _lastGameStateFooterStatus = string.Empty;
 
     public MainWindow()
     {
@@ -93,6 +94,7 @@ public partial class MainWindow : Window
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("offline");
         if (_busy || IsGameRunning()) return;
         RefreshGameState();
         if (!IsValidFolder(_gameFolder))
@@ -222,32 +224,67 @@ public partial class MainWindow : Window
             GameStateLabel.Text = "JOGO ABERTO";
             GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(35, 130, 75));
             PlayButton.IsEnabled = false;
-            FooterStatus.Text = "O jogo está em execução. PLAY bloqueado.";
+            SetGameStateFooter("O jogo está em execução. PLAY bloqueado.");
         }
         else if (_launchPending)
         {
             GameStateLabel.Text = "INICIANDO...";
             GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(190, 125, 35));
             PlayButton.IsEnabled = false;
-            FooterStatus.Text = "Aguardando abertura do jogo...";
+            SetGameStateFooter("Aguardando abertura do jogo...");
         }
         else if (valid)
         {
             GameStateLabel.Text = "PREPARADO";
             GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(35, 145, 80));
             PlayButton.IsEnabled = !_busy;
+            SetGameStateFooter("Jogo preparado. Pronto para iniciar no modo offline.");
         }
         else if (string.IsNullOrWhiteSpace(_gameFolder))
         {
             GameStateLabel.Text = "NENHUM";
             GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(85, 91, 102));
             PlayButton.IsEnabled = false;
+            SetGameStateFooter("Selecione a pasta do jogo para começar.");
         }
         else
         {
             GameStateLabel.Text = "INVÁLIDO";
             GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(170, 45, 55));
             PlayButton.IsEnabled = false;
+            SetGameStateFooter("A pasta selecionada não passou na validação.");
+        }
+    }
+
+    private void SetGameStateFooter(string message)
+    {
+        // The one-second process watcher must not erase operation results or progress messages.
+        if (string.Equals(_lastGameStateFooterStatus, message, StringComparison.Ordinal)) return;
+        _lastGameStateFooterStatus = message;
+        FooterStatus.Text = message;
+    }
+
+    private void SetActiveNavigation(string active)
+    {
+        var buttons = new (string Key, System.Windows.Controls.Button Button)[]
+        {
+            ("offline", OfflineNavButton), ("online", OnlineNavButton),
+            ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
+            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton)
+        };
+
+        foreach (var item in buttons)
+        {
+            var selected = item.Key == active;
+            item.Button.Background = new SolidColorBrush(Color.FromArgb(
+                selected ? (byte)205 : (byte)118,
+                selected ? (byte)157 : (byte)16,
+                selected ? (byte)31 : (byte)24,
+                selected ? (byte)44 : (byte)42));
+            item.Button.BorderBrush = new SolidColorBrush(selected
+                ? Color.FromRgb(255, 82, 96)
+                : Color.FromArgb(102, 255, 255, 255));
+            item.Button.BorderThickness = selected ? new Thickness(1.5) : new Thickness(1);
         }
     }
 
@@ -265,6 +302,7 @@ public partial class MainWindow : Window
 
     private async void Diagnostics_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("diagnostics");
         if (_busy) return;
         await RunBusyAsync("Executando diagnóstico...", async token =>
         {
@@ -291,6 +329,7 @@ public partial class MainWindow : Window
 
     private async void Updates_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("updates");
         if (_busy) return;
         try { await CheckForUpdatesAsync(automatic: false); }
         catch (Exception ex) { Log("ERRO ao atualizar: " + ex.Message); FooterStatus.Text = "Falha ao verificar/aplicar atualização."; }
@@ -370,6 +409,7 @@ public partial class MainWindow : Window
 
     private void Multiplayer_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("online");
         FooterStatus.Text = "ONLINE — modo experimental.";
         MessageBox.Show(this,
             "O modo online ainda está em integração. As bridges e os scripts originais serão preservados; esta opção não inicia uma sessão até a validação do fluxo de rede.",
@@ -379,6 +419,7 @@ public partial class MainWindow : Window
 
     private void PrivateMatch_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("private");
         FooterStatus.Text = "PRIVATE MATCH — aguardando integração.";
         MessageBox.Show(this,
             "Partidas privadas ainda não estão conectadas à interface. Nenhuma sessão foi iniciada.",
@@ -388,6 +429,7 @@ public partial class MainWindow : Window
 
     private void ModList_Click(object sender, RoutedEventArgs e)
     {
+        SetActiveNavigation("mods");
         FooterStatus.Text = "MOD LIST — catálogo ainda não integrado.";
         MessageBox.Show(this,
             "A lista de mods será integrada em uma etapa própria. Por enquanto, o launcher não altera nem instala mods.",
