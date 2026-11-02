@@ -28,6 +28,15 @@ class RankedStoreTests(unittest.TestCase):
         self.assertEqual(match["opponent"]["display_name"], "PC-PLAYER-ONE")
         self.assertIsNotNone(self.store.current_match(self.one["player_id"]))
 
+    def test_longest_wait_expands_rating_window_for_new_arrival(self):
+        with self.store.transaction() as db:
+            db.execute("UPDATE players SET rating=1000 WHERE player_id=?", (self.one["player_id"],))
+            db.execute("UPDATE players SET rating=1250 WHERE player_id=?", (self.two["player_id"],))
+        self.store.join_queue(self.one["player_id"], "sa-east")
+        self.now += 30
+        match = self.store.join_queue(self.two["player_id"], "sa-east")
+        self.assertIsNotNone(match)
+
     def test_regions_do_not_mix(self):
         self.store.join_queue(self.one["player_id"], "sa-east")
         self.assertIsNone(self.store.join_queue(self.two["player_id"], "eu-west"))
