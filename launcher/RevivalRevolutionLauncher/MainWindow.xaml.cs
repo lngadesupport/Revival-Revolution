@@ -255,6 +255,16 @@ public partial class MainWindow : Window
             PlayButton.IsEnabled = false;
             SetGameStateFooter("A pasta selecionada não passou na validação.");
         }
+
+        DashboardLocalStatus.Text = _gameRunning ? "EM EXECUÇÃO"
+            : _launchPending ? "INICIANDO"
+            : valid ? "VALIDADA"
+            : string.IsNullOrWhiteSpace(_gameFolder) ? "NÃO CONFIGURADA" : "INVÁLIDA";
+        DashboardLocalStatus.Foreground = new SolidColorBrush(_gameRunning || valid
+            ? Color.FromRgb(120, 225, 155)
+            : string.IsNullOrWhiteSpace(_gameFolder)
+                ? Color.FromRgb(210, 205, 220)
+                : Color.FromRgb(255, 125, 135));
     }
 
     private void SetGameStateFooter(string message)
