@@ -66,4 +66,4 @@ Os scripts, bridges e DLLs existentes da distribuição não devem ser substitu�
 
 ## Estado de validação
 
-O código WPF foi compilado com sucesso pelo workflow Windows do GitHub Actions no commit registrado na PR. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. Não declare uma versão como pronta para distribuição até que esses testes sejam concluídos.
+A validação de cada versão deve incluir o workflow Windows do GitHub Actions e testes manuais em Windows x64. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. Não declare uma versão como pronta para distribuição até que esses testes sejam concluídos.
