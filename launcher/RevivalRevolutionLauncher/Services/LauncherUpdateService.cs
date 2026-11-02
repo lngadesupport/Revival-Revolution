@@ -262,7 +262,11 @@ public sealed class LauncherUpdateService
             ps.AppendLine("  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null");
             ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
-        ps.AppendLine($"  Start-Process -FilePath {PsQuote(Path.Combine(root, "RevivalRevolution.exe"))} -WorkingDirectory {PsQuote(root)}");
+        var launcherExe = Path.Combine(root, "RevivalRevolution.exe");
+        ps.AppendLine($"  $launcherExe = {PsQuote(launcherExe)}");
+        ps.AppendLine("  if (-not (Test-Path -LiteralPath $launcherExe -PathType Leaf)) { throw 'Executável atualizado não encontrado; não foi possível reiniciar o launcher.' }");
+        ps.AppendLine("  $started = Start-Process -FilePath $launcherExe -WorkingDirectory $root -PassThru");
+        ps.AppendLine("  if (-not $started) { throw 'O Windows não confirmou a reinicialização do launcher.' }");
         ps.AppendLine("} catch {");
         ps.AppendLine("  $failure = $_.Exception.ToString()");
         ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
