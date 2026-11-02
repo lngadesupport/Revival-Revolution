@@ -4,7 +4,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Revival Revolution" Height="810" Width="1440"
         MinHeight="700" MinWidth="1100" WindowStartupLocation="CenterScreen"
-        Background="#080911" Foreground="#FFFFFF">
+        Background="#080911" Foreground="#FFFFFF"
+        FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue">
     <Window.Resources>
         <SolidColorBrush x:Key="Glass" Color="#B00A0B17"/>
         <SolidColorBrush x:Key="Muted" Color="#C5C4D2"/>
@@ -61,6 +62,7 @@
             <Setter Property="Padding" Value="10,8"/>
             <Setter Property="CaretBrush" Value="#FFFFFF"/>
             <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
         </Style>
     </Window.Resources>
 
@@ -165,7 +167,7 @@
                             <TextBox x:Name="LogBox" IsReadOnly="True" TextWrapping="Wrap"
                                      AcceptsReturn="True" MinHeight="76" MaxHeight="130"
                                      Background="Transparent" BorderThickness="0" Padding="0"
-                                     Foreground="#E6E4EC" FontSize="10"
+                                     Foreground="#E6E4EC" FontSize="10" FontFamily="Segoe UI"
                                      VerticalScrollBarVisibility="Auto"/>
                         </StackPanel>
                     </Border>
