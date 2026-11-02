@@ -14,6 +14,14 @@
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Assets/Fonts/BebasNeue-Regular.ttf" />
+    <Content Include="Assets/metal-revolution-background.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets/metal-revolution-logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Update="launcher-update.json">
