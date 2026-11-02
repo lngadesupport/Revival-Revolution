@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SetActiveNavigation("offline");
         var version = typeof(MainWindow).Assembly.GetName().Version;
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
