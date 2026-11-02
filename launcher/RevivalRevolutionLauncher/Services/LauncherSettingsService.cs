@@ -14,9 +14,8 @@ public sealed class LauncherSettings
 public sealed class LauncherSettingsService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    private static string SettingsDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "RevivalRevolution");
+    // Keep settings and launcher logs beside the executable so the ZIP build remains portable.
+    private static string SettingsDirectory => Path.Combine(AppContext.BaseDirectory, "Launcher", "Config");
     private static string SettingsPath => Path.Combine(SettingsDirectory, "launcher-settings.json");
 
     public LauncherSettings Load()
@@ -42,5 +41,5 @@ public sealed class LauncherSettingsService
     }
 
     public string GetSettingsPath() => SettingsPath;
-    public string GetLogDirectory() => Path.Combine(SettingsDirectory, "Logs");
+    public string GetLogDirectory() => Path.Combine(AppContext.BaseDirectory, "Launcher", "Logs");
 }
