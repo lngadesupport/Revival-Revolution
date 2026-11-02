@@ -149,7 +149,7 @@
                             <TextBox x:Name="GameFolderBox" IsReadOnly="True" VerticalContentAlignment="Center"
                                      Text="CAMINHO DA PASTA" Background="#A0080A15" BorderBrush="#33FFFFFF"
                                      Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" Content="SELECIONE A PASTA" Click="ChooseFolder_Click"
+                            <Button Grid.Column="1" Content="SELECIONAR UFO.EXE" Click="ChooseFolder_Click"
                                     HorizontalContentAlignment="Center" FontSize="10" Margin="0"/>
                         </Grid>
                         <Border Background="#A0090A14" BorderBrush="#33FFFFFF" BorderThickness="1"
@@ -177,7 +177,7 @@
             </Grid>
         </Grid>
 
-        <TextBlock x:Name="FooterStatus" Text="Selecione a pasta do jogo para começar."
+        <TextBlock x:Name="FooterStatus" Text="Selecione o arquivo ufo.exe para começar."
                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,30,12"
                    Foreground="#D1CEDA" FontSize="10" />
 
