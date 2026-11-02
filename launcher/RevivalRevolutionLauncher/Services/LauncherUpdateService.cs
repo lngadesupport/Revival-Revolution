@@ -264,10 +264,9 @@ public sealed class LauncherUpdateService
             ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
         ps.AppendLine("  if (-not (Test-Path -LiteralPath $launcherExe -PathType Leaf)) { throw 'Executável atualizado não encontrado; não foi possível reiniciar o launcher.' }");
-        ps.AppendLine("  if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }");
-        ps.AppendLine("  if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }");
         ps.AppendLine("  $started = Start-Process -FilePath $launcherExe -WorkingDirectory $root -PassThru");
         ps.AppendLine("  if (-not $started) { throw 'O Windows não confirmou a reinicialização do launcher.' }");
+        ps.AppendLine("  try { if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }; if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force } } catch { Add-Content -LiteralPath " + PsQuote(Path.Combine(logs, "update-error.log")) + " -Value ('Cleanup warning: ' + $_.Exception.Message) -Encoding UTF8 }");
         ps.AppendLine("} catch {");
         ps.AppendLine("  $failure = $_.Exception.ToString()");
         ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
