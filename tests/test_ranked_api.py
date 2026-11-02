@@ -81,7 +81,7 @@ class RankedApiTests(unittest.TestCase):
 
     def test_profile_avatar_can_be_saved_and_cleared(self):
         player = self.register("AVATAR-PLAYER")
-        avatar = "data:image/png;base64,aGVsbG8="
+        avatar = "data:image/png;base64,iVBORw0KGgo="
         status, profile = self.request("POST", "/v1/profile", {"avatar_data": avatar}, player["token"])
         self.assertEqual(status, 200)
         self.assertEqual(profile["avatar_data"], avatar)
@@ -173,6 +173,12 @@ class RankedApiTests(unittest.TestCase):
         player = self.register("SEARCH")
         status, _ = self.request("GET", "/v1/players/search?q=a", token=player["token"])
         self.assertEqual(status, 400)
+
+    def test_avatar_rejects_mismatched_image_signature(self):
+        player = self.register("BAD-AVATAR")
+        status, body = self.request("POST", "/v1/profile", {"avatar_data": "data:image/png;base64,aGVsbG8="}, player["token"])
+        self.assertEqual(status, 400)
+        self.assertEqual(body["error"], "invalid_request")
 
 if __name__ == "__main__":
     unittest.main()
