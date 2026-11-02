@@ -464,13 +464,15 @@ public partial class MainWindow : Window
             {
                 var progress = new Progress<DownloadProgress>(p =>
                 {
-                    UpdateProgressDetail.Text = $"{p.FileName}: {p.BytesReceived / 1048576d:F1} MB";
+                    var received = p.BytesReceived / 1048576d;
+                    var total = p.TotalBytes is long bytes ? $" / {bytes / 1048576d:F1} MB" : "";
+                    var resumed = p.IsResuming ? " • retomada" : "";
+                    UpdateProgressDetail.Text = $"{p.FileName}: {received:F1} MB{total}{resumed}";
                     if (p.Percent is double percent)
                     {
                         UpdateProgressBar.IsIndeterminate = false;
                         UpdateProgressBar.Value = Math.Clamp(percent, 0, 100);
                         UpdatePercentText.Text = $"{percent:F0}%";
-                        UpdateStageText.Text = "Baixando pacote de atualização...";
                     }
                     else
                     {
@@ -478,9 +480,25 @@ public partial class MainWindow : Window
                         UpdatePercentText.Text = "—";
                     }
                 });
+                var stageProgress = new Progress<UpdateOperationProgress>(stage =>
+                {
+                    UpdateStageText.Text = stage.Stage switch
+                    {
+                        "verify" => "Verificando integridade do pacote...",
+                        "extract" => "Preparando arquivos da atualização...",
+                        "finalize" => "Finalizando preparação...",
+                        _ => "Baixando pacote de atualização..."
+                    };
+                    UpdateProgressDetail.Text = stage.Detail;
+                    if (stage.Stage != "download")
+                    {
+                        UpdateProgressBar.IsIndeterminate = true;
+                        UpdatePercentText.Text = stage.Stage == "verify" ? "SHA-256" : "…";
+                    }
+                });
 
                 UpdateStageText.Text = "Baixando pacote de atualização...";
-                script = await _updates.DownloadAndStageAsync(_root, update, progress, token);
+                script = await _updates.DownloadAndStageAsync(_root, update, progress, token, stageProgress);
                 UpdateProgressBar.IsIndeterminate = false;
                 UpdateProgressBar.Value = 100;
                 UpdatePercentText.Text = "100%";
