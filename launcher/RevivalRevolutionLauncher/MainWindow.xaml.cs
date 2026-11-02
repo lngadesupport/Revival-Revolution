@@ -39,13 +39,6 @@ public partial class MainWindow : Window
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
-        if (_settings.ConfirmBeforeLaunch)
-        {
-            var choice = MessageBox.Show(this, "Iniciar Metal Revolution no modo offline agora?",
-                "Confirmar inicialização", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (choice != MessageBoxResult.Yes) return;
-        }
-
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
@@ -58,13 +51,6 @@ public partial class MainWindow : Window
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
     {
-        if (!_settings.EnableAnimations)
-        {
-            MainContent.Opacity = 1;
-            WindowChrome.Opacity = 1;
-            HeaderPanel.Opacity = SidebarPanel.Opacity = HeroPanel.Opacity = QuickAccessPanel.Opacity = BottomPanel.Opacity = 1;
-            return;
-        }
         // Staggered entrance: soft fade plus a short upward settle, with no impact on launch logic.
         AnimateEntrance(MainContent, 0, 420, 10);
         AnimateEntrance(WindowChrome, 45, 360, 4);
@@ -167,6 +153,13 @@ public partial class MainWindow : Window
             MessageBox.Show(this, "Escolha primeiro a pasta correta do jogo.", "Pasta não configurada",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
+        }
+
+        if (_settings.ConfirmBeforeLaunch)
+        {
+            var choice = MessageBox.Show(this, "Iniciar Metal Revolution no modo offline agora?",
+                "Confirmar inicialização", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (choice != MessageBoxResult.Yes) return;
         }
 
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
@@ -400,11 +393,6 @@ public partial class MainWindow : Window
             _settings = window.Result;
             Log("Configurações salvas.");
             FooterStatus.Text = "Configurações atualizadas.";
-            if (!_settings.EnableAnimations)
-            {
-                MainContent.BeginAnimation(UIElement.OpacityProperty, null);
-                MainContent.Opacity = 1;
-            }
         }
         catch (Exception ex)
         {
