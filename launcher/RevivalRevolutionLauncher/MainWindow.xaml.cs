@@ -38,7 +38,15 @@ public partial class MainWindow : Window
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
-        SyncDistributionScripts(logChanges: false);
+        try
+        {
+            SyncDistributionScripts(logChanges: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+            Log("Não foi possível copiar os scripts offline na inicialização: " + ex.Message);
+        }
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
