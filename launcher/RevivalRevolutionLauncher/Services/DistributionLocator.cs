@@ -13,8 +13,7 @@ public sealed class DistributionLocator
 
     private static readonly HashSet<string> IgnoredDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".git", ".vs", "bin", "obj", "node_modules", "__pycache__", "Temp", "Cache",
-        "Logs", "Downloads", "Runtime", "Library"
+        ".git", ".vs", "bin", "obj", "node_modules", "__pycache__"
     };
 
     private const int MaxDirectoriesToInspect = 50000;
