@@ -105,6 +105,20 @@ class SocialStore:
                 raise ValueError("unknown player")
             return dict(row)
 
+    def avatar(self, player_id):
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT avatar_data FROM player_profiles WHERE player_id=?",
+                (player_id,),
+            ).fetchone()
+            if row is None:
+                # Distinguish an existing account without a photo from an unknown ID.
+                exists = db.execute("SELECT 1 FROM players WHERE player_id=?", (player_id,)).fetchone()
+                if not exists:
+                    raise ValueError("unknown player")
+                return {"player_id": player_id, "avatar_data": ""}
+            return {"player_id": player_id, "avatar_data": row["avatar_data"] or ""}
+
     def update_profile(self, player_id, display_name=None, avatar_data=None, update_avatar=False):
         name = self._nickname(display_name) if display_name is not None else None
         avatar = self._avatar(avatar_data) if update_avatar else None
@@ -135,7 +149,7 @@ class SocialStore:
         with self._connect() as db:
             rows = db.execute("""
                 SELECT p.player_id,p.display_name,p.rating,
-                       COALESCE(s.avatar_data,'') AS avatar_data,
+                       CASE WHEN s.avatar_data IS NOT NULL AND s.avatar_data <> '' THEN 1 ELSE 0 END AS has_avatar,
                        CASE WHEN (? - p.last_seen) <= 90 THEN 1 ELSE 0 END AS online
                 FROM players p LEFT JOIN player_profiles s USING(player_id)
                 WHERE p.display_name LIKE ? COLLATE NOCASE
@@ -147,7 +161,7 @@ class SocialStore:
         with self._connect() as db:
             rows = db.execute("""
                 SELECT p.player_id,p.display_name,p.rating,
-                       COALESCE(s.avatar_data,'') AS avatar_data,
+                       CASE WHEN s.avatar_data IS NOT NULL AND s.avatar_data <> '' THEN 1 ELSE 0 END AS has_avatar,
                        CASE WHEN (? - p.last_seen) <= 90 THEN 1 ELSE 0 END AS online
                 FROM players p LEFT JOIN player_profiles s USING(player_id)
                 ORDER BY p.rating DESC, p.created_at ASC, p.player_id ASC LIMIT ?
@@ -222,7 +236,7 @@ class SocialStore:
             rows = db.execute("""
                 SELECT f.requester_id,f.addressee_id,f.status,f.created_at,
                        p.player_id,p.display_name,p.rating,p.last_seen,
-                       COALESCE(s.avatar_data,'') AS avatar_data
+                       CASE WHEN s.avatar_data IS NOT NULL AND s.avatar_data <> '' THEN 1 ELSE 0 END AS has_avatar
                 FROM friendships f
                 JOIN players p ON p.player_id =
                     CASE WHEN f.requester_id=? THEN f.addressee_id ELSE f.requester_id END
@@ -233,7 +247,7 @@ class SocialStore:
             result = {"friends": [], "incoming": [], "outgoing": []}
             for row in rows:
                 item = {"player_id": row["player_id"], "display_name": row["display_name"],
-                        "rating": row["rating"], "avatar_data": row["avatar_data"],
+                        "rating": row["rating"], "has_avatar": bool(row["has_avatar"]),
                         "online": self.clock() - float(row["last_seen"]) <= 90}
                 if row["status"] == "accepted":
                     result["friends"].append(item)
