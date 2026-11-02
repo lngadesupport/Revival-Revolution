@@ -8,7 +8,6 @@ namespace RevivalRevolution;
 
 public sealed class LauncherSettingsWindow : Window
 {
-    private readonly CheckBox _animations;
     private readonly CheckBox _startupUpdates;
     private readonly CheckBox _confirmLaunch;
     private readonly CheckBox _persistLogs;
@@ -19,7 +18,6 @@ public sealed class LauncherSettingsWindow : Window
     {
         Result = new LauncherSettings
         {
-            EnableAnimations = current.EnableAnimations,
             CheckUpdatesOnStartup = current.CheckUpdatesOnStartup,
             ConfirmBeforeLaunch = current.ConfirmBeforeLaunch,
             PersistLogs = current.PersistLogs
@@ -51,8 +49,6 @@ public sealed class LauncherSettingsWindow : Window
             Foreground = new SolidColorBrush(Color.FromRgb(190, 192, 205))
         });
 
-        _animations = AddOption(root, "Animações suaves",
-            "Fade-in, transições e movimentos discretos da interface.", current.EnableAnimations);
         _startupUpdates = AddOption(root, "Verificar atualizações ao abrir",
             "Consulta a Release oficial sem bloquear a inicialização se a rede falhar.", current.CheckUpdatesOnStartup);
         _confirmLaunch = AddOption(root, "Confirmar antes de iniciar o jogo",
@@ -93,7 +89,6 @@ public sealed class LauncherSettingsWindow : Window
         {
             Result = new LauncherSettings
             {
-                EnableAnimations = _animations.IsChecked == true,
                 CheckUpdatesOnStartup = _startupUpdates.IsChecked == true,
                 ConfirmBeforeLaunch = _confirmLaunch.IsChecked == true,
                 PersistLogs = _persistLogs.IsChecked == true
