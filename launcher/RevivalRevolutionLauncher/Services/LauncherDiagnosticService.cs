@@ -4,13 +4,22 @@ public sealed record DiagnosticItem(string Name, bool Passed, string Detail);
 
 public sealed class LauncherDiagnosticService
 {
-    private static readonly string[] Scripts =
+    private static readonly string[] RequiredOfflineScripts =
     {
         "offline_launcher.py", "inject_offline.py", "inject_overlay.py",
+    };
+
+    private static readonly string[] OptionalOnlineScripts =
+    {
         "peer_session.py", "autopunch_transport.py", "selection_sync.py", "live_fighter.py"
     };
 
-    private static readonly string[] Libraries =
+    private static readonly string[] RequiredOfflineLibraries =
+    {
+        "MetalOfflineBridgeImGuiV3.dll"
+    };
+
+    private static readonly string[] OptionalOnlineLibraries =
     {
         "MetalNetplayBridgeV32.dll", "MetalOfflineBridgeImGuiV3.dll",
         "MetalImGuiOverlay.dll", "SDL3.dll"
@@ -23,10 +32,17 @@ public sealed class LauncherDiagnosticService
         var results = new List<DiagnosticItem>();
         var distribution = _locator.Find(root, gameFolder);
         var scriptRoot = distribution ?? root;
-        foreach (var name in Scripts)
-            Check(results, name, Path.Combine(scriptRoot, name));
+        foreach (var name in RequiredOfflineScripts)
+            Check(results, "Essencial offline: " + name, Path.Combine(scriptRoot, name));
 
-        foreach (var name in Libraries)
+        foreach (var name in OptionalOnlineScripts)
+        {
+            var path = Path.Combine(scriptRoot, name);
+            results.Add(new("Opcional online: " + name, true,
+                File.Exists(path) ? path : "Não instalado; não é necessário para iniciar no modo offline."));
+        }
+
+        foreach (var name in RequiredOfflineLibraries)
         {
             var candidates = new[] { distribution, gameFolder, root }
                 .Where(path => !string.IsNullOrWhiteSpace(path))
@@ -34,8 +50,20 @@ public sealed class LauncherDiagnosticService
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var found = candidates.FirstOrDefault(File.Exists);
-            results.Add(new(name, found is not null,
+            results.Add(new("Essencial offline: " + name, found is not null,
                 found ?? "Não encontrado. Locais verificados: " + string.Join("; ", candidates)));
+        }
+
+        foreach (var name in OptionalOnlineLibraries)
+        {
+            var candidates = new[] { distribution, gameFolder, root }
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => Path.Combine(path!, name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var found = candidates.FirstOrDefault(File.Exists);
+            results.Add(new("Opcional online: " + name, true,
+                found ?? "Não instalado; não é necessário para iniciar no modo offline."));
         }
 
         Check(results, "Python portátil", pythonPath);
