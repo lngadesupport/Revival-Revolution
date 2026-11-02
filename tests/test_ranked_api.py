@@ -109,7 +109,7 @@ class RankedApiTests(unittest.TestCase):
     def test_player_search_and_leaderboard(self):
         one = self.register("SEARCHABLE-ONE")
         two = self.register("SEARCHABLE-TWO")
-        status, found = self.request("GET", "/v1/players/search?q=SEARCHABLE")
+        status, found = self.request("GET", "/v1/players/search?q=SEARCHABLE", token=one["token"])
         self.assertEqual(status, 200)
         self.assertEqual(len(found["players"]), 2)
         status, board = self.request("GET", "/v1/leaderboard", token=one["token"])
