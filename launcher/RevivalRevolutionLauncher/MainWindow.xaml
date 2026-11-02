@@ -79,13 +79,13 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <Grid Margin="28,58,28,28">
+        <Grid x:Name="MainContent" Margin="28,58,28,28" Opacity="0" Loaded="MainContent_Loaded">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="#B30A0B18" BorderBrush="#33FFFFFF"
+            <Border x:Name="SidebarPanel" Grid.Column="0" Opacity="0" Background="#B30A0B18" BorderBrush="#33FFFFFF"
                     BorderThickness="1" CornerRadius="16" Padding="16">
                 <DockPanel LastChildFill="True">
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,5">
@@ -115,7 +115,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <DockPanel Grid.Row="0" LastChildFill="False">
+                <DockPanel x:Name="HeaderPanel" Grid.Row="0" Opacity="0" LastChildFill="False">
                     <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
                         <Image x:Name="MetalLogo" Width="190" Height="64" Stretch="Uniform" Visibility="Collapsed"/>
                         <StackPanel x:Name="LogoFallback">
@@ -136,7 +136,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="230"/>
                     </Grid.ColumnDefinitions>
-                    <Border Grid.Column="0" Background="#9B090A12" BorderBrush="#44FFFFFF"
+                    <Border x:Name="HeroPanel" Grid.Column="0" Opacity="0" Background="#9B090A12" BorderBrush="#44FFFFFF"
                             BorderThickness="1" CornerRadius="16" Padding="28" Margin="0,0,18,0">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -186,7 +186,7 @@
                                        FontFamily="Segoe UI" FontSize="11" Foreground="#D0CED8"/>
                         </Grid>
                     </Border>
-                    <Border Grid.Column="1" Background="#A0090A14" BorderBrush="#44FFFFFF"
+                    <Border x:Name="QuickAccessPanel" Grid.Column="1" Opacity="0" Background="#A0090A14" BorderBrush="#44FFFFFF"
                             BorderThickness="1" CornerRadius="16" Padding="16">
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="ACESSO RÁPIDO" FontFamily="Segoe UI" FontSize="10"
@@ -205,7 +205,7 @@
                     </Border>
                 </Grid>
 
-                <Grid Grid.Row="2" Margin="0,0,0,0">
+                <Grid x:Name="BottomPanel" Grid.Row="2" Opacity="0" Margin="0,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="190"/>
@@ -252,7 +252,7 @@
                    Foreground="#D1CEDA" FontSize="10" />
 
         <!-- Custom window chrome sits over the game artwork. -->
-        <Border x:Name="WindowChrome" Height="44" VerticalAlignment="Top" Margin="10,9,10,0"
+        <Border x:Name="WindowChrome" Opacity="0" Height="44" VerticalAlignment="Top" Margin="10,9,10,0"
                 Background="#D9090D18" BorderBrush="#66FFFFFF" BorderThickness="1"
                 CornerRadius="9" MouseLeftButtonDown="WindowChrome_MouseLeftButtonDown">
             <Grid>
