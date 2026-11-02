@@ -122,7 +122,7 @@ class SocialStore:
                 WHERE display_name LIKE ? COLLATE NOCASE
                 ORDER BY display_name COLLATE NOCASE, player_id LIMIT ?
             """, (f"%{query}%", max(1, min(int(limit), 20)))).fetchall()
-            return [dict(row) for row in rows]
+            return [{**dict(row), "online": self.clock() - float(row["last_seen"]) <= 90} for row in rows]
 
     def leaderboard(self, limit=100):
         with self._connect() as db:
@@ -130,7 +130,7 @@ class SocialStore:
                 SELECT player_id,display_name,rating FROM players
                 ORDER BY rating DESC, created_at ASC, player_id ASC LIMIT ?
             """, (max(1, min(int(limit), 100)),)).fetchall()
-            return [{"position": index + 1, **dict(row)} for index, row in enumerate(rows)]
+            return [{"position": index + 1, **dict(row), "online": self.clock() - float(row["last_seen"]) <= 90} for index, row in enumerate(rows)]
 
     def request_friend(self, requester_id, addressee_id):
         if not isinstance(addressee_id, str) or not addressee_id.strip():
@@ -203,7 +203,7 @@ class SocialStore:
             result = {"friends": [], "incoming": [], "outgoing": []}
             for row in rows:
                 item = {"player_id": row["player_id"], "display_name": row["display_name"],
-                        "rating": row["rating"], "created_at": row["created_at"]}
+                        "rating": row["rating"], "created_at": row["created_at"],\n                        "online": self.clock() - float(row["last_seen"]) <= 90}
                 if row["status"] == "accepted":
                     result["friends"].append(item)
                 elif row["addressee_id"] == player_id:
