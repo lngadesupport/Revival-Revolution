@@ -72,7 +72,7 @@ public sealed class LauncherDiagnosticService
         CheckEmptyManagedLibraries(results, managed);
         if (distribution is null)
             results.Add(new("Raiz da distribuição", false,
-                "Não foi possível localizar offline_launcher.py na pasta do launcher nem na pasta acima do jogo."));
+                "Não foi possível localizar o conjunto completo dos três scripts offline na distribuição. Verifique se offline_launcher.py, inject_offline.py e inject_overlay.py estão juntos na pasta do launcher, na pasta do jogo ou em uma subpasta próxima."));
         else
             results.Add(new("Raiz da distribuição", true, distribution));
         return results;
