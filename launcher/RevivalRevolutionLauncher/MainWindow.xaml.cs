@@ -38,7 +38,7 @@ public partial class MainWindow : Window
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
-        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        SyncDistributionScripts(logChanges: false);
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
@@ -115,6 +115,20 @@ public partial class MainWindow : Window
 
     private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
 
+    private void SyncDistributionScripts(bool logChanges)
+    {
+        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        if (_distributionRoot is null || string.IsNullOrWhiteSpace(_gameFolder) ||
+            !_distributionLocator.IsInsideDirectory(_distributionRoot, _gameFolder))
+            return;
+
+        var source = _distributionRoot;
+        var destination = _distributionLocator.CopyToLauncherFolder(source, _root);
+        _distributionRoot = destination;
+        if (logChanges)
+            Log($"Scripts offline copiados de {source} para {destination}.");
+    }
+
     private void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog
@@ -128,7 +142,19 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         var folder = dialog.FolderName;
         _gameFolder = folder;
-        _distributionRoot = _distributionLocator.Find(_root, folder);
+        try
+        {
+            SyncDistributionScripts(logChanges: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _distributionRoot = _distributionLocator.Find(_root, folder);
+            Log("Não foi possível copiar os scripts offline para a pasta do launcher: " + ex.Message);
+            MessageBox.Show(this,
+                "Os scripts foram encontrados na pasta do jogo, mas não foi possível copiá-los para a pasta do launcher. " +
+                "Verifique as permissões e tente novamente.\n\n" + ex.Message,
+                "Falha ao copiar scripts", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
         GameFolderBox.Text = folder;
         _config.SaveGameFolder(_root, folder, _distributionRoot);
         RefreshGameState();
@@ -159,7 +185,18 @@ public partial class MainWindow : Window
             if (choice != MessageBoxResult.Yes) return;
         }
 
-        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        try
+        {
+            SyncDistributionScripts(logChanges: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log("Falha ao sincronizar scripts offline: " + ex.Message);
+            MessageBox.Show(this, "Não foi possível copiar os scripts para a pasta do launcher.\n\n" + ex.Message,
+                "Falha ao copiar scripts", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         if (_distributionRoot is null)
         {
             Log("Distribuição incompleta: não encontrei offline_launcher.py junto ao launcher nem na pasta acima do jogo.");
