@@ -4,7 +4,6 @@ namespace RevivalRevolution.Services;
 
 public sealed class LauncherSettings
 {
-    public bool EnableAnimations { get; set; } = true;
     public bool CheckUpdatesOnStartup { get; set; } = true;
     public bool ConfirmBeforeLaunch { get; set; } = false;
     public bool PersistLogs { get; set; } = true;
