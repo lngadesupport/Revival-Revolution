@@ -46,30 +46,10 @@ Este MVP não é ainda uma temporada competitiva pública:
 - sem aceitação de partida, lease de reconexão ou administração;
 - sem ticket de sessão P2P;
 - sem aplicação de ELO/vitória/derrota;
-- sem integração com o launcher;
+- sem integração visual dentro do jogo/Community Panel;
 - sem validação autoritativa do resultado.
 
 Não altere rating com base apenas no resultado informado pelos clientes.
-
-## Integração inicial do launcher
-
-A navegação ONLINE abre `RankedWindow`, que:
-- usa `Environment.MachineName` como nome público, sem pedir nickname;
-- permite configurar a URL HTTPS da API (HTTP apenas para localhost);
-- cria a identidade somente após ação explícita do usuário;
-- guarda o token bearer protegido pelo DPAPI do usuário Windows em
-  `%LOCALAPPDATA%\\RevivalRevolution\\Ranked\\credentials.json`;
-- consulta perfil, rating, fila e partida;
-- permite entrar e sair da fila e restaura fila/atribuição ao reabrir o launcher.
-
-A credencial não é registrada nos logs. Se o DPAPI não conseguir abrir um token
-existente, o launcher bloqueia novo cadastro para evitar duplicar a conta.
-
-A atribuição recebida ainda não inicia o jogo: a tela informa que a autorização
-P2P está pendente. O backend atual não emite ticket de sessão, e o protocolo
-`peer_session.py` ainda usa connection code manual. Não foi inventado um ticket
-incompatível com o handshake existente.
-
 
 ## Recursos sociais implementados no backend (sem integração visual ainda)
 
