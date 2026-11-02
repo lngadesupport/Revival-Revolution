@@ -55,6 +55,7 @@ jobs:
           Compress-Archive -Path (Join-Path $publish "*") -DestinationPath $archive -CompressionLevel Optimal
           if (!(Test-Path $archive)) { throw "Portable ZIP archive was not created." }
           if ((Get-Item $archive).Length -lt 10MB) { throw "Portable ZIP archive is unexpectedly small." }
+          $offlineFiles = @("offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll")
           $verify = ".\\artifacts\\portable-verify"
           if (Test-Path $verify) { Remove-Item $verify -Recurse -Force }
           Expand-Archive -Path $archive -DestinationPath $verify -Force
