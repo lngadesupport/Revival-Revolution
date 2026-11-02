@@ -132,5 +132,47 @@ class RankedApiTests(unittest.TestCase):
         self.assertEqual(profile["display_name"], "PROFILE-OWNER")
 
 
+    def test_friend_request_can_be_declined(self):
+        sender = self.register("DECLINE-SENDER")
+        receiver = self.register("DECLINE-RECEIVER")
+        status, _ = self.request("POST", "/v1/friends/request", {"player_id": receiver["player_id"]}, sender["token"])
+        self.assertEqual(status, 201)
+        status, result = self.request("POST", "/v1/friends/decline", {"player_id": sender["player_id"]}, receiver["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "declined")
+        status, friends = self.request("GET", "/v1/friends", token=receiver["token"])
+        self.assertEqual(friends["incoming"], [])
+
+    def test_block_removes_friendship_and_prevents_new_requests(self):
+        one = self.register("BLOCK-ONE")
+        two = self.register("BLOCK-TWO")
+        self.request("POST", "/v1/friends/request", {"player_id": two["player_id"]}, one["token"])
+        self.request("POST", "/v1/friends/accept", {"player_id": one["player_id"]}, two["token"])
+        status, result = self.request("POST", "/v1/players/block", {"player_id": two["player_id"]}, one["token"])
+        self.assertEqual(status, 200)
+        self.assertTrue(result["blocked"])
+        status, friends = self.request("GET", "/v1/friends", token=one["token"])
+        self.assertEqual(friends["friends"], [])
+        status, _ = self.request("POST", "/v1/friends/request", {"player_id": one["player_id"]}, two["token"])
+        self.assertEqual(status, 400)
+        status, blocked = self.request("GET", "/v1/blocks", token=one["token"])
+        self.assertEqual(blocked["players"][0]["player_id"], two["player_id"])
+        status, result = self.request("POST", "/v1/players/unblock", {"player_id": two["player_id"]}, one["token"])
+        self.assertTrue(result["unblocked"])
+
+    def test_presence_heartbeat_requires_authentication(self):
+        status, _ = self.request("POST", "/v1/presence/heartbeat", {})
+        self.assertEqual(status, 401)
+        player = self.register("HEARTBEAT")
+        status, result = self.request("POST", "/v1/presence/heartbeat", {}, player["token"])
+        self.assertEqual(status, 200)
+        self.assertTrue(result["online"])
+        self.assertIsNotNone(result["last_seen"])
+
+    def test_player_search_rejects_too_short_query(self):
+        player = self.register("SEARCH")
+        status, _ = self.request("GET", "/v1/players/search?q=a", token=player["token"])
+        self.assertEqual(status, 400)
+
 if __name__ == "__main__":
     unittest.main()
