@@ -20,14 +20,14 @@ este servidor HTTP de desenvolvimento diretamente à internet.
 - `GET /health` — verificação pública de saúde.
 - `POST /v1/register` — JSON `{"display_name":"NICKNAME"}`; devolve UUID,
   rating inicial e token bearer mostrado uma única vez.
-- `GET /v1/me` — próprio perfil (UUID, nickname, rating e avatar).
+- `GET /v1/me` — próprio perfil (UUID, nickname, rating, avatar e estado online).
 - `POST /v1/account/rotate-token` — gera uma nova credencial e invalida imediatamente a anterior; guarde a resposta em armazenamento privado.
-- `GET /v1/players/{player_id}` — perfil público de outro jogador por UUID.
+- `GET /v1/players/{player_id}` — perfil público de outro jogador por UUID, incluindo avatar e estado online.
 - `POST /v1/profile` — atualiza `display_name` e/ou `avatar_data`.
   Avatar aceita data URL base64 PNG/JPEG/WebP de até 256 KiB; a assinatura
   binária é validada e enviar null limpa a foto.
-- `GET /v1/players/search?q=...` — busca jogadores por nickname (mínimo 2 caracteres).
-- `GET /v1/friends` — amigos aceitos, solicitações recebidas e enviadas.
+- `GET /v1/players/search?q=...` — busca jogadores por nickname (mínimo 2 caracteres), com avatar e estado online.
+- `GET /v1/friends` — amigos aceitos, solicitações recebidas e enviadas, com avatar e estado online.
 - `POST /v1/friends/request` — JSON `{"player_id":"UUID"}`; cria solicitação
   ou aceita automaticamente uma solicitação recíproca.
 - `POST /v1/friends/accept` — aceita solicitação recebida.
@@ -37,13 +37,13 @@ este servidor HTTP de desenvolvimento diretamente à internet.
 - `POST /v1/players/block` e `POST /v1/players/unblock` — bloqueia/desbloqueia;
   bloquear remove a amizade e impede novas solicitações entre as contas.
 - `POST /v1/presence/heartbeat` — confirma atividade autenticada.
-- `GET /v1/leaderboard?limit=100` — classificação por rating atual.
+- `GET /v1/leaderboard?limit=100` — classificação por rating atual, com avatar e estado online.
 - `POST /v1/queue/join` — JSON `{"region":"sa-east"}`.
 - `GET /v1/queue` — posição/estado da fila.
 - `POST /v1/queue/leave` — sai da fila.
 - `GET /v1/match` — partida atualmente atribuída.
 
-Use `Authorization: Bearer TOKEN`. O banco guarda somente o SHA-256 do token.
+As respostas sociais mostram presença online/offline aproximada, não o horário exato da última atividade.\n\nUse `Authorization: Bearer TOKEN`. O banco guarda somente o SHA-256 do token.
 O cliente integrado ao jogo deverá guardar o token em armazenamento privado
 do usuário, nunca em arquivos públicos ou logs. O launcher não apresenta telas
 sociais.
