@@ -1,0 +1,12 @@
+{
+    "id": "",
+    "state": "bridge_ready",
+    "message": "Game bridge ready. Local VS routing and rollback tests are available; peer transport is not connected.",
+    "session_id": "",
+    "pid": 20660,
+    "local_slot": -1,
+    "frame": 0,
+    "protocol": 1,
+    "transport_connected": false,
+    "input_authority_enforced": false
+}
