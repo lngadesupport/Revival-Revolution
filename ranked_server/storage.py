@@ -137,14 +137,21 @@ class RankedStore:
                 db.execute("INSERT INTO queue(player_id,region,joined_at) VALUES(?,?,?)", (player_id, region, now))
             own_rating = int(player["rating"])
             wait = max(0, now - joined_at)
-            window = base_window + int(wait // widen_seconds) * step
             candidates = db.execute("""
                 SELECT q.player_id,q.joined_at,p.rating,p.display_name
                 FROM queue q JOIN players p USING(player_id)
                 WHERE q.region=? AND q.player_id<>?
                 ORDER BY ABS(p.rating-?), q.joined_at, q.player_id
             """, (region, player_id, own_rating)).fetchall()
-            eligible = [r for r in candidates if abs(int(r["rating"]) - own_rating) <= window]
+            # Use the longer wait of the two players so an older queued player
+            # can receive the advertised widening even when a newcomer arrives.
+            eligible = []
+            for candidate in candidates:
+                candidate_wait = max(0, now - float(candidate["joined_at"]))
+                effective_wait = max(wait, candidate_wait)
+                window = base_window + int(effective_wait // widen_seconds) * step
+                if abs(int(candidate["rating"]) - own_rating) <= window:
+                    eligible.append(candidate)
             if not eligible:
                 return None
             opponent = eligible[0]
