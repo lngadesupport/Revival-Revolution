@@ -66,7 +66,7 @@ public sealed class DistributionLocator
     {
         var relative = Path.GetRelativePath(Path.GetFullPath(parentDirectory), Path.GetFullPath(candidatePath));
         return !Path.IsPathRooted(relative) &&
-               relative != "." &&
+               (relative == "." || relative != "..") &&
                relative != ".." &&
                !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
                !relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal);
