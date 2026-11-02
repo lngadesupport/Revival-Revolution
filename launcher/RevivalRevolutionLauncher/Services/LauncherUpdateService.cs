@@ -13,6 +13,8 @@ public sealed record LauncherUpdateInfo(
     string ReleaseNotes,
     IReadOnlyList<string> Files);
 
+public sealed record UpdateOperationProgress(string Stage, string Detail);
+
 public sealed class LauncherUpdateService
 {
     private const long MaxPackageBytes = 2L * 1024 * 1024 * 1024;
@@ -86,7 +88,8 @@ public sealed class LauncherUpdateService
         string root,
         LauncherUpdateInfo update,
         IProgress<DownloadProgress>? progress,
-        CancellationToken token)
+        CancellationToken token,
+        IProgress<UpdateOperationProgress>? stageProgress = null)
     {
         if (!Uri.TryCreate(update.PackageUrl, UriKind.Absolute, out var packageUri) ||
             packageUri.Scheme != Uri.UriSchemeHttps ||
@@ -106,14 +109,19 @@ public sealed class LauncherUpdateService
         Directory.CreateDirectory(downloadsDirectory);
 
         var zip = Path.Combine(downloadsDirectory, "launcher-update.zip");
+        stageProgress?.Report(new("download", "Baixando pacote oficial do GitHub..."));
         await Downloads.DownloadAsync(packageUri.ToString(), zip, progress, token);
+
+        stageProgress?.Report(new("verify", "Conferindo a integridade SHA-256 do pacote..."));
         await VerifyPackageHashAsync(zip, update.Sha256, token);
 
         if (Directory.Exists(staging)) Directory.Delete(staging, true);
         Directory.CreateDirectory(staging);
         try
         {
+            stageProgress?.Report(new("extract", "Validando o manifesto e preparando os arquivos autorizados..."));
             ExtractAuthorizedFiles(zip, staging, update.Files, token);
+            stageProgress?.Report(new("finalize", "Preparando a aplicação segura da atualização..."));
             return await CreateApplyScriptAsync(root, staging, update.Files, token);
         }
         catch
