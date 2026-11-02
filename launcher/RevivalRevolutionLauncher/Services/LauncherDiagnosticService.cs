@@ -1,6 +1,6 @@
 namespace RevivalRevolution.Services;
 
-public sealed record DiagnosticItem(string Name, bool Passed, string Detail);
+public sealed record DiagnosticItem(string Name, bool Passed, string Detail, bool Optional = false);
 
 public sealed class LauncherDiagnosticService
 {
@@ -21,8 +21,7 @@ public sealed class LauncherDiagnosticService
 
     private static readonly string[] OptionalOnlineLibraries =
     {
-        "MetalNetplayBridgeV32.dll", "MetalOfflineBridgeImGuiV3.dll",
-        "MetalImGuiOverlay.dll", "SDL3.dll"
+        "MetalNetplayBridgeV32.dll", "MetalImGuiOverlay.dll", "SDL3.dll"
     };
 
     private readonly DistributionLocator _locator = new();
@@ -39,7 +38,7 @@ public sealed class LauncherDiagnosticService
         {
             var path = Path.Combine(scriptRoot, name);
             results.Add(new("Opcional online: " + name, true,
-                File.Exists(path) ? path : "Não instalado; não é necessário para iniciar no modo offline."));
+                File.Exists(path) ? path : "Não instalado; não é necessário para iniciar no modo offline.", Optional: true));
         }
 
         foreach (var name in RequiredOfflineLibraries)
@@ -63,7 +62,7 @@ public sealed class LauncherDiagnosticService
                 .ToArray();
             var found = candidates.FirstOrDefault(File.Exists);
             results.Add(new("Opcional online: " + name, true,
-                found ?? "Não instalado; não é necessário para iniciar no modo offline."));
+                found ?? "Não instalado; não é necessário para iniciar no modo offline.", Optional: true));
         }
 
         Check(results, "Python portátil", pythonPath);
