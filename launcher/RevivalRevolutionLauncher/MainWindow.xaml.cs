@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using RevivalRevolution.Services;
 
@@ -18,6 +20,8 @@ public partial class MainWindow : Window
     private readonly LauncherUpdateService _updates = new();
     private string? _gameFolder;
     private bool _busy;
+    private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private bool _gameRunning;
 
     public MainWindow()
     {
@@ -29,6 +33,9 @@ public partial class MainWindow : Window
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
+        _gameStateTimer.Tick += (_, _) => RefreshGameState();
+        _gameStateTimer.Start();
+        RefreshGameState();
         Log("Revival Revolution Launcher iniciado.");
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
     }
@@ -77,13 +84,15 @@ public partial class MainWindow : Window
         _distributionRoot = _distributionLocator.Find(_root, folder);
         GameFolderBox.Text = folder;
         _config.SaveGameFolder(_root, folder, _distributionRoot);
+        RefreshGameState();
         FooterStatus.Text = "Pasta do jogo salva.";
         Log($"Pasta selecionada: {folder}");
     }
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
-        if (_busy) return;
+        if (_busy || IsGameRunning()) return;
+        RefreshGameState();
         if (!IsValidFolder(_gameFolder))
         {
             MessageBox.Show(this, "Escolha primeiro a pasta correta do jogo.", "Pasta não configurada",
@@ -149,8 +158,61 @@ public partial class MainWindow : Window
             _config.SaveGameFolder(_root, _gameFolder!, _distributionRoot);
             _gameLaunch.StartOffline(python, script, _distributionRoot!);
             Log("Inicialização offline iniciada. Os detalhes do processo estão em Launcher\\Logs.");
-            FooterStatus.Text = "Jogo em inicialização.";
+            FooterStatus.Text = "Jogo em inicialização; aguardando ufo.exe.";
         });
+    }
+
+    private bool IsGameRunning()
+    {
+        if (string.IsNullOrWhiteSpace(_gameFolder)) return false;
+        var expectedExe = Path.GetFullPath(Path.Combine(_gameFolder, "ufo.exe"));
+        foreach (var process in Process.GetProcessesByName("ufo"))
+        {
+            try
+            {
+                var actualExe = process.MainModule?.FileName;
+                if (!string.IsNullOrWhiteSpace(actualExe) &&
+                    string.Equals(Path.GetFullPath(actualExe), expectedExe, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
+            {
+                // Sem acesso ao caminho do processo, não presumimos que seja esta instalação.
+            }
+            finally { process.Dispose(); }
+        }
+        return false;
+    }
+
+    private void RefreshGameState()
+    {
+        var valid = IsValidFolder(_gameFolder);
+        _gameRunning = valid && IsGameRunning();
+        if (_gameRunning)
+        {
+            GameStateLabel.Text = "JOGO ABERTO";
+            GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(35, 130, 75));
+            PlayButton.IsEnabled = false;
+            FooterStatus.Text = "O jogo está em execução. PLAY bloqueado.";
+        }
+        else if (valid)
+        {
+            GameStateLabel.Text = "PREPARADO";
+            GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(35, 145, 80));
+            PlayButton.IsEnabled = !_busy;
+        }
+        else if (string.IsNullOrWhiteSpace(_gameFolder))
+        {
+            GameStateLabel.Text = "NENHUM";
+            GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(85, 91, 102));
+            PlayButton.IsEnabled = false;
+        }
+        else
+        {
+            GameStateLabel.Text = "INVÁLIDO";
+            GameStateBorder.Background = new SolidColorBrush(Color.FromRgb(170, 45, 55));
+            PlayButton.IsEnabled = false;
+        }
     }
 
     private void Install_Click(object sender, RoutedEventArgs e)
@@ -246,6 +308,7 @@ public partial class MainWindow : Window
         {
             _busy = false;
             if (IsVisible) IsEnabled = true;
+            RefreshGameState();
         }
     }
 
@@ -261,6 +324,12 @@ public partial class MainWindow : Window
         LogBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
         LogBox.ScrollToEnd();
     }
+    protected override void OnClosed(EventArgs e)
+    {
+        _gameStateTimer.Stop();
+        base.OnClosed(e);
+    }
+
     private void Home_Click(object sender, RoutedEventArgs e) => FooterStatus.Text = "Página inicial.";
 
     private void Multiplayer_Click(object sender, RoutedEventArgs e)
