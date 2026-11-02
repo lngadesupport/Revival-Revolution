@@ -109,8 +109,9 @@ class RankedStore:
             row = db.execute("SELECT player_id,display_name,rating FROM players WHERE token_hash=?", (digest,)).fetchone()
             if row is None:
                 return None
-            db.execute("UPDATE players SET last_seen=? WHERE player_id=?", (self.clock(), row["player_id"]))
-            return dict(row)
+            now = self.clock()
+            db.execute("UPDATE players SET last_seen=? WHERE player_id=?", (now, row["player_id"]))
+            return {**dict(row), "last_seen": now}
 
     def join_queue(self, player_id: str, region: str = "global", *, base_window: int = 100, step: int = 50, widen_seconds: int = 10) -> dict | None:
         region = str(region).strip().lower()
