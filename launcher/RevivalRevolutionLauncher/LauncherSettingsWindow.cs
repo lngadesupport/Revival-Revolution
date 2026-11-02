@@ -8,6 +8,8 @@ namespace RevivalRevolution;
 
 public sealed class LauncherSettingsWindow : Window
 {
+    private readonly TextBox _playerName;
+    private readonly TextBox _playerTag;
     private readonly CheckBox _startupUpdates;
     private readonly CheckBox _confirmLaunch;
     private readonly CheckBox _persistLogs;
@@ -18,6 +20,8 @@ public sealed class LauncherSettingsWindow : Window
     {
         Result = new LauncherSettings
         {
+            PlayerName = current.PlayerName,
+            PlayerTag = current.PlayerTag,
             CheckUpdatesOnStartup = current.CheckUpdatesOnStartup,
             ConfirmBeforeLaunch = current.ConfirmBeforeLaunch,
             PersistLogs = current.PersistLogs
@@ -25,9 +29,9 @@ public sealed class LauncherSettingsWindow : Window
 
         Title = "Configurações — Revival Revolution";
         Width = 590;
-        Height = 590;
+        Height = 700;
         MinWidth = 520;
-        MinHeight = 520;
+        MinHeight = 620;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.NoResize;
         Background = new SolidColorBrush(Color.FromRgb(12, 14, 25));
@@ -44,11 +48,27 @@ public sealed class LauncherSettingsWindow : Window
         });
         root.Children.Add(new TextBlock
         {
-            Text = "Personalize o comportamento do launcher.",
-            Margin = new Thickness(0, 2, 0, 20),
+            Text = "Personalize seu perfil e o comportamento do launcher.",
+            Margin = new Thickness(0, 2, 0, 18),
             Foreground = new SolidColorBrush(Color.FromRgb(190, 192, 205))
         });
 
+        AddSectionTitle(root, "PERFIL DO JOGADOR");
+        _playerName = AddTextField(root, "Nome do jogador", current.PlayerName, 24,
+            "Nome de exibição salvo no perfil local do launcher.");
+        _playerTag = AddTextField(root, "Tag / clã (opcional)", current.PlayerTag, 12,
+            "Identificador curto para personalização futura do perfil.");
+
+        root.Children.Add(new TextBlock
+        {
+            Text = "Esses dados ficam salvos no launcher. Ainda não são enviados nem sincronizados com o jogo.",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 2, 0, 12),
+            FontSize = 10,
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 190, 120))
+        });
+
+        AddSectionTitle(root, "PREFERÊNCIAS");
         _startupUpdates = AddOption(root, "Verificar atualizações ao abrir",
             "Consulta a Release oficial sem bloquear a inicialização se a rede falhar.", current.CheckUpdatesOnStartup);
         _confirmLaunch = AddOption(root, "Confirmar antes de iniciar o jogo",
@@ -56,14 +76,7 @@ public sealed class LauncherSettingsWindow : Window
         _persistLogs = AddOption(root, "Salvar logs no computador",
             "Mantém um histórico local para facilitar diagnósticos.", current.PersistLogs);
 
-        root.Children.Add(new TextBlock
-        {
-            Text = "INSTALAÇÃO DO JOGO",
-            Margin = new Thickness(0, 18, 0, 4),
-            FontWeight = FontWeights.Bold,
-            FontSize = 11,
-            Foreground = new SolidColorBrush(Color.FromRgb(255, 105, 118))
-        });
+        AddSectionTitle(root, "INSTALAÇÃO DO JOGO");
         root.Children.Add(new TextBlock
         {
             Text = string.IsNullOrWhiteSpace(gameFolder) ? "Nenhuma pasta selecionada." : gameFolder,
@@ -80,15 +93,26 @@ public sealed class LauncherSettingsWindow : Window
             Foreground = new SolidColorBrush(Color.FromRgb(145, 149, 165))
         });
 
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 24, 0, 0) };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
         var cancel = MakeButton("CANCELAR", false);
         cancel.Click += (_, _) => { DialogResult = false; Close(); };
         var save = MakeButton("SALVAR CONFIGURAÇÕES", true);
         save.Margin = new Thickness(10, 0, 0, 0);
         save.Click += (_, _) =>
         {
+            var playerName = _playerName.Text.Trim();
+            var playerTag = _playerTag.Text.Trim();
+            if (playerName.Length > 24 || playerTag.Length > 12)
+            {
+                MessageBox.Show(this, "O nome aceita até 24 caracteres e a tag até 12.",
+                    "Perfil inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             Result = new LauncherSettings
             {
+                PlayerName = playerName,
+                PlayerTag = playerTag,
                 CheckUpdatesOnStartup = _startupUpdates.IsChecked == true,
                 ConfirmBeforeLaunch = _confirmLaunch.IsChecked == true,
                 PersistLogs = _persistLogs.IsChecked == true
@@ -100,6 +124,52 @@ public sealed class LauncherSettingsWindow : Window
         buttons.Children.Add(save);
         root.Children.Add(buttons);
         Content = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    }
+
+    private static void AddSectionTitle(Panel parent, string title)
+    {
+        parent.Children.Add(new TextBlock
+        {
+            Text = title,
+            Margin = new Thickness(0, 12, 0, 6),
+            FontWeight = FontWeights.Bold,
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(255, 105, 118))
+        });
+    }
+
+    private static TextBox AddTextField(Panel parent, string title, string value, int maxLength, string description)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 3, 0, 8) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+        var input = new TextBox
+        {
+            Text = value ?? "",
+            MaxLength = maxLength,
+            Padding = new Thickness(9, 7, 9, 7),
+            Background = new SolidColorBrush(Color.FromRgb(25, 28, 43)),
+            Foreground = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromRgb(75, 80, 100)),
+            CaretBrush = Brushes.White,
+            FontSize = 13
+        };
+        panel.Children.Add(input);
+        panel.Children.Add(new TextBlock
+        {
+            Text = description,
+            Margin = new Thickness(0, 3, 0, 0),
+            FontSize = 10,
+            Foreground = new SolidColorBrush(Color.FromRgb(174, 177, 192))
+        });
+        parent.Children.Add(panel);
+        return input;
     }
 
     private static CheckBox AddOption(Panel parent, string title, string description, bool isChecked)
