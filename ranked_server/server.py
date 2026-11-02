@@ -109,6 +109,8 @@ def make_handler(store: RankedStore):
                 if player is None:
                     return self._json(401, {"error": "authentication_required"})
                 player_id = player["player_id"]
+                if path == "/v1/account/rotate-token":
+                    return self._json(200, store.rotate_token(player_id))
                 if path == "/v1/profile":
                     result = social.update_profile(
                         player_id,
