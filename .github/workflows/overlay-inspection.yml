@@ -1,0 +1,32 @@
+name: Inspect native game integration binaries
+
+on:
+  push:
+    branches: ["feature/ranked-match-backend-v2"]
+    paths:
+      - "tools/inspect_native_pe.py"
+      - "MetalImGuiOverlay.dll"
+      - "MetalNetplayBridgeV8.dll"
+      - "MetalOfflineBridgeImGuiV3.dll"
+      - "Assembly-CSharp-firstpass.dll"
+      - ".github/workflows/overlay-inspection.yml"
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Inspect PE metadata and relevant strings
+        shell: pwsh
+        run: |
+          python tools/inspect_native_pe.py MetalImGuiOverlay.dll MetalNetplayBridgeV8.dll MetalOfflineBridgeImGuiV3.dll Assembly-CSharp-firstpass.dll | Out-File -Encoding utf8 overlay-inspection.txt
+          Get-Content overlay-inspection.txt
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: revival-native-overlay-inspection
+          path: overlay-inspection.txt
+          if-no-files-found: error
+          retention-days: 14
