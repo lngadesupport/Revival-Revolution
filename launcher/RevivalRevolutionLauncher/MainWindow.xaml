@@ -4,7 +4,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Revival Revolution" Height="810" Width="1440"
         MinHeight="700" MinWidth="1100" WindowStartupLocation="CenterScreen"
-        Background="#080911" Foreground="#FFFFFF"
+        WindowStyle="None" ResizeMode="CanResize" Background="#080911" Foreground="#FFFFFF"
         FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue">
     <Window.Resources>
         <SolidColorBrush x:Key="Glass" Color="#B00A0B17"/>
@@ -79,7 +79,7 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <Grid Margin="28">
+        <Grid Margin="28,58,28,28">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
@@ -185,5 +185,53 @@
         <TextBlock x:Name="FooterStatus" Text="Selecione a pasta do jogo para começar."
                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,30,12"
                    Foreground="#D1CEDA" FontSize="10" />
+
+        <!-- Custom window chrome sits over the game artwork. -->
+        <Border x:Name="WindowChrome" Height="42" VerticalAlignment="Top" Margin="8,8,8,0"
+                Background="#C9090B15" BorderBrush="#55FFFFFF" BorderThickness="1"
+                CornerRadius="9" MouseLeftButtonDown="WindowChrome_MouseLeftButtonDown">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"
+                            IsHitTestVisible="False">
+                    <Ellipse Width="7" Height="7" Fill="#D52D3B" Margin="0,0,9,0"/>
+                    <TextBlock Text="REVIVAL REVOLUTION" FontFamily="Segoe UI" FontSize="10"
+                               FontWeight="Bold" Foreground="#D9D8E2" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
+                    <Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            Width="44" Margin="0" Padding="0" HorizontalContentAlignment="Center"
+                            Background="Transparent" BorderThickness="0" Click="MinimizeWindow_Click"
+                            ToolTip="Minimizar"/>
+                    <Button x:Name="MaximizeButton" Content="&#xE922;" FontFamily="Segoe MDL2 Assets"
+                            FontSize="10" Width="44" Margin="0" Padding="0"
+                            HorizontalContentAlignment="Center" Background="Transparent"
+                            BorderThickness="0" Click="MaximizeWindow_Click" ToolTip="Maximizar"/>
+                    <Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            Width="48" Margin="0" Padding="0" HorizontalContentAlignment="Center"
+                            Background="Transparent" BorderThickness="0" Click="CloseWindow_Click"
+                            ToolTip="Fechar">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="CloseSurface" Background="Transparent" CornerRadius="0,8,8,0">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="CloseSurface" Property="Background" Value="#FFD52D3B"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="CloseSurface" Property="Background" Value="#FF9D1F2C"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
