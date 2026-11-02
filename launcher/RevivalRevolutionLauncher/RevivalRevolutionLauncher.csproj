@@ -24,6 +24,13 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <!-- Legacy offline bootstrap scripts are supplied manually before packaging. -->
+    <Content Include="OfflineScripts\\**\\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="launcher-update.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
