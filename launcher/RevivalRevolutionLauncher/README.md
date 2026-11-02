@@ -26,6 +26,12 @@ Publicação self-contained:
 dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
 ```
 
+## Scripts da distribuição offline
+
+O launcher procura os arquivos originais `offline_launcher.py`, `inject_offline.py` e `inject_overlay.py` primeiro na pasta do jogo e na distribuição local. Quando não encontra o conjunto completo, tenta baixá-los da pasta pública do Google Drive configurada no aplicativo e os salva em `OfflineScripts` junto ao launcher. A pasta do Drive precisa permitir acesso de leitura a qualquer pessoa com o link.
+
+Os scripts não são armazenados neste repositório nem incluídos no artefato de build. O launcher valida que os downloads não estejam vazios ou sejam páginas HTML antes de utilizá-los. Essa validação não substitui a verificação de procedência; use apenas a pasta oficial controlada pelo mantenedor. Se o Drive estiver privado, indisponível ou mudar seu formato de listagem, a inicialização offline será interrompida com uma mensagem de erro.
+
 ## Configuração do mantenedor
 
 - Antes de habilitar a instalação, publique hashes SHA-256 autenticados para cada ZIP por canal independente do próprio arquivo. Um `SHA256SUMS.json` incluído no ZIP não autentica o ZIP que o contém.
