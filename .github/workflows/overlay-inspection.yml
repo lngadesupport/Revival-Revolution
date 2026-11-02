@@ -30,10 +30,21 @@ jobs:
           python -m pip install dnfile
           python tools/inspect_managed_assembly.py MetalNetplayBridgeV8.dll MetalOfflineBridgeImGuiV3.dll Assembly-CSharp-firstpass.dll | Out-File -Append -Encoding utf8 overlay-inspection.txt
           Get-Content overlay-inspection.txt
+      - name: Decompile existing managed bridge assemblies
+        shell: pwsh
+        run: |
+          dotnet tool install --global ilspycmd
+          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+          ilspycmd -p -o bridge-source MetalNetplayBridgeV8.dll
+          ilspycmd -p -o offline-bridge-source MetalOfflineBridgeImGuiV3.dll
+          Get-ChildItem bridge-source,offline-bridge-source -Recurse -File | Select-Object FullName,Length
       - name: Upload inspection report
         uses: actions/upload-artifact@v4
         with:
           name: revival-native-overlay-inspection
-          path: overlay-inspection.txt
+          path: |
+            overlay-inspection.txt
+            bridge-source/
+            offline-bridge-source/
           if-no-files-found: error
           retention-days: 14
