@@ -11,8 +11,10 @@
     <FileVersion>0.7.3.0</FileVersion>
     <RootNamespace>RevivalRevolution</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/revival-revolution.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets/revival-revolution.ico" />
     <Resource Include="Assets/Fonts/BebasNeue-Regular.ttf" />
     <Content Include="Assets/metal-revolution-background.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -2,9 +2,9 @@
         Loaded="Window_Loaded" StateChanged="MainWindow_StateChanged"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Revival Revolution" Height="810" Width="1440"
+        Title="Revival Revolution" Icon="pack://application:,,,/Assets/revival-revolution.ico" Height="810" Width="1440"
         MinHeight="700" MinWidth="1100" WindowStartupLocation="CenterScreen"
-        WindowStyle="None" ResizeMode="CanResize" Background="#080911" Foreground="#FFFFFF"
+        WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="True" Background="Transparent" Foreground="#FFFFFF"
         FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue">
     <Window.Resources>
         <SolidColorBrush x:Key="Glass" Color="#B00A0B17"/>
@@ -66,6 +66,7 @@
         </Style>
     </Window.Resources>
 
+    <Border Background="#080911" CornerRadius="12" ClipToBounds="True">
     <Grid ClipToBounds="True">
         <Image x:Name="HeroBackground" Stretch="UniformToFill" Opacity="0.96"/>
         <Rectangle Fill="#38050916"/>
@@ -192,6 +193,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"
                             IsHitTestVisible="False">
+                    <Image Source="pack://application:,,,/Assets/revival-revolution.ico" Width="24" Height="24" Stretch="Uniform" Margin="0,0,9,0"/>
                     <Ellipse Width="7" Height="7" Fill="#D52D3B" Margin="0,0,9,0"/>
                     <TextBlock Text="REVIVAL REVOLUTION  /  COMMUNITY LAUNCHER" FontFamily="Segoe UI" FontSize="9"
                                FontWeight="Bold" Foreground="#D9D8E2" VerticalAlignment="Center"/>
@@ -262,4 +264,5 @@
             </Border>
         </Grid>
     </Grid>
+    </Border>
 </Window>
