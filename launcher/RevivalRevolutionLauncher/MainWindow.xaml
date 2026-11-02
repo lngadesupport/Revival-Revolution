@@ -1,5 +1,5 @@
 <Window x:Class="RevivalRevolution.MainWindow"
-        Loaded="Window_Loaded" WindowStateChanged="MainWindow_StateChanged"
+        Loaded="Window_Loaded" StateChanged="MainWindow_StateChanged"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Revival Revolution" Height="810" Width="1440"
