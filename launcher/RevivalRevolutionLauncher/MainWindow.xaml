@@ -104,6 +104,7 @@
                         <Separator Background="#55FFFFFF" Margin="4,20,4,14"/>
                         <Button x:Name="DiagnosticsNavButton" Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="11"/>
                         <Button x:Name="UpdatesNavButton" Content="ATUALIZAÇÕES" Click="Updates_Click" FontSize="11"/>
+                        <Button x:Name="SettingsNavButton" Content="CONFIGURAÇÕES" Click="Settings_Click" FontSize="11"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
