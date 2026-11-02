@@ -98,7 +98,7 @@
                     <StackPanel>
                         <Grid Margin="8,0,0,12">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="#AEB2C2"
+                    <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF"
                                VerticalAlignment="Center"/>
                     <Button Grid.Column="1" Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16"
                             Width="34" Height="30" Padding="0" Margin="0" HorizontalContentAlignment="Center"
@@ -110,9 +110,8 @@
                         <Button x:Name="PrivateMatchNavButton" Content="PRIVATE MATCH" Click="PrivateMatch_Click" FontSize="16" Padding="13,13"/>
                         <Button x:Name="ModListNavButton" Content="MOD LIST" Click="ModList_Click" FontSize="22" Padding="13,13"/>
                         <Separator Background="#55FFFFFF" Margin="4,20,4,14"/>
-                        <Button x:Name="DiagnosticsNavButton" Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="11"/>
-                        <Button x:Name="UpdatesNavButton" Content="ATUALIZAÇÕES" Click="Updates_Click" FontSize="11"/>
-                        <Button x:Name="SettingsNavButton" Content="CONFIGURAÇÕES" Click="Settings_Click" FontSize="11"/>
+                        <Button x:Name="DiagnosticsNavButton" Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="13"/>
+                        <Button x:Name="UpdatesNavButton" Content="ATUALIZAÇÕES" Click="Updates_Click" FontSize="13"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -140,16 +139,8 @@
                     </Border>
                 </DockPanel>
 
-                <!-- Centro intencionalmente livre para preservar a arte de fundo. -->
-                <Grid Grid.Row="1">
-                    <Button x:Name="HeroPlayButton" Content="&#xE768;  JOGAR" FontFamily="Segoe UI"
-                            FontSize="24" FontWeight="Black" Padding="28,18" Width="220" Height="76"
-                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,42,0"
-                            Background="#D5C21D2C" BorderBrush="#FFFF6671" BorderThickness="2"
-                            Click="Launch_Click" ToolTip="Iniciar Metal Revolution">
-                        <Button.Effect><DropShadowEffect Color="#FFFF1744" BlurRadius="26" ShadowDepth="0" Opacity="0.75"/></Button.Effect>
-                    </Button>
-                </Grid>
+                <!-- Área central livre: o único botão de inicialização fica no canto inferior direito. -->
+                <Grid Grid.Row="1"/>
                 
                 <Grid x:Name="BottomPanel" Grid.Row="2" Opacity="0" Margin="0,0,0,0">
                     <Grid.ColumnDefinitions>
@@ -166,17 +157,17 @@
                                      Text="CAMINHO DA PASTA" Background="#A0080A15" BorderBrush="#33FFFFFF"
                                      Margin="0,0,8,0"/>
                             <Button Grid.Column="1" Content="SELECIONAR UFO.EXE" Click="ChooseFolder_Click"
-                                    HorizontalContentAlignment="Center" FontSize="10" Margin="0"/>
+                                    HorizontalContentAlignment="Center" FontSize="12" Margin="0"/>
                         </Grid>
                         <Border Background="#A0090A14" BorderBrush="#33FFFFFF" BorderThickness="1"
                                 CornerRadius="9" Padding="10">
                             <StackPanel>
-                                <TextBlock Text="LOG" FontSize="10" FontWeight="Bold" Foreground="#DAD8E2"
+                                <TextBlock Text="LOG" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF"
                                            Margin="0,0,0,6"/>
                                 <TextBox x:Name="LogBox" IsReadOnly="True" TextWrapping="Wrap"
                                          AcceptsReturn="True" MinHeight="48" MaxHeight="68"
                                          Background="Transparent" BorderThickness="0" Padding="0"
-                                         Foreground="#E6E4EC" FontSize="10" FontFamily="Segoe UI"
+                                         Foreground="#FFFFFF" FontSize="12" FontFamily="Segoe UI"
                                          VerticalScrollBarVisibility="Auto"/>
                             </StackPanel>
                         </Border>
@@ -210,8 +201,8 @@
                             IsHitTestVisible="False">
                     <Image Source="pack://application:,,,/Assets/revival-revolution.ico" Width="24" Height="24" Stretch="Uniform" Margin="0,0,9,0"/>
                     <Ellipse Width="7" Height="7" Fill="#D52D3B" Margin="0,0,9,0"/>
-                    <TextBlock Text="REVIVAL REVOLUTION  /  COMMUNITY LAUNCHER" FontFamily="Segoe UI" FontSize="9"
-                               FontWeight="Bold" Foreground="#D9D8E2" VerticalAlignment="Center"/>
+                    <TextBlock Text="REVIVAL REVOLUTION  /  COMMUNITY LAUNCHER" FontFamily="Segoe UI" FontSize="11"
+                               FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
                     <Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"
