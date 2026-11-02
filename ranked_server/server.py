@@ -69,6 +69,8 @@ def make_handler(store: RankedStore):
                 return self._json(200, social.profile(player_id))
             if path == "/v1/friends":
                 return self._json(200, social.friends(player_id))
+            if path == "/v1/blocks":
+                return self._json(200, {"players": social.blocked_players(player_id)})
             if path.startswith("/v1/players/") and path != "/v1/players/search":
                 target_id = path[len("/v1/players/"):]
                 if not target_id or "/" in target_id:
@@ -120,6 +122,14 @@ def make_handler(store: RankedStore):
                     return self._json(201 if result["status"] == "pending" else 200, result)
                 if path == "/v1/friends/accept":
                     return self._json(200, social.accept_friend(player_id, body.get("player_id")))
+                if path == "/v1/friends/decline":
+                    return self._json(200, social.decline_friend(player_id, body.get("player_id")))
+                if path == "/v1/players/block":
+                    return self._json(200, social.block_player(player_id, body.get("player_id")))
+                if path == "/v1/players/unblock":
+                    return self._json(200, social.unblock_player(player_id, body.get("player_id")))
+                if path == "/v1/presence/heartbeat":
+                    return self._json(200, {"online": True, "last_seen": player.get("last_seen")})
                 if path == "/v1/friends/remove":
                     return self._json(200, {"removed": social.remove_friend(player_id, body.get("player_id"))})
                 if path == "/v1/queue/join":
