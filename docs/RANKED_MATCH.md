@@ -69,3 +69,18 @@ A atribuição recebida ainda não inicia o jogo: a tela informa que a autoriza�
 P2P está pendente. O backend atual não emite ticket de sessão, e o protocolo
 `peer_session.py` ainda usa connection code manual. Não foi inventado um ticket
 incompatível com o handshake existente.
+
+
+## Recursos sociais implementados no backend (sem integração visual ainda)
+
+- Perfil com UUID permanente, nickname editável e avatar base64 limitado a 256 KiB.
+- Busca de jogadores por nickname.
+- Solicitações de amizade, aceite, lista de amigos e remoção.
+- Presença aproximada por última atividade (janela de 90 segundos).
+- Endpoint de leaderboard por rating.
+- O nickname não é único; a identidade é sempre o UUID.
+- Alterar nickname/avatar não altera UUID, rating ou relações de amizade.
+- Clãs foram deliberadamente deixados de fora: não há evidência técnica suficiente
+  de um sistema de clãs existente nem de um ponto de integração no jogo.
+- O leaderboard ainda não representa temporada competitiva: o rating permanece
+  inicial até existir validação confiável de resultados.
