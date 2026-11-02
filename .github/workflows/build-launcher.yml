@@ -41,6 +41,17 @@ jobs:
           }
           $config = Get-Content $configPath -Raw | ConvertFrom-Json
           if ($config.manifestUrl -ne "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json") { throw "Updater manifest URL is not the official GitHub Releases endpoint." }
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+      - name: Build game-folder installer
+        shell: pwsh
+        run: |
+          $iscc = "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe"
+          if (!(Test-Path $iscc)) { throw "Inno Setup compiler not found." }
+          & $iscc ".\\installer\\RevivalRevolution.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed." }
+          $setup = ".\\artifacts\\RevivalRevolution-Setup-0.7.2-win-x64.exe"
+          if (!(Test-Path $setup)) { throw "Game-folder setup executable missing." }
       - name: Upload Windows launcher artifact
         uses: actions/upload-artifact@v4
         with:
