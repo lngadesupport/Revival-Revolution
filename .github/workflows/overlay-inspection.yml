@@ -5,6 +5,7 @@ on:
     branches: ["feature/ranked-match-backend-v2"]
     paths:
       - "tools/inspect_native_pe.py"
+      - "tools/inspect_managed_assembly.py"
       - "MetalImGuiOverlay.dll"
       - "MetalNetplayBridgeV8.dll"
       - "MetalOfflineBridgeImGuiV3.dll"
@@ -22,6 +23,12 @@ jobs:
         shell: pwsh
         run: |
           python tools/inspect_native_pe.py MetalImGuiOverlay.dll MetalNetplayBridgeV8.dll MetalOfflineBridgeImGuiV3.dll Assembly-CSharp-firstpass.dll | Out-File -Encoding utf8 overlay-inspection.txt
+          Get-Content overlay-inspection.txt
+      - name: Inspect managed Unity bridge metadata
+        shell: pwsh
+        run: |
+          python -m pip install dnfile
+          python tools/inspect_managed_assembly.py MetalNetplayBridgeV8.dll MetalOfflineBridgeImGuiV3.dll Assembly-CSharp-firstpass.dll | Out-File -Append -Encoding utf8 overlay-inspection.txt
           Get-Content overlay-inspection.txt
       - name: Upload inspection report
         uses: actions/upload-artifact@v4
