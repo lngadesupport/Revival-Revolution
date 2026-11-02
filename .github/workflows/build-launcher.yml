@@ -49,12 +49,10 @@ jobs:
           Compress-Archive -Path (Join-Path $publish "*") -DestinationPath $archive -CompressionLevel Optimal
           if (!(Test-Path $archive)) { throw "Portable ZIP archive was not created." }
           if ((Get-Item $archive).Length -lt 10MB) { throw "Portable ZIP archive is unexpectedly small." }
-      - name: Upload Windows launcher artifact
+      - name: Upload portable Windows launcher
         uses: actions/upload-artifact@v4
         with:
-          name: RevivalRevolution-win-x64
-          path: |
-            .\artifacts\RevivalRevolution-win-x64
-            .\artifacts\RevivalRevolution-Setup-0.7.2-win-x64.exe
+          name: RevivalRevolution-Portable-win-x64
+          path: .\\artifacts\\RevivalRevolution-Portable-0.7.3-win-x64.zip
           if-no-files-found: error
           retention-days: 14
