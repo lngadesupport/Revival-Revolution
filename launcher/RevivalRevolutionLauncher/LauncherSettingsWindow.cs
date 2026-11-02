@@ -8,11 +8,11 @@ namespace RevivalRevolution;
 
 public sealed class LauncherSettingsWindow : Window
 {
-    private readonly TextBox _playerName;
-    private readonly TextBox _playerTag;
-    private readonly CheckBox _startupUpdates;
-    private readonly CheckBox _confirmLaunch;
-    private readonly CheckBox _persistLogs;
+    private readonly TextBox _playerName = null!;
+    private readonly TextBox _playerTag = null!;
+    private readonly CheckBox _startupUpdates = null!;
+    private readonly CheckBox _confirmLaunch = null!;
+    private readonly CheckBox _persistLogs = null!;
 
     public LauncherSettings Result { get; private set; }
 
@@ -241,7 +241,7 @@ public sealed class LauncherSettingsWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show(parent as Window, "Não foi possível abrir o link: " + ex.Message,
+                MessageBox.Show("Não foi possível abrir o link: " + ex.Message,
                     "Abrir perfil", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         };
