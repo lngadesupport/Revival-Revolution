@@ -69,5 +69,59 @@ class RankedApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
 
 
+    def test_profile_can_change_nickname_without_changing_identity(self):
+        player = self.register("OLD-NAME")
+        status, profile = self.request("POST", "/v1/profile", {"display_name": "New Name"}, player["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(profile["player_id"], player["player_id"])
+        self.assertEqual(profile["display_name"], "New Name")
+        status, current = self.request("GET", "/v1/me", token=player["token"])
+        self.assertEqual(current["player_id"], player["player_id"])
+        self.assertEqual(current["display_name"], "New Name")
+
+    def test_profile_avatar_can_be_saved_and_cleared(self):
+        player = self.register("AVATAR-PLAYER")
+        avatar = "data:image/png;base64,aGVsbG8="
+        status, profile = self.request("POST", "/v1/profile", {"avatar_data": avatar}, player["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(profile["avatar_data"], avatar)
+        status, profile = self.request("POST", "/v1/profile", {"avatar_data": None}, player["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(profile["avatar_data"], "")
+
+    def test_friend_request_accept_and_remove(self):
+        one = self.register("FRIEND-ONE")
+        two = self.register("FRIEND-TWO")
+        status, result = self.request("POST", "/v1/friends/request", {"player_id": two["player_id"]}, one["token"])
+        self.assertEqual(status, 201)
+        self.assertEqual(result["status"], "pending")
+        status, friends = self.request("GET", "/v1/friends", token=two["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(friends["incoming"][0]["player_id"], one["player_id"])
+        status, result = self.request("POST", "/v1/friends/accept", {"player_id": one["player_id"]}, two["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "accepted")
+        status, friends = self.request("GET", "/v1/friends", token=one["token"])
+        self.assertEqual(friends["friends"][0]["player_id"], two["player_id"])
+        status, result = self.request("POST", "/v1/friends/remove", {"player_id": two["player_id"]}, one["token"])
+        self.assertTrue(result["removed"])
+
+    def test_player_search_and_leaderboard(self):
+        one = self.register("SEARCHABLE-ONE")
+        two = self.register("SEARCHABLE-TWO")
+        status, found = self.request("GET", "/v1/players/search?q=SEARCHABLE")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(found["players"]), 2)
+        status, board = self.request("GET", "/v1/leaderboard", token=one["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(len(board["entries"]), 2)
+        self.assertEqual(board["entries"][0]["position"], 1)
+
+    def test_friend_request_rejects_self(self):
+        player = self.register("SELF")
+        status, _ = self.request("POST", "/v1/friends/request", {"player_id": player["player_id"]}, player["token"])
+        self.assertEqual(status, 400)
+
+
 if __name__ == "__main__":
     unittest.main()
