@@ -45,6 +45,52 @@ public partial class MainWindow : Window
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
     }
 
+    private void MainContent_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Staggered entrance: soft fade plus a short upward settle, with no impact on launch logic.
+        AnimateEntrance(MainContent, 0, 420, 10);
+        AnimateEntrance(WindowChrome, 45, 360, 4);
+        AnimateEntrance(HeaderPanel, 90, 460, 8);
+        AnimateEntrance(SidebarPanel, 130, 520, 12);
+        AnimateEntrance(HeroPanel, 190, 560, 14);
+        AnimateEntrance(QuickAccessPanel, 270, 520, 12);
+        AnimateEntrance(BottomPanel, 340, 520, 10);
+    }
+
+    private static void AnimateEntrance(UIElement element, int delayMs, int durationMs, double offsetY)
+    {
+        if (element is null) return;
+        element.Opacity = 0;
+        var transform = element.RenderTransform as TranslateTransform;
+        if (transform is null)
+        {
+            transform = new TranslateTransform();
+            element.RenderTransform = transform;
+        }
+        transform.Y = offsetY;
+
+        var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
+            TimeSpan.FromMilliseconds(durationMs))
+        {
+            BeginTime = TimeSpan.FromMilliseconds(delayMs),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            }
+        };
+        var slide = new System.Windows.Media.Animation.DoubleAnimation(offsetY, 0,
+            TimeSpan.FromMilliseconds(durationMs))
+        {
+            BeginTime = TimeSpan.FromMilliseconds(delayMs),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            }
+        };
+        element.BeginAnimation(UIElement.OpacityProperty, fade);
+        transform.BeginAnimation(TranslateTransform.YProperty, slide);
+    }
+
     private void LoadVisualAssets()
     {
         var assets = Path.Combine(_root, "Assets");
