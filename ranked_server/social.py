@@ -127,7 +127,7 @@ class SocialStore:
     def leaderboard(self, limit=100):
         with self._connect() as db:
             rows = db.execute("""
-                SELECT player_id,display_name,rating FROM players
+                SELECT player_id,display_name,rating,last_seen FROM players
                 ORDER BY rating DESC, created_at ASC, player_id ASC LIMIT ?
             """, (max(1, min(int(limit), 100)),)).fetchall()
             return [{"position": index + 1, **dict(row), "online": self.clock() - float(row["last_seen"]) <= 90} for index, row in enumerate(rows)]
