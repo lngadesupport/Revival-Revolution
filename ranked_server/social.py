@@ -49,6 +49,13 @@ class SocialStore:
                     ON friendships(addressee_id, status);
                 CREATE INDEX IF NOT EXISTS friendships_requester_status
                     ON friendships(requester_id, status);
+                CREATE TABLE IF NOT EXISTS blocked_players (
+                    blocker_id TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+                    blocked_id TEXT NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+                    created_at REAL NOT NULL,
+                    PRIMARY KEY(blocker_id, blocked_id),
+                    CHECK(blocker_id <> blocked_id)
+                );
             """)
 
     @staticmethod
@@ -144,6 +151,12 @@ class SocialStore:
             try:
                 if not db.execute("SELECT 1 FROM players WHERE player_id=?", (addressee_id,)).fetchone():
                     raise ValueError("player_not_found")
+                blocked = db.execute("""
+                    SELECT 1 FROM blocked_players
+                    WHERE (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)
+                """, (requester_id, addressee_id, addressee_id, requester_id)).fetchone()
+                if blocked:
+                    raise ValueError("friend_request_blocked")
                 existing = db.execute("""
                     SELECT requester_id,addressee_id,status FROM friendships
                     WHERE (requester_id=? AND addressee_id=?)
@@ -212,3 +225,58 @@ class SocialStore:
                 else:
                     result["outgoing"].append(item)
             return result
+
+
+    def decline_friend(self, player_id, requester_id):
+        with self._connect() as db:
+            result = db.execute("""
+                DELETE FROM friendships
+                WHERE requester_id=? AND addressee_id=? AND status='pending'
+            """, (requester_id, player_id))
+            if result.rowcount == 0:
+                raise ValueError("pending_request_not_found")
+        return {"status": "declined", "player_id": requester_id}
+
+    def block_player(self, blocker_id, blocked_id):
+        if not isinstance(blocked_id, str) or not blocked_id.strip():
+            raise ValueError("player_id is required")
+        blocked_id = blocked_id.strip()
+        if blocker_id == blocked_id:
+            raise ValueError("cannot block yourself")
+        now = self.clock()
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                if not db.execute("SELECT 1 FROM players WHERE player_id=?", (blocked_id,)).fetchone():
+                    raise ValueError("player_not_found")
+                db.execute("""
+                    INSERT OR IGNORE INTO blocked_players(blocker_id,blocked_id,created_at)
+                    VALUES(?,?,?)
+                """, (blocker_id, blocked_id, now))
+                db.execute("""
+                    DELETE FROM friendships
+                    WHERE (requester_id=? AND addressee_id=?)
+                       OR (requester_id=? AND addressee_id=?)
+                """, (blocker_id, blocked_id, blocked_id, blocker_id))
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
+        return {"blocked": True, "player_id": blocked_id}
+
+    def unblock_player(self, blocker_id, blocked_id):
+        with self._connect() as db:
+            result = db.execute("""
+                DELETE FROM blocked_players WHERE blocker_id=? AND blocked_id=?
+            """, (blocker_id, blocked_id))
+            return {"unblocked": result.rowcount > 0, "player_id": blocked_id}
+
+    def blocked_players(self, blocker_id):
+        with self._connect() as db:
+            rows = db.execute("""
+                SELECT p.player_id,p.display_name,b.created_at
+                FROM blocked_players b JOIN players p ON p.player_id=b.blocked_id
+                WHERE b.blocker_id=?
+                ORDER BY p.display_name COLLATE NOCASE
+            """, (blocker_id,)).fetchall()
+            return [dict(row) for row in rows]
