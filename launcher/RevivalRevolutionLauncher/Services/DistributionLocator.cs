@@ -25,6 +25,12 @@ public sealed class DistributionLocator
         if (!string.IsNullOrWhiteSpace(gameFolder))
         {
             var game = Path.GetFullPath(gameFolder);
+
+            // Search the selected game directory itself first. The original distribution
+            // scripts may be stored alongside ufo.exe or in a nearby subfolder.
+            AddRoot(roots, game);
+
+            // Preserve support for the legacy layout where scripts live beside the game folder.
             AddRoot(roots, Directory.GetParent(game)?.FullName);
             AddRoot(roots, Directory.GetParent(Directory.GetParent(game)?.FullName ?? game)?.FullName);
         }
