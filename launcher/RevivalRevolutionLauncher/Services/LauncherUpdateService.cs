@@ -248,6 +248,7 @@ public sealed class LauncherUpdateService
         ps.AppendLine($"$stage = {PsQuote(staging)}");
         ps.AppendLine($"$root = {PsQuote(root)}");
         ps.AppendLine($"$backup = {PsQuote(backup)}");
+        ps.AppendLine($"$launcherExe = {PsQuote(Path.Combine(root, "RevivalRevolution.exe"))}");
         ps.AppendLine("if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }");
         ps.AppendLine("New-Item -ItemType Directory -Force -Path $backup | Out-Null");
         ps.AppendLine("$processed = [System.Collections.Generic.List[string]]::new()");
@@ -262,19 +263,18 @@ public sealed class LauncherUpdateService
             ps.AppendLine("  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null");
             ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
         }
-        var launcherExe = Path.Combine(root, "RevivalRevolution.exe");
-        ps.AppendLine($"  $launcherExe = {PsQuote(launcherExe)}");
         ps.AppendLine("  if (-not (Test-Path -LiteralPath $launcherExe -PathType Leaf)) { throw 'Executável atualizado não encontrado; não foi possível reiniciar o launcher.' }");
+        ps.AppendLine("  if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }");
+        ps.AppendLine("  if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }");
         ps.AppendLine("  $started = Start-Process -FilePath $launcherExe -WorkingDirectory $root -PassThru");
         ps.AppendLine("  if (-not $started) { throw 'O Windows não confirmou a reinicialização do launcher.' }");
         ps.AppendLine("} catch {");
         ps.AppendLine("  $failure = $_.Exception.ToString()");
         ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
         ps.AppendLine("  Set-Content -LiteralPath " + PsQuote(Path.Combine(logs, "update-error.log")) + " -Value $failure -Encoding UTF8");
+        ps.AppendLine("  if (Test-Path -LiteralPath $launcherExe -PathType Leaf) { try { Start-Process -FilePath $launcherExe -WorkingDirectory $root | Out-Null } catch { Add-Content -LiteralPath " + PsQuote(Path.Combine(logs, "update-error.log")) + " -Value ('Rollback restart failed: ' + $_.Exception.Message) -Encoding UTF8 } }");
         ps.AppendLine("  throw");
         ps.AppendLine("}");
-        ps.AppendLine("Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue");
-        ps.AppendLine("Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue");
 
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(ps.ToString()));
         var log = Path.Combine(root, "Launcher", "Logs", "update-error.log");
