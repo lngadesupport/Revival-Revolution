@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -25,6 +26,7 @@ public sealed class RankedWindow : Window
     private bool _polling;
     private bool _busy;
     private bool _matchAssigned;
+    private bool _isQueued;
 
     public RankedWindow()
     {
@@ -158,10 +160,7 @@ public sealed class RankedWindow : Window
             else
             {
                 _credentials.SaveServerUrl(url);
-                using var client = new RankedApiClient(url);
-                _profile = await client.RegisterAsync(Environment.MachineName);
-                // The server-issued bearer token is persisted only after DPAPI protection.
-                // Register response token is obtained separately below to avoid logging it.
+                // Register once, then immediately protect the returned token with DPAPI.
                 _saved = await RegisterAndSaveAsync(url);
                 _client?.Dispose();
                 _client = new RankedApiClient(url, _saved.Token);
@@ -205,6 +204,7 @@ public sealed class RankedWindow : Window
                 return;
             }
             _queueStatus.Text = "Na fila • procurando adversário…";
+            _isQueued = true;
             _queueButton.IsEnabled = false;
             _leaveButton.IsEnabled = true;
             _pollTimer.Start();
@@ -222,6 +222,7 @@ public sealed class RankedWindow : Window
         {
             var left = await _client.LeaveQueueAsync();
             _pollTimer.Stop();
+            _isQueued = false;
             _queueStatus.Text = left ? "Busca cancelada." : "Você não estava na fila.";
             _queueButton.IsEnabled = true;
             _leaveButton.IsEnabled = false;
@@ -251,6 +252,7 @@ public sealed class RankedWindow : Window
             else
             {
                 _queueStatus.Text = "Não há busca ativa.";
+                _isQueued = false;
                 _pollTimer.Stop();
                 _queueButton.IsEnabled = true;
                 _leaveButton.IsEnabled = false;
@@ -268,6 +270,7 @@ public sealed class RankedWindow : Window
         match ??= await _client!.GetMatchAsync();
         if (match is null) return;
         _matchAssigned = true;
+        _isQueued = false;
         _pollTimer.Stop();
         _queueStatus.Text = "Adversário encontrado.";
         _matchStatus.Text = $"Partida: {match.MatchId}\nAdversário: {match.OpponentName}\nRating: {match.OpponentRating}\nSeu slot: {match.PlayerSlot}\nRegião: {match.Region}\nEstado: {match.Status}\n\nAtribuição recebida. A abertura do jogo aguarda ticket P2P seguro.";
@@ -321,8 +324,8 @@ public sealed class RankedWindow : Window
     {
         _busy = busy;
         _connectButton.IsEnabled = !busy;
-        _queueButton.IsEnabled = !busy && _profile is not null && !_matchAssigned && !_leaveButton.IsEnabled;
-        _leaveButton.IsEnabled = !busy && _leaveButton.IsEnabled;
+        _queueButton.IsEnabled = !busy && _profile is not null && !_matchAssigned && !_isQueued;
+        _leaveButton.IsEnabled = !busy && _isQueued;
     }
 
     private void ShowError(string message)
