@@ -416,8 +416,7 @@ public partial class MainWindow : Window
         {
             ("offline", OfflineNavButton), ("online", OnlineNavButton),
             ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
-            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton),
-            ("settings", SettingsNavButton)
+            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton)
         };
 
         foreach (var item in buttons)
