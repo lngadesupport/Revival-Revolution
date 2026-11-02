@@ -1,0 +1,50 @@
+name: Build Windows launcher
+
+on:
+  push:
+    branches: [ main, feature/modern-wpf-launcher ]
+    paths:
+      - "launcher/RevivalRevolutionLauncher/**"
+      - ".github/workflows/build-launcher.yml"
+      - ".github/workflows/publish-launcher-release.yml"
+  pull_request:
+    paths:
+      - "launcher/RevivalRevolutionLauncher/**"
+      - ".github/workflows/build-launcher.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj
+      - name: Build
+        run: dotnet build .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --no-restore
+      - name: Publish self-contained Windows x64
+        run: dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\RevivalRevolution-win-x64
+      - name: Verify published files
+        shell: pwsh
+        run: |
+          $publish = ".\\artifacts\\RevivalRevolution-win-x64"
+          if (!(Test-Path (Join-Path $publish "RevivalRevolution.exe"))) { throw "Launcher executable missing from publish output." }
+          $configPath = Join-Path $publish "launcher-update.json"
+          if (!(Test-Path $configPath)) { throw "Updater configuration missing from publish output." }
+          foreach ($asset in @("Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png")) {
+            if (!(Test-Path (Join-Path $publish $asset))) { throw "Required launcher asset missing from publish output: $asset" }
+          }
+          $config = Get-Content $configPath -Raw | ConvertFrom-Json
+          if ($config.manifestUrl -ne "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json") { throw "Updater manifest URL is not the official GitHub Releases endpoint." }
+      - name: Upload Windows launcher artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RevivalRevolution-win-x64
+          path: .\artifacts\RevivalRevolution-win-x64\
+          if-no-files-found: error
+          retention-days: 14

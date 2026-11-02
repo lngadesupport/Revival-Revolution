@@ -1,0 +1,75 @@
+name: Publish launcher release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require stable release commit to be on main
+        if: ${{ !contains(github.ref_name, '-') }}
+        shell: pwsh
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) { throw "Stable release tags must point to a commit already merged into main." }
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          if ($version -notmatch '^(\d+\.\d+\.\d+)(?:-([0-9A-Za-z.-]+))?$') { throw "Tag must be vMAJOR.MINOR.PATCH with an optional prerelease suffix." }
+          $assemblyVersion = "$($Matches[1]).0"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "assembly_version=$assemblyVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Restore
+        run: dotnet restore ./launcher/RevivalRevolutionLauncher/RevivalRevolutionLauncher.csproj
+
+      - name: Publish self-contained Windows x64 and package
+        shell: pwsh
+        run: |
+          dotnet publish ./launcher/RevivalRevolutionLauncher/RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=${{ steps.version.outputs.version }} -p:AssemblyVersion=${{ steps.version.outputs.assembly_version }} -p:FileVersion=${{ steps.version.outputs.assembly_version }} -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o ./artifacts/RevivalRevolution-win-x64
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
+          $publish = (Resolve-Path ./artifacts/RevivalRevolution-win-x64).Path
+          if (!(Test-Path (Join-Path $publish "RevivalRevolution.exe"))) { throw "Launcher executable missing." }
+          Remove-Item (Join-Path $publish "launcher-update.json") -ErrorAction SilentlyContinue
+          Compress-Archive -Path (Join-Path $publish "*") -DestinationPath "./artifacts/RevivalRevolution-win-x64.zip" -CompressionLevel Optimal
+          $hash = (Get-FileHash "./artifacts/RevivalRevolution-win-x64.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $files = Get-ChildItem $publish -File -Recurse | ForEach-Object { $_.FullName.Substring($publish.Length + 1).Replace('\','/') } | Sort-Object
+          $manifest = [ordered]@{
+            version = "${{ steps.version.outputs.version }}"
+            packageUrl = "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/RevivalRevolution-win-x64.zip"
+            sha256 = $hash
+            releaseNotes = "Consulte as notas desta versão nas Releases do GitHub."
+            files = @($files)
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path "./artifacts/launcher-update.json" -Encoding utf8
+
+      - name: Publish GitHub Release and updater assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Revival Revolution Launcher ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          make_latest: ${{ !contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            artifacts/RevivalRevolution-win-x64.zip
+            artifacts/launcher-update.json
