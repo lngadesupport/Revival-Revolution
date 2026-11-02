@@ -2,7 +2,7 @@ name: Build Windows launcher
 
 on:
   push:
-    branches: [ main, feature/modern-wpf-launcher ]
+    branches: [ main, feature/modern-wpf-launcher, release/0.7.2-stabilization ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - ".github/workflows/build-launcher.yml"
@@ -41,17 +41,14 @@ jobs:
           }
           $config = Get-Content $configPath -Raw | ConvertFrom-Json
           if ($config.manifestUrl -ne "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json") { throw "Updater manifest URL is not the official GitHub Releases endpoint." }
-      - name: Install Inno Setup
-        run: choco install innosetup --yes --no-progress
-      - name: Build game-folder installer
+      - name: Package portable ZIP
         shell: pwsh
         run: |
-          $iscc = "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe"
-          if (!(Test-Path $iscc)) { throw "Inno Setup compiler not found." }
-          & $iscc ".\\installer\\RevivalRevolution.iss"
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed." }
-          $setup = ".\\artifacts\\RevivalRevolution-Setup-0.7.2-win-x64.exe"
-          if (!(Test-Path $setup)) { throw "Game-folder setup executable missing." }
+          $publish = ".\\artifacts\\RevivalRevolution-win-x64"
+          $archive = ".\\artifacts\\RevivalRevolution-Portable-0.7.3-win-x64.zip"
+          Compress-Archive -Path (Join-Path $publish "*") -DestinationPath $archive -CompressionLevel Optimal
+          if (!(Test-Path $archive)) { throw "Portable ZIP archive was not created." }
+          if ((Get-Item $archive).Length -lt 10MB) { throw "Portable ZIP archive is unexpectedly small." }
       - name: Upload Windows launcher artifact
         uses: actions/upload-artifact@v4
         with:
