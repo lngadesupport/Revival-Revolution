@@ -55,7 +55,7 @@ public partial class MainWindow : Window
         RefreshGameState();
         Log("Revival Revolution Launcher iniciado.");
         Log("Launcher instalado no diretório do jogo: " + _root);
-        Log("Selecione ou confirme a pasta que contém ufo.exe e ufo_Data\\Managed.");
+        Log("Selecione ou confirme o arquivo ufo.exe da instalação do jogo.");
     }
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
@@ -142,16 +142,32 @@ public partial class MainWindow : Window
 
     private void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog
+        var dialog = new OpenFileDialog
         {
-            Title = "Selecione a pasta Metal Revolution",
+            Title = "Selecione o executável do Metal Revolution (ufo.exe)",
+            Filter = "Executável do jogo (ufo.exe)|ufo.exe|Executáveis (*.exe)|*.exe",
+            FileName = "ufo.exe",
+            CheckFileExists = true,
+            CheckPathExists = true,
             Multiselect = false,
-            FolderName = _gameFolder is not null && Directory.Exists(_gameFolder)
+            InitialDirectory = _gameFolder is not null && Directory.Exists(_gameFolder)
                 ? _gameFolder
-                : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+                : _root
         };
         if (dialog.ShowDialog(this) != true) return;
-        var folder = dialog.FolderName;
+        if (!string.Equals(Path.GetFileName(dialog.FileName), "ufo.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(this, "Selecione especificamente o arquivo ufo.exe da instalação do Metal Revolution.",
+                "Executável incorreto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var folder = Path.GetDirectoryName(Path.GetFullPath(dialog.FileName))!;
+        if (!IsValidFolder(folder))
+        {
+            MessageBox.Show(this, "A pasta do executável não contém ufo_Data\\Managed. Selecione o ufo.exe da instalação completa do jogo.",
+                "Instalação inválida", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         _gameFolder = folder;
         try
         {
