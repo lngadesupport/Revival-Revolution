@@ -25,7 +25,7 @@ public sealed class GoogleDriveDistributionDownloader
         if (RequiredFiles.All(name => IsPlausibleScript(Path.Combine(destination, name))))
             return destination;
 
-        using var cookies = new CookieContainer();
+        var cookies = new CookieContainer();
         using var handler = new HttpClientHandler
         {
             CookieContainer = cookies,
