@@ -177,6 +177,25 @@ public sealed class RankedWindow : Window
             _queueButton.IsEnabled = true;
             _identityStatus.Foreground = Brush("#85E3A4");
             _queueStatus.Text = "Pronto para entrar na fila.";
+
+            // Recover an existing assignment or queued state after a launcher restart.
+            var previousMatch = await _client.GetMatchAsync();
+            if (previousMatch is not null)
+            {
+                await ShowMatchAsync(previousMatch);
+            }
+            else
+            {
+                var previousQueue = await _client.GetQueueAsync();
+                if (previousQueue.TryGetProperty("queued", out var wasQueued) && wasQueued.GetBoolean())
+                {
+                    _isQueued = true;
+                    _queueButton.IsEnabled = false;
+                    _leaveButton.IsEnabled = true;
+                    _queueStatus.Text = "Busca anterior restaurada. Retomando consulta da fila…";
+                    _pollTimer.Start();
+                }
+            }
         }
         catch (Exception ex)
         {
