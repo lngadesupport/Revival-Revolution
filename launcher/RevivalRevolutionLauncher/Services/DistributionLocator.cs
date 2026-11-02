@@ -1,8 +1,8 @@
 namespace RevivalRevolution.Services;
 
 /// <summary>
-/// Finds the legacy offline bootstrap even when the launcher and the game are installed
-/// in sibling folders or the distribution is nested one or two levels below its root.
+/// Searches the selected game installation recursively, finds each bootstrap file independently,
+/// and stages the complete set in the game's own OfflineScripts folder.
 /// </summary>
 public sealed class DistributionLocator
 {
@@ -11,56 +11,68 @@ public sealed class DistributionLocator
         "offline_launcher.py", "inject_offline.py", "inject_overlay.py"
     };
 
-    private static readonly string[] SearchFolderNames =
+    private static readonly HashSet<string> IgnoredDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Distribution", "distribution", "Scripts", "scripts", "Launcher", "launcher",
-        "Offline", "offline", "OfflineScripts", "Bootstrap", "bootstrap"
+        ".git", ".vs", "bin", "obj", "node_modules", "__pycache__", "Temp", "Cache",
+        "Logs", "Downloads", "Runtime", "Library"
     };
 
+    private const int MaxDirectoriesToInspect = 50000;
+    private const long MaxScriptBytes = 10 * 1024 * 1024;
+
+    /// <summary>
+    /// Locates every required script under the game folder (and launcher folder when distinct).
+    /// Files may be in different subfolders. Found files are copied individually to
+    /// <game folder>\OfflineScripts. Returns that canonical folder only when all are present.
+    /// </summary>
     public string? Find(string launcherRoot, string? gameFolder)
     {
+        var destinationRoot = Path.GetFullPath(
+            !string.IsNullOrWhiteSpace(gameFolder) ? gameFolder : launcherRoot);
+        var destination = Path.Combine(destinationRoot, "OfflineScripts");
+        Directory.CreateDirectory(destination);
+
         var roots = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(gameFolder))
-        {
-            var game = Path.GetFullPath(gameFolder);
-
-            // Prefer the selected game installation so its original scripts can be
-            // synchronized into the launcher's own OfflineScripts folder.
-            AddRoot(roots, game);
-            AddRoot(roots, Directory.GetParent(game)?.FullName);
-            AddRoot(roots, Directory.GetParent(Directory.GetParent(game)?.FullName ?? game)?.FullName);
-        }
-
-        // Keep the launcher's bundled copy as a fallback.
+        AddRoot(roots, destinationRoot);
         AddRoot(roots, launcherRoot);
 
-        // First check the expected flat layouts. This keeps normal launches fast.
-        foreach (var root in roots)
+        var found = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in RequiredBootstrapFiles)
         {
-            var match = FindCompleteSet(root, maxDepth: 0);
-            if (match is not null) return match;
+            var existing = Path.Combine(destination, name);
+            if (IsPlausibleScript(existing))
+                found[name] = existing;
         }
 
-        // Then inspect only a small, bounded set of nearby folders. Do not crawl the game
-        // installation recursively (which can contain thousands of assets and DLLs).
         foreach (var root in roots)
         {
-            var match = FindCompleteSet(root, maxDepth: 3);
-            if (match is not null) return match;
-
-            foreach (var folderName in SearchFolderNames)
+            foreach (var file in SearchFiles(root))
             {
-                var knownFolder = Path.Combine(root, folderName);
-                if (!Directory.Exists(knownFolder)) continue;
-                match = FindCompleteSet(knownFolder, maxDepth: 2);
-                if (match is not null) return match;
+                var name = Path.GetFileName(file);
+                if (!RequiredBootstrapFiles.Contains(name, StringComparer.OrdinalIgnoreCase) ||
+                    found.ContainsKey(name) || !IsPlausibleScript(file))
+                    continue;
+
+                found[name] = file;
+                if (found.Count == RequiredBootstrapFiles.Length) break;
             }
+            if (found.Count == RequiredBootstrapFiles.Length) break;
         }
 
-        return null;
-    }
+        foreach (var name in RequiredBootstrapFiles)
+        {
+            if (!found.TryGetValue(name, out var source)) continue;
+            var target = Path.Combine(destination, name);
+            if (string.Equals(Path.GetFullPath(source), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
+                continue;
 
+            File.Copy(source, target, overwrite: true);
+        }
+
+        return RequiredBootstrapFiles.All(name => IsPlausibleScript(Path.Combine(destination, name)))
+            ? destination
+            : null;
+    }
 
     public bool IsInsideDirectory(string candidatePath, string parentDirectory)
     {
@@ -80,8 +92,8 @@ public sealed class DistributionLocator
         foreach (var file in RequiredBootstrapFiles)
         {
             var source = Path.Combine(sourceDirectory, file);
-            if (!File.Exists(source))
-                throw new FileNotFoundException("Script offline obrigatório não encontrado.", source);
+            if (!IsPlausibleScript(source))
+                throw new FileNotFoundException("Script offline obrigatório não encontrado ou inválido.", source);
 
             var target = Path.Combine(destination, file);
             if (!string.Equals(Path.GetFullPath(source), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
@@ -91,41 +103,68 @@ public sealed class DistributionLocator
         return destination;
     }
 
-    private static string? FindCompleteSet(string root, int maxDepth)
+    private static IEnumerable<string> SearchFiles(string root)
     {
-        if (!Directory.Exists(root)) return null;
-        var pending = new Queue<(string Path, int Depth)>();
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        pending.Enqueue((Path.GetFullPath(root), 0));
+        if (!Directory.Exists(root)) yield break;
 
-        while (pending.Count > 0)
+        var pending = new Queue<string>();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        pending.Enqueue(Path.GetFullPath(root));
+        var inspected = 0;
+
+        while (pending.Count > 0 && inspected++ < MaxDirectoriesToInspect)
         {
-            var (current, depth) = pending.Dequeue();
+            var current = pending.Dequeue();
             if (!visited.Add(current)) continue;
 
-            if (RequiredBootstrapFiles.All(file => File.Exists(Path.Combine(current, file))))
-                return current;
+            IEnumerable<string> files;
+            try { files = Directory.EnumerateFiles(current).ToArray(); }
+            catch (UnauthorizedAccessException) { continue; }
+            catch (IOException) { continue; }
 
-            if (depth >= maxDepth) continue;
-            try
+            foreach (var file in files)
+                yield return file;
+
+            IEnumerable<string> directories;
+            try { directories = Directory.EnumerateDirectories(current).ToArray(); }
+            catch (UnauthorizedAccessException) { continue; }
+            catch (IOException) { continue; }
+
+            foreach (var child in directories)
             {
-                foreach (var child in Directory.EnumerateDirectories(current))
+                var name = Path.GetFileName(child);
+                if (IgnoredDirectoryNames.Contains(name)) continue;
+                try
                 {
-                    var name = Path.GetFileName(child);
-                    if (name.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
-                        name.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
-                        name.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
-                        name.Equals("node_modules", StringComparison.OrdinalIgnoreCase) ||
-                        name.Equals("ufo_Data", StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    pending.Enqueue((child, depth + 1));
+                    if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
                 }
-            }
-            catch (UnauthorizedAccessException) { }
-            catch (IOException) { }
-        }
+                catch (UnauthorizedAccessException) { continue; }
+                catch (IOException) { continue; }
 
-        return null;
+                pending.Enqueue(child);
+            }
+        }
+    }
+
+    private static bool IsPlausibleScript(string path)
+    {
+        if (!File.Exists(path)) return false;
+        try
+        {
+            var info = new FileInfo(path);
+            if (info.Length == 0 || info.Length > MaxScriptBytes) return false;
+            using var stream = File.OpenRead(path);
+            var buffer = new byte[Math.Min(512, (int)info.Length)];
+            var read = stream.Read(buffer, 0, buffer.Length);
+            var prefix = System.Text.Encoding.UTF8.GetString(buffer, 0, read)
+                .TrimStart('\uFEFF', ' ', '\t', '\r', '\n');
+            return !prefix.StartsWith("<!doctype", StringComparison.OrdinalIgnoreCase) &&
+                   !prefix.StartsWith("<html", StringComparison.OrdinalIgnoreCase) &&
+                   !prefix.StartsWith("<head", StringComparison.OrdinalIgnoreCase) &&
+                   !prefix.StartsWith("<form", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
     }
 
     private static void AddRoot(List<string> roots, string? path)

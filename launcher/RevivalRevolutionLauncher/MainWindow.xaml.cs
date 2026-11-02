@@ -54,7 +54,8 @@ public partial class MainWindow : Window
         _gameStateTimer.Start();
         RefreshGameState();
         Log("Revival Revolution Launcher iniciado.");
-        Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
+        Log("Launcher instalado no diretório do jogo: " + _root);
+        Log("Selecione ou confirme a pasta que contém ufo.exe e ufo_Data\\Managed.");
     }
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
@@ -126,16 +127,17 @@ public partial class MainWindow : Window
 
     private void SyncDistributionScripts(bool logChanges)
     {
-        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
-        if (_distributionRoot is null || string.IsNullOrWhiteSpace(_gameFolder) ||
-            !_distributionLocator.IsInsideDirectory(_distributionRoot, _gameFolder))
+        if (string.IsNullOrWhiteSpace(_gameFolder))
+        {
+            _distributionRoot = null;
             return;
+        }
 
-        var source = _distributionRoot;
-        var destination = _distributionLocator.CopyToLauncherFolder(source, _root);
-        _distributionRoot = destination;
+        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
         if (logChanges)
-            Log($"Scripts offline copiados de {source} para {destination}.");
+            Log(_distributionRoot is null
+                ? "Busca profunda concluída: um ou mais scripts offline ainda não foram localizados."
+                : $"Scripts offline localizados e reunidos em {_distributionRoot}.");
     }
 
     private void ChooseFolder_Click(object sender, RoutedEventArgs e)
@@ -211,8 +213,8 @@ public partial class MainWindow : Window
             Log("Scripts offline não encontrados localmente. Tentando obter os arquivos da pasta pública do Google Drive.");
             await RunBusyAsync("Baixando scripts offline...", async token =>
             {
-                _distributionRoot = await _driveScripts.DownloadMissingAsync(_root, token);
-                Log("Scripts offline baixados e validados na pasta OfflineScripts do launcher.");
+                _distributionRoot = await _driveScripts.DownloadMissingAsync(_gameFolder!, token);
+                Log("Scripts offline ausentes baixados e validados na pasta OfflineScripts do jogo.");
             });
         }
 
@@ -221,8 +223,8 @@ public partial class MainWindow : Window
             Log("Distribuição incompleta: scripts offline ausentes e fallback do Google Drive indisponível.");
             FooterStatus.Text = "Arquivos de inicialização ausentes.";
             MessageBox.Show(this,
-                "Não encontrei os três scripts offline localmente e não foi possível baixá-los automaticamente. " +
-                "Verifique se a pasta do Google Drive está compartilhada como 'Qualquer pessoa com o link — Leitor' " +
+                "A busca profunda não encontrou todos os scripts offline e o download automático não conseguiu completar o conjunto. " +
+                "Verifique se os arquivos estão dentro da pasta do jogo ou se a pasta do Google Drive está compartilhada como 'Qualquer pessoa com o link — Leitor'. " +
                 "e tente novamente. Os arquivos esperados são offline_launcher.py, inject_offline.py e inject_overlay.py.",
                 "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
@@ -272,7 +274,8 @@ public partial class MainWindow : Window
             File.WriteAllText(Path.Combine(_distributionRoot!, "python-runtime.txt"), python);
             File.WriteAllText(Path.Combine(_gameFolder!, "python-runtime.txt"), python);
             _config.SaveGameFolder(_root, _gameFolder!, _distributionRoot);
-            _gameLaunch.StartOffline(python, script, _distributionRoot!);
+            // The bootstrap must resolve game assets and relative paths from the actual game root.
+            _gameLaunch.StartOffline(python, script, _gameFolder!);
             _launchPending = true;
             _launchRequestedAt = DateTime.UtcNow;
             Log("Inicialização offline iniciada. Aguardando o processo ufo.exe; o PLAY ficará bloqueado por até 45 segundos.");

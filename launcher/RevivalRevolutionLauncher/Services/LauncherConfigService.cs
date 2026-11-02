@@ -41,6 +41,11 @@ public sealed class LauncherConfigService
             catch (NotSupportedException) { }
         }
 
+        // In installed mode the launcher lives directly in the selected game directory.
+        if (File.Exists(Path.Combine(root, "ufo.exe")) &&
+            Directory.Exists(Path.Combine(root, "ufo_Data", "Managed")))
+            return Path.GetFullPath(root);
+
         var bundledGame = Path.Combine(root, "Metal Revolution");
         return Directory.Exists(bundledGame) ? bundledGame : null;
     }
