@@ -262,15 +262,14 @@ public partial class MainWindow : Window
             Log("Aviso: DLLs vazias em Managed (mantendo o comportamento do launcher original): " +
                 string.Join(", ", emptyManagedDlls));
 
-        var runtimeRoot = _gameFolder!;
-        var python = _python.FindRuntime(runtimeRoot);
+        var python = _python.FindRuntime(_root);
         if (python is null && MessageBox.Show(this, "O Python portátil não está instalado. Deseja baixá-lo agora?",
             "Runtime necessário", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
         await RunBusyAsync("Preparando inicialização...", async token =>
         {
-            python ??= await _python.InstallAsync(runtimeRoot, CreateProgress(), token);
+            python ??= await _python.InstallAsync(_root, CreateProgress(), token);
             // The legacy bootstrap resolves its runtime marker from its own working directory/game folder.
             File.WriteAllText(Path.Combine(_distributionRoot!, "python-runtime.txt"), python);
             File.WriteAllText(Path.Combine(_gameFolder!, "python-runtime.txt"), python);
@@ -332,8 +331,7 @@ public partial class MainWindow : Window
         else if (_launchPending && DateTime.UtcNow - _launchRequestedAt >= TimeSpan.FromSeconds(LaunchDetectionTimeoutSeconds))
         {
             _launchPending = false;
-            var logDirectory = Path.Combine(_gameFolder ?? _root, "Launcher", "Logs");
-            Log($"O processo ufo.exe não foi detectado após {LaunchDetectionTimeoutSeconds} segundos. PLAY liberado. Verifique os logs em: {logDirectory}");
+            Log("O processo ufo.exe não foi detectado após 45 segundos. PLAY liberado; confira o log de inicialização se o jogo não abriu.");
         }
 
         if (_gameRunning)
