@@ -203,7 +203,8 @@ class SocialStore:
             result = {"friends": [], "incoming": [], "outgoing": []}
             for row in rows:
                 item = {"player_id": row["player_id"], "display_name": row["display_name"],
-                        "rating": row["rating"], "created_at": row["created_at"],\n                        "online": self.clock() - float(row["last_seen"]) <= 90}
+                        "rating": row["rating"], "created_at": row["created_at"],
+                        "online": self.clock() - float(row["last_seen"]) <= 90}
                 if row["status"] == "accepted":
                     result["friends"].append(item)
                 elif row["addressee_id"] == player_id:
