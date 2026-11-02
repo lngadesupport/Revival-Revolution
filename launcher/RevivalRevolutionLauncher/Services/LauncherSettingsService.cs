@@ -4,6 +4,8 @@ namespace RevivalRevolution.Services;
 
 public sealed class LauncherSettings
 {
+    public string PlayerName { get; set; } = "";
+    public string PlayerTag { get; set; } = "";
     public bool CheckUpdatesOnStartup { get; set; } = true;
     public bool ConfirmBeforeLaunch { get; set; } = false;
     public bool PersistLogs { get; set; } = true;
