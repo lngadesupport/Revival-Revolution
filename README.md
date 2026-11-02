@@ -6,7 +6,7 @@
 
 *Metal Revolution* é um jogo de luta com temática cyberpunk e personagens robóticos, desenvolvido pelo estúdio **NEXT Studios**. A atribuição de desenvolvimento do jogo original é ao estúdio, não a uma pessoa individual. A operação original foi publicada/comunicada pela equipe de Metal Revolution/GTarcade. Consulte as referências no final deste documento.
 
-**Criador/desenvolvedor do jogo original: NEXT Studios.** Não encontramos, nos arquivos fornecidos para este repositório, uma atribuição verificável de uma pessoa individual como criador do projeto comunitário Revival Revolution; por isso, não inventamos um nome. Os créditos de quem mantém este repositório ficam associados à conta GitHub que publica as alterações, salvo indicação explícita em contrário.
+**Criador/desenvolvedor do jogo original: NEXT Studios.** Conforme crédito informado pelo mantenedor, o criador original do projeto comunitário/distribuição Revival Revolution é identificado como **@NC_KuroRaiden** ([Twitter/X](https://x.com/NC_KuroRaiden)). O desenvolvimento e a manutenção desta versão do launcher WPF são atribuídos a **@lngadesupport** ([GitHub](https://github.com/lngadesupport)). Esses créditos não alteram a autoria do jogo original.
 
 ## O que este projeto faz
 
@@ -56,6 +56,9 @@ Este é um projeto comunitário independente, não oficial e sem afiliação com
 Os scripts, bridges e DLLs existentes da distribuição não devem ser substituídos sem verificar sua compatibilidade e preservar uma cópia do estado anterior.
 
 ## Créditos e referências
+
+- **Criador original do projeto comunitário (crédito informado pelo mantenedor):** [@NC_KuroRaiden — Twitter/X](https://x.com/NC_KuroRaiden).
+- **Launcher WPF — desenvolvimento e manutenção:** [@lngadesupport — GitHub](https://github.com/lngadesupport).
 
 - **Jogo original — NEXT Studios:** [IndieCade — Metal Revolution](https://www.indiecade.com/metal-revolution/).
 - **Identificação de desenvolvedor/publicador — NEXT Studios:** [ModDB — Metal Revolution](https://www.moddb.com/games/metal-revolution).
