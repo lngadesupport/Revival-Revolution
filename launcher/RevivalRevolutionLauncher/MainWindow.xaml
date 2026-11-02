@@ -183,7 +183,7 @@
 
         <!-- Custom window chrome sits over the game artwork. -->
         <Border x:Name="WindowChrome" Opacity="0" Height="44" VerticalAlignment="Top" Margin="10,9,10,0"
-                Background="#D9090D18" BorderBrush="#66FFFFFF" BorderThickness="1"
+                Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                 CornerRadius="9" MouseLeftButtonDown="WindowChrome_MouseLeftButtonDown">
             <Grid>
                 <Grid.ColumnDefinitions>
