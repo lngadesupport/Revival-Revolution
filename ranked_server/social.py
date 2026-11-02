@@ -82,6 +82,14 @@ class SocialStore:
             raise ValueError("invalid avatar_data")
         if not raw or len(raw) > 256 * 1024:
             raise ValueError("avatar image must be between 1 byte and 256 KiB")
+        image_type = match.group(1)
+        valid = (
+            (image_type == "png" and raw.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
+            or (image_type == "jpeg" and raw.startswith(b"\\xff\\xd8\\xff"))
+            or (image_type == "webp" and len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP")
+        )
+        if not valid:
+            raise ValueError("avatar data does not match its declared image type")
         return value
 
     def profile(self, player_id):
