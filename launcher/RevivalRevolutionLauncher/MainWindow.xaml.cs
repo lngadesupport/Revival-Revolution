@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly GameLaunchService _gameLaunch = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly DistributionLocator _distributionLocator = new();
+    private readonly GoogleDriveDistributionDownloader _driveScripts = new();
     private string? _distributionRoot;
     private readonly LauncherUpdateService _updates = new();
     private readonly LauncherSettingsService _settingsService = new();
@@ -207,12 +208,22 @@ public partial class MainWindow : Window
 
         if (_distributionRoot is null)
         {
-            Log("Distribuição incompleta: não encontrei offline_launcher.py junto ao launcher nem na pasta acima do jogo.");
+            Log("Scripts offline não encontrados localmente. Tentando obter os arquivos da pasta pública do Google Drive.");
+            await RunBusyAsync("Baixando scripts offline...", async token =>
+            {
+                _distributionRoot = await _driveScripts.DownloadMissingAsync(_root, token);
+                Log("Scripts offline baixados e validados na pasta OfflineScripts do launcher.");
+            });
+        }
+
+        if (_distributionRoot is null)
+        {
+            Log("Distribuição incompleta: scripts offline ausentes e fallback do Google Drive indisponível.");
             FooterStatus.Text = "Arquivos de inicialização ausentes.";
             MessageBox.Show(this,
-                "Não encontrei os três scripts offline. Coloque os arquivos originais " +
-                "offline_launcher.py, inject_offline.py e inject_overlay.py juntos na pasta OfflineScripts " +
-                "que acompanha o launcher.",
+                "Não encontrei os três scripts offline localmente e não foi possível baixá-los automaticamente. " +
+                "Verifique se a pasta do Google Drive está compartilhada como 'Qualquer pessoa com o link — Leitor' " +
+                "e tente novamente. Os arquivos esperados são offline_launcher.py, inject_offline.py e inject_overlay.py.",
                 "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
