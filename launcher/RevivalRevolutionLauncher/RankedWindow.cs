@@ -167,6 +167,7 @@ public sealed class RankedWindow : Window
                 _saved = await RegisterAndSaveAsync(url);
                 _client?.Dispose();
                 _client = new RankedApiClient(url, _saved.Token);
+                _profile = await _client.GetProfileAsync();
                 _identityStatus.Text = $"Identidade criada • {_profile.DisplayName} • ID {_profile.PlayerId[..8]}…";
                 _serverUrl.IsReadOnly = true;
                 _connectButton.Content = "ATUALIZAR PERFIL";
