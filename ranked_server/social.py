@@ -80,7 +80,7 @@ class SocialStore:
     def profile(self, player_id):
         with self._connect() as db:
             row = db.execute("""
-                SELECT p.player_id,p.display_name,p.rating,p.created_at,
+                SELECT p.player_id,p.display_name,p.rating,p.created_at,p.last_seen,
                        COALESCE(s.avatar_data,'') AS avatar_data
                 FROM players p LEFT JOIN player_profiles s USING(player_id)
                 WHERE p.player_id=?
@@ -118,7 +118,7 @@ class SocialStore:
         query = query.strip()[:32]
         with self._connect() as db:
             rows = db.execute("""
-                SELECT player_id,display_name,rating FROM players
+                SELECT player_id,display_name,rating,last_seen FROM players
                 WHERE display_name LIKE ? COLLATE NOCASE
                 ORDER BY display_name COLLATE NOCASE, player_id LIMIT ?
             """, (f"%{query}%", max(1, min(int(limit), 20)))).fetchall()
@@ -193,7 +193,7 @@ class SocialStore:
         with self._connect() as db:
             rows = db.execute("""
                 SELECT f.requester_id,f.addressee_id,f.status,f.created_at,
-                       p.player_id,p.display_name,p.rating
+                       p.player_id,p.display_name,p.rating,p.last_seen
                 FROM friendships f
                 JOIN players p ON p.player_id =
                     CASE WHEN f.requester_id=? THEN f.addressee_id ELSE f.requester_id END
