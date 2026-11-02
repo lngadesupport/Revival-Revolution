@@ -123,5 +123,14 @@ class RankedApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
 
 
+    def test_player_profile_lookup_by_permanent_id(self):
+        owner = self.register("PROFILE-OWNER")
+        viewer = self.register("PROFILE-VIEWER")
+        status, profile = self.request("GET", "/v1/players/" + owner["player_id"], token=viewer["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(profile["player_id"], owner["player_id"])
+        self.assertEqual(profile["display_name"], "PROFILE-OWNER")
+
+
 if __name__ == "__main__":
     unittest.main()
