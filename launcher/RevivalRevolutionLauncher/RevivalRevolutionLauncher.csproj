@@ -36,4 +36,13 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
+
+  <Target Name="ValidateOfflineDistributionScripts" BeforeTargets="PrepareForPublish">
+    <Error Condition="!Exists('OfflineScripts/offline_launcher.py')"
+           Text="Offline distribution incomplete: OfflineScripts/offline_launcher.py is missing." />
+    <Error Condition="!Exists('OfflineScripts/inject_offline.py')"
+           Text="Offline distribution incomplete: OfflineScripts/inject_offline.py is missing." />
+    <Error Condition="!Exists('OfflineScripts/inject_overlay.py')"
+           Text="Offline distribution incomplete: OfflineScripts/inject_overlay.py is missing." />
+  </Target>
 </Project>
