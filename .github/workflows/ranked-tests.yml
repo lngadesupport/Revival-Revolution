@@ -1,0 +1,28 @@
+name: Ranked backend tests
+
+on:
+  push:
+    branches: [ main, "feature/ranked-match-backend*" ]
+    paths:
+      - "ranked_server/**"
+      - "tests/**"
+      - ".github/workflows/ranked-tests.yml"
+  pull_request:
+    paths:
+      - "ranked_server/**"
+      - "tests/**"
+      - ".github/workflows/ranked-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run Ranked unit tests
+        run: python -m unittest discover -s tests -v
