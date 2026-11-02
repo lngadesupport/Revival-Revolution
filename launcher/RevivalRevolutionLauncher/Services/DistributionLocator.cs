@@ -20,20 +20,20 @@ public sealed class DistributionLocator
     public string? Find(string launcherRoot, string? gameFolder)
     {
         var roots = new List<string>();
-        AddRoot(roots, launcherRoot);
 
         if (!string.IsNullOrWhiteSpace(gameFolder))
         {
             var game = Path.GetFullPath(gameFolder);
 
-            // Search the selected game directory itself first. The original distribution
-            // scripts may be stored alongside ufo.exe or in a nearby subfolder.
+            // Prefer the selected game installation so its original scripts can be
+            // synchronized into the launcher's own OfflineScripts folder.
             AddRoot(roots, game);
-
-            // Preserve support for the legacy layout where scripts live beside the game folder.
             AddRoot(roots, Directory.GetParent(game)?.FullName);
             AddRoot(roots, Directory.GetParent(Directory.GetParent(game)?.FullName ?? game)?.FullName);
         }
+
+        // Keep the launcher's bundled copy as a fallback.
+        AddRoot(roots, launcherRoot);
 
         // First check the expected flat layouts. This keeps normal launches fast.
         foreach (var root in roots)
@@ -59,6 +59,36 @@ public sealed class DistributionLocator
         }
 
         return null;
+    }
+
+
+    public bool IsInsideDirectory(string candidatePath, string parentDirectory)
+    {
+        var relative = Path.GetRelativePath(Path.GetFullPath(parentDirectory), Path.GetFullPath(candidatePath));
+        return !Path.IsPathRooted(relative) &&
+               relative != "." &&
+               relative != ".." &&
+               !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
+               !relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal);
+    }
+
+    public string CopyToLauncherFolder(string sourceDirectory, string launcherRoot)
+    {
+        var destination = Path.Combine(Path.GetFullPath(launcherRoot), "OfflineScripts");
+        Directory.CreateDirectory(destination);
+
+        foreach (var file in RequiredBootstrapFiles)
+        {
+            var source = Path.Combine(sourceDirectory, file);
+            if (!File.Exists(source))
+                throw new FileNotFoundException("Script offline obrigatório não encontrado.", source);
+
+            var target = Path.Combine(destination, file);
+            if (!string.Equals(Path.GetFullPath(source), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
+                File.Copy(source, target, overwrite: true);
+        }
+
+        return destination;
     }
 
     private static string? FindCompleteSet(string root, int maxDepth)
