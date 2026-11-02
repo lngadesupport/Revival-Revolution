@@ -165,8 +165,9 @@ public partial class MainWindow : Window
             Log("Distribuição incompleta: não encontrei offline_launcher.py junto ao launcher nem na pasta acima do jogo.");
             FooterStatus.Text = "Arquivos de inicialização ausentes.";
             MessageBox.Show(this,
-                "Não encontrei os scripts da distribuição (offline_launcher.py, inject_offline.py e inject_overlay.py). " +
-                "Mantenha esses arquivos na pasta do launcher ou na pasta que contém a pasta do jogo.",
+                "Não encontrei os três scripts offline. Coloque os arquivos originais " +
+                "offline_launcher.py, inject_offline.py e inject_overlay.py juntos na pasta OfflineScripts " +
+                "que acompanha o launcher.",
                 "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
