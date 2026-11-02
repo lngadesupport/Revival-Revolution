@@ -27,7 +27,7 @@ este servidor HTTP de desenvolvimento diretamente à internet.
 - `GET /v1/friends` — amigos aceitos, solicitações recebidas e enviadas.
 - `POST /v1/friends/request` — JSON `{"player_id":"UUID"}`; cria solicitação ou aceita automaticamente uma solicitação recíproca.
 - `POST /v1/friends/accept` — JSON `{"player_id":"UUID-DO-REMETENTE"}`.
-- `POST /v1/friends/remove` — JSON `{"player_id":"UUID"}`.
+- `POST /v1/friends/decline` — recusa uma solicitação recebida.\n- `POST /v1/friends/remove` — JSON `{"player_id":"UUID"}`.\n- `GET /v1/blocks`, `POST /v1/players/block` e `POST /v1/players/unblock` — bloqueio; bloqueio remove a amizade e impede novas solicitações entre as contas.\n- `POST /v1/presence/heartbeat` — atualiza a presença autenticada.
 - `GET /v1/leaderboard?limit=100` — classificação por rating.
 - Presença é derivada de `last_seen` (online quando visto nos últimos 90 segundos).
 - `POST /v1/queue/join` — JSON `{"region":"sa-east"}`.
