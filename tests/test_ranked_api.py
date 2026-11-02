@@ -192,5 +192,25 @@ class RankedApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(profile["player_id"], player["player_id"])
 
+    def test_social_lists_include_avatar_without_exact_last_seen(self):
+        one = self.register("AVATAR-ONE")
+        two = self.register("AVATAR-TWO")
+        avatar = "data:image/png;base64,iVBORw0KGgo="
+        self.request("POST", "/v1/profile", {"avatar_data": avatar}, two["token"])
+        status, profile = self.request("GET", "/v1/players/" + two["player_id"], token=one["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(profile["avatar_data"], avatar)
+        self.assertIn("online", profile)
+        self.assertNotIn("last_seen", profile)
+        self.request("POST", "/v1/friends/request", {"player_id": two["player_id"]}, one["token"])
+        self.request("POST", "/v1/friends/accept", {"player_id": one["player_id"]}, two["token"])
+        status, friends = self.request("GET", "/v1/friends", token=one["token"])
+        self.assertEqual(friends["friends"][0]["avatar_data"], avatar)
+        status, search = self.request("GET", "/v1/players/search?q=AVATAR-TWO", token=one["token"])
+        self.assertEqual(search["players"][0]["avatar_data"], avatar)
+        status, board = self.request("GET", "/v1/leaderboard", token=one["token"])
+        self.assertTrue(any(entry["player_id"] == two["player_id"] and entry["avatar_data"] == avatar for entry in board["entries"]))
+        self.assertNotIn("last_seen", board["entries"][0])
+
 if __name__ == "__main__":
     unittest.main()
