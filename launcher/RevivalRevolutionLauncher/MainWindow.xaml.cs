@@ -18,6 +18,8 @@ public partial class MainWindow : Window
     private readonly DistributionLocator _distributionLocator = new();
     private string? _distributionRoot;
     private readonly LauncherUpdateService _updates = new();
+    private readonly LauncherSettingsService _settingsService = new();
+    private LauncherSettings _settings = new();
     private string? _gameFolder;
     private bool _busy;
     private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -31,11 +33,19 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _settings = _settingsService.Load();
         SetActiveNavigation("offline");
         var version = typeof(MainWindow).Assembly.GetName().Version;
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
+        if (_settings.ConfirmBeforeLaunch)
+        {
+            var choice = MessageBox.Show(this, "Iniciar Metal Revolution no modo offline agora?",
+                "Confirmar inicialização", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (choice != MessageBoxResult.Yes) return;
+        }
+
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
@@ -48,6 +58,13 @@ public partial class MainWindow : Window
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
     {
+        if (!_settings.EnableAnimations)
+        {
+            MainContent.Opacity = 1;
+            WindowChrome.Opacity = 1;
+            HeaderPanel.Opacity = SidebarPanel.Opacity = HeroPanel.Opacity = QuickAccessPanel.Opacity = BottomPanel.Opacity = 1;
+            return;
+        }
         // Staggered entrance: soft fade plus a short upward settle, with no impact on launch logic.
         AnimateEntrance(MainContent, 0, 420, 10);
         AnimateEntrance(WindowChrome, 45, 360, 4);
@@ -348,7 +365,8 @@ public partial class MainWindow : Window
         {
             ("offline", OfflineNavButton), ("online", OnlineNavButton),
             ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
-            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton)
+            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton),
+            ("settings", SettingsNavButton)
         };
 
         foreach (var item in buttons)
@@ -363,6 +381,35 @@ public partial class MainWindow : Window
                 ? Color.FromRgb(255, 82, 96)
                 : Color.FromArgb(102, 255, 255, 255));
             item.Button.BorderThickness = selected ? new Thickness(1.5) : new Thickness(1);
+        }
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        SetActiveNavigation("settings");
+        var window = new LauncherSettingsWindow(_settings, _gameFolder ?? "",
+            _settingsService.GetSettingsPath(), _settingsService.GetLogDirectory())
+        {
+            Owner = this
+        };
+        if (window.ShowDialog() != true) return;
+
+        try
+        {
+            _settingsService.Save(window.Result);
+            _settings = window.Result;
+            Log("Configurações salvas.");
+            FooterStatus.Text = "Configurações atualizadas.";
+            if (!_settings.EnableAnimations)
+            {
+                MainContent.BeginAnimation(UIElement.OpacityProperty, null);
+                MainContent.Opacity = 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Não foi possível salvar as configurações: " + ex.Message,
+                "Erro ao salvar", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -397,7 +444,8 @@ public partial class MainWindow : Window
         // A checagem automática não bloqueia a abertura caso o GitHub esteja indisponível.
         try
         {
-            await CheckForUpdatesAsync(automatic: true);
+            if (_settings.CheckUpdatesOnStartup)
+                await CheckForUpdatesAsync(automatic: true);
         }
         catch (Exception ex)
         {
@@ -548,8 +596,29 @@ public partial class MainWindow : Window
     private void Log(string message)
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.Invoke(() => Log(message)); return; }
-        LogBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
+        LogBox.AppendText(line);
         LogBox.ScrollToEnd();
+        if (_settings.PersistLogs)
+        {
+            try
+            {
+                var directory = _settingsService.GetLogDirectory();
+                Directory.CreateDirectory(directory);
+                var path = Path.Combine(directory, "launcher.log");
+                if (File.Exists(path) && new FileInfo(path).Length > 2 * 1024 * 1024)
+                {
+                    var previous = Path.Combine(directory, "launcher.previous.log");
+                    File.Delete(previous);
+                    File.Move(path, previous);
+                }
+                File.AppendAllText(path, line);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Logging must never interrupt launching or updating.
+            }
+        }
     }
     protected override void OnClosed(EventArgs e)
     {
