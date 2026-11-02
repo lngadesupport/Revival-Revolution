@@ -56,8 +56,6 @@ public partial class MainWindow : Window
         AnimateEntrance(WindowChrome, 45, 360, 4);
         AnimateEntrance(HeaderPanel, 90, 460, 8);
         AnimateEntrance(SidebarPanel, 130, 520, 12);
-        AnimateEntrance(HeroPanel, 190, 560, 14);
-        AnimateEntrance(QuickAccessPanel, 270, 520, 12);
         AnimateEntrance(BottomPanel, 340, 520, 10);
     }
 
