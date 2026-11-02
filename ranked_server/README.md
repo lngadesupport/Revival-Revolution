@@ -21,6 +21,7 @@ este servidor HTTP de desenvolvimento diretamente à internet.
 - `POST /v1/register` — JSON `{"display_name":"NICKNAME"}`; devolve UUID,
   rating inicial e token bearer mostrado uma única vez.
 - `GET /v1/me` — próprio perfil (UUID, nickname, rating e avatar).
+- `POST /v1/account/rotate-token` — gera uma nova credencial e invalida imediatamente a anterior; guarde a resposta em armazenamento privado.
 - `GET /v1/players/{player_id}` — perfil público de outro jogador por UUID.
 - `POST /v1/profile` — atualiza `display_name` e/ou `avatar_data`.
   Avatar aceita data URL base64 PNG/JPEG/WebP de até 256 KiB; a assinatura
