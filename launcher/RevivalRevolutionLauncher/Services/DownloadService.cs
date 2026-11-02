@@ -20,21 +20,23 @@ public sealed class DownloadService
         AllowAutoRedirect = true
     }) { Timeout = Timeout.InfiniteTimeSpan };
 
-    public Task DownloadAsync(string url, string destination, IProgress<DownloadProgress>? progress, CancellationToken token)
+    public Task DownloadAsync(string url, string destination, IProgress<DownloadProgress>? progress,
+        CancellationToken token, IReadOnlySet<string>? allowedRedirectHosts = null)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
             throw new ArgumentException("A URL de download deve usar HTTPS.", nameof(url));
-        return DownloadAsync(uri, destination, progress, token);
+        return DownloadAsync(uri, destination, progress, token, allowedRedirectHosts);
     }
 
     public Task DownloadPixeldrainAsync(string fileId, string destination, IProgress<DownloadProgress>? progress, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(fileId) || fileId.Any(c => !char.IsAsciiLetterOrDigit(c)))
             throw new ArgumentException("Identificador Pixeldrain inválido.", nameof(fileId));
-        return DownloadAsync(new Uri($"https://pixeldrain.com/api/file/{fileId}?download"), destination, progress, token);
+        return DownloadAsync(new Uri($"https://pixeldrain.com/api/file/{fileId}?download"), destination, progress, token, null);
     }
 
-    private static async Task DownloadAsync(Uri uri, string destination, IProgress<DownloadProgress>? progress, CancellationToken token)
+    private static async Task DownloadAsync(Uri uri, string destination, IProgress<DownloadProgress>? progress,
+        CancellationToken token, IReadOnlySet<string>? allowedRedirectHosts)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
         var partial = destination + ".download";
@@ -44,8 +46,10 @@ public sealed class DownloadService
         if (offset > 0) request.Headers.Range = new RangeHeaderValue(offset, null);
         using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
-        if (response.RequestMessage?.RequestUri?.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidOperationException("O servidor redirecionou o download para uma conexão que não usa HTTPS.");
+        var finalUri = response.RequestMessage?.RequestUri;
+        if (finalUri is null || finalUri.Scheme != Uri.UriSchemeHttps ||
+            (allowedRedirectHosts is not null && !allowedRedirectHosts.Contains(finalUri.Host)))
+            throw new InvalidOperationException("O servidor redirecionou o download para um destino HTTPS não autorizado.");
 
         if (offset > 0 && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
         {
