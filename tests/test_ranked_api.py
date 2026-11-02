@@ -1,5 +1,6 @@
 import json
 import threading
+import tempfile
 import unittest
 import urllib.error
 import urllib.request
@@ -11,7 +12,9 @@ from ranked_server.storage import RankedStore
 
 class RankedApiTests(unittest.TestCase):
     def setUp(self):
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(RankedStore(":memory:")))
+        self.temp = tempfile.TemporaryDirectory()
+        store = RankedStore(self.temp.name + "/ranked.sqlite3")
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(store))
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.base = f"http://127.0.0.1:{self.server.server_port}"
@@ -20,6 +23,7 @@ class RankedApiTests(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2)
+        self.temp.cleanup()
 
     def request(self, method, path, payload=None, token=None):
         data = None if payload is None else json.dumps(payload).encode()
