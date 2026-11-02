@@ -36,6 +36,9 @@ jobs:
           if (!(Test-Path (Join-Path $publish "RevivalRevolution.exe"))) { throw "Launcher executable missing from publish output." }
           $configPath = Join-Path $publish "launcher-update.json"
           if (!(Test-Path $configPath)) { throw "Updater configuration missing from publish output." }
+          foreach ($asset in @("Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png")) {
+            if (!(Test-Path (Join-Path $publish $asset))) { throw "Required launcher asset missing from publish output: $asset" }
+          }
           $config = Get-Content $configPath -Raw | ConvertFrom-Json
           if ($config.manifestUrl -ne "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json") { throw "Updater manifest URL is not the official GitHub Releases endpoint." }
       - name: Upload Windows launcher artifact
