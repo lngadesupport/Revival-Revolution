@@ -171,11 +171,11 @@
                         </Border>
                     </StackPanel>
                     <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="12,0,0,0">
-                        <Border Background="#B30B0B14" CornerRadius="8" Padding="12,7" HorizontalAlignment="Stretch">
-                            <TextBlock Text="JOGO PREPARADO" FontSize="15" FontWeight="Black"
+                        <Border x:Name="GameStateBorder" Background="#FF555B66" CornerRadius="8" Padding="12,7" HorizontalAlignment="Stretch">
+                            <TextBlock x:Name="GameStateLabel" Text="NENHUM" FontSize="15" FontWeight="Black"
                                        HorizontalAlignment="Center"/>
                         </Border>
-                        <Button Content="PLAY" Style="{StaticResource PlayButton}" Click="Launch_Click"
+                        <Button x:Name="PlayButton" Content="PLAY" Style="{StaticResource PlayButton}" Click="Launch_Click"
                                 HorizontalContentAlignment="Center" Margin="0,10,0,0"/>
                     </StackPanel>
                 </Grid>
