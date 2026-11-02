@@ -150,6 +150,9 @@ public sealed class RankedWindow : Window
         SetBusy(true);
         try
         {
+            if (_saved is null && _credentials.HasStoredToken())
+                throw new InvalidOperationException("Existe uma credencial protegida neste Windows, mas não foi possível descriptografá-la. Por segurança, não criei uma nova identidade para evitar duplicar seu ranking.");
+
             if (_saved is not null)
             {
                 _client?.Dispose();
