@@ -69,6 +69,14 @@ def make_handler(store: RankedStore):
                 return self._json(200, social.profile(player_id))
             if path == "/v1/friends":
                 return self._json(200, social.friends(player_id))
+            if path.startswith("/v1/players/") and path != "/v1/players/search":
+                target_id = path[len("/v1/players/"):]
+                if not target_id or "/" in target_id:
+                    return self._json(404, {"error": "not_found"})
+                try:
+                    return self._json(200, social.profile(target_id))
+                except ValueError:
+                    return self._json(404, {"error": "player_not_found"})
             if path == "/v1/players/search":
                 query = parse_qs(parsed.query)
                 try:
