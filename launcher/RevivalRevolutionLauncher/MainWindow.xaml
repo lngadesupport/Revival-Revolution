@@ -96,8 +96,15 @@
                                    HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="#AEB2C2"
-                                   Margin="8,4,0,16"/>
+                        <Grid Margin="8,0,0,12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="#AEB2C2"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                            Width="34" Height="30" Padding="0" Margin="0" HorizontalContentAlignment="Center"
+                            Background="#55202B43" BorderBrush="#5579CFFF" Click="ChooseFolder_Click"
+                            ToolTip="Configurar caminho do ufo.exe"/>
+                </Grid>
                         <Button x:Name="OfflineNavButton" Content="OFFLINE" Click="Launch_Click" FontSize="22" Padding="13,13"/>
                         <Button x:Name="OnlineNavButton" Content="ONLINE" Click="Multiplayer_Click" FontSize="22" Padding="13,13"/>
                         <Button x:Name="PrivateMatchNavButton" Content="PRIVATE MATCH" Click="PrivateMatch_Click" FontSize="16" Padding="13,13"/>
@@ -134,7 +141,15 @@
                 </DockPanel>
 
                 <!-- Centro intencionalmente livre para preservar a arte de fundo. -->
-                <Grid Grid.Row="1" IsHitTestVisible="False"/>
+                <Grid Grid.Row="1">
+                    <Button x:Name="HeroPlayButton" Content="&#xE768;  JOGAR" FontFamily="Segoe UI"
+                            FontSize="24" FontWeight="Black" Padding="28,18" Width="220" Height="76"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,42,0"
+                            Background="#D5C21D2C" BorderBrush="#FFFF6671" BorderThickness="2"
+                            Click="Launch_Click" ToolTip="Iniciar Metal Revolution">
+                        <Button.Effect><DropShadowEffect Color="#FFFF1744" BlurRadius="26" ShadowDepth="0" Opacity="0.75"/></Button.Effect>
+                    </Button>
+                </Grid>
                 
                 <Grid x:Name="BottomPanel" Grid.Row="2" Opacity="0" Margin="0,0,0,0">
                     <Grid.ColumnDefinitions>
