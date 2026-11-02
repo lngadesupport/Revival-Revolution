@@ -396,6 +396,46 @@ public partial class MainWindow : Window
         Log("Mod List selecionada; catálogo ainda não integrado.");
     }
 
+
+    private void WindowChrome_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Left) return;
+        if (e.ClickCount == 2)
+        {
+            ToggleWindowState();
+            return;
+        }
+
+        if (WindowState == WindowState.Maximized) return;
+        try { DragMove(); }
+        catch (InvalidOperationException) { /* Ignore a drag that ended before it began. */ }
+    }
+
+    private void MinimizeWindow_Click(object sender, RoutedEventArgs e)
+        => WindowState = WindowState.Minimized;
+
+    private void MaximizeWindow_Click(object sender, RoutedEventArgs e)
+        => ToggleWindowState();
+
+    private void ToggleWindowState()
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            WindowState = WindowState.Normal;
+            MaximizeButton.Content = "\\uE922";
+            MaximizeButton.ToolTip = "Maximizar";
+        }
+        else
+        {
+            WindowState = WindowState.Maximized;
+            MaximizeButton.Content = "\\uE923";
+            MaximizeButton.ToolTip = "Restaurar";
+        }
+    }
+
+    private void CloseWindow_Click(object sender, RoutedEventArgs e)
+        => Close();
+
     private void Discord_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show(this, "O endereço do Discord ainda não foi configurado.", "Discord",
