@@ -691,7 +691,17 @@ public partial class MainWindow : Window
 
     private void Discord_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(this, "O endereço do Discord ainda não foi configurado.", "Discord",
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        const string discordUrl = "https://discord.gg/Zw2GCscKU";
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = discordUrl, UseShellExecute = true });
+            Log("Convite do Discord aberto no navegador padrão.");
+        }
+        catch (Exception ex)
+        {
+            Log("Não foi possível abrir o Discord: " + ex.Message);
+            MessageBox.Show(this, "Não foi possível abrir o navegador automaticamente. Acesse:\n" + discordUrl,
+                "Discord", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 }
