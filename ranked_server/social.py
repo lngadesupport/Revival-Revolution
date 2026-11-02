@@ -95,11 +95,12 @@ class SocialStore:
     def profile(self, player_id):
         with self._connect() as db:
             row = db.execute("""
-                SELECT p.player_id,p.display_name,p.rating,p.created_at,p.last_seen,
-                       COALESCE(s.avatar_data,'') AS avatar_data
+                SELECT p.player_id,p.display_name,p.rating,
+                       COALESCE(s.avatar_data,'') AS avatar_data,
+                       CASE WHEN (? - p.last_seen) <= 90 THEN 1 ELSE 0 END AS online
                 FROM players p LEFT JOIN player_profiles s USING(player_id)
                 WHERE p.player_id=?
-            """, (player_id,)).fetchone()
+            """, (self.clock(), player_id)).fetchone()
             if row is None:
                 raise ValueError("unknown player")
             return dict(row)
@@ -133,19 +134,25 @@ class SocialStore:
         query = query.strip()[:32]
         with self._connect() as db:
             rows = db.execute("""
-                SELECT player_id,display_name,rating,last_seen FROM players
-                WHERE display_name LIKE ? COLLATE NOCASE
-                ORDER BY display_name COLLATE NOCASE, player_id LIMIT ?
-            """, (f"%{query}%", max(1, min(int(limit), 20)))).fetchall()
-            return [{**dict(row), "online": self.clock() - float(row["last_seen"]) <= 90} for row in rows]
+                SELECT p.player_id,p.display_name,p.rating,
+                       COALESCE(s.avatar_data,'') AS avatar_data,
+                       CASE WHEN (? - p.last_seen) <= 90 THEN 1 ELSE 0 END AS online
+                FROM players p LEFT JOIN player_profiles s USING(player_id)
+                WHERE p.display_name LIKE ? COLLATE NOCASE
+                ORDER BY p.display_name COLLATE NOCASE, p.player_id LIMIT ?
+            """, (self.clock(), f"%{query}%", max(1, min(int(limit), 20)))).fetchall()
+            return [dict(row) for row in rows]
 
     def leaderboard(self, limit=100):
         with self._connect() as db:
             rows = db.execute("""
-                SELECT player_id,display_name,rating,last_seen FROM players
-                ORDER BY rating DESC, created_at ASC, player_id ASC LIMIT ?
-            """, (max(1, min(int(limit), 100)),)).fetchall()
-            return [{"position": index + 1, **dict(row), "online": self.clock() - float(row["last_seen"]) <= 90} for index, row in enumerate(rows)]
+                SELECT p.player_id,p.display_name,p.rating,
+                       COALESCE(s.avatar_data,'') AS avatar_data,
+                       CASE WHEN (? - p.last_seen) <= 90 THEN 1 ELSE 0 END AS online
+                FROM players p LEFT JOIN player_profiles s USING(player_id)
+                ORDER BY p.rating DESC, p.created_at ASC, p.player_id ASC LIMIT ?
+            """, (self.clock(), max(1, min(int(limit), 100)))).fetchall()
+            return [{"position": index + 1, **dict(row)} for index, row in enumerate(rows)]
 
     def request_friend(self, requester_id, addressee_id):
         if not isinstance(addressee_id, str) or not addressee_id.strip():
@@ -214,17 +221,19 @@ class SocialStore:
         with self._connect() as db:
             rows = db.execute("""
                 SELECT f.requester_id,f.addressee_id,f.status,f.created_at,
-                       p.player_id,p.display_name,p.rating,p.last_seen
+                       p.player_id,p.display_name,p.rating,p.last_seen,
+                       COALESCE(s.avatar_data,'') AS avatar_data
                 FROM friendships f
                 JOIN players p ON p.player_id =
                     CASE WHEN f.requester_id=? THEN f.addressee_id ELSE f.requester_id END
+                LEFT JOIN player_profiles s ON s.player_id=p.player_id
                 WHERE (f.requester_id=? OR f.addressee_id=?)
                 ORDER BY f.status, p.display_name COLLATE NOCASE
             """, (player_id, player_id, player_id)).fetchall()
             result = {"friends": [], "incoming": [], "outgoing": []}
             for row in rows:
                 item = {"player_id": row["player_id"], "display_name": row["display_name"],
-                        "rating": row["rating"], "created_at": row["created_at"],
+                        "rating": row["rating"], "avatar_data": row["avatar_data"],
                         "online": self.clock() - float(row["last_seen"]) <= 90}
                 if row["status"] == "accepted":
                     result["friends"].append(item)
