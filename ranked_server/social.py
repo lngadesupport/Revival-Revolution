@@ -84,8 +84,8 @@ class SocialStore:
             raise ValueError("avatar image must be between 1 byte and 256 KiB")
         image_type = match.group(1)
         valid = (
-            (image_type == "png" and raw.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
-            or (image_type == "jpeg" and raw.startswith(b"\\xff\\xd8\\xff"))
+            (image_type == "png" and raw.startswith(b"\x89PNG\r\n\x1a\n"))
+            or (image_type == "jpeg" and raw.startswith(b"\xff\xd8\xff"))
             or (image_type == "webp" and len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP")
         )
         if not valid:
