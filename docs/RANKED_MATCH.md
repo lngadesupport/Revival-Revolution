@@ -60,7 +60,8 @@ A análise estática feita pelo workflow de CI confirmou:
 
 Essa inspeção prova que existem pontos de reflexão e componentes de overlay,
 mas não prova que o painel atual aceite novas abas nem que os tipos sociais
-existam no jogo. O próximo passo é analisar o protocolo de comandos do bridge
+existam no jogo. O próximo passo é executar a inspeção em runtime documentada em
+ [RUNTIME_INSPECTION.md](RUNTIME_INSPECTION.md) e usar o mecanismo de reflexão já existente
 e, se possível, usar o próprio mecanismo de reflexão em execução para descobrir
 as classes reais sem depender de uma cópia estática de `Assembly-CSharp.dll`.
 
