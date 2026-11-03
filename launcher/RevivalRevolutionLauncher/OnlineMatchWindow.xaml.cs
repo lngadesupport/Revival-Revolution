@@ -284,7 +284,7 @@ public partial class OnlineMatchWindow : Window
         _matchActive = true;
         _activeMatchId = match["match_id"]?.GetValue<string>();
         UpdateMatch(match);
-        if (_matchStatus == "assigned") StartMatchLifecyclePolling();
+        if (_matchActive) StartMatchLifecyclePolling();
     }
 
     private void UpdateMatch(JsonObject match)
@@ -329,7 +329,7 @@ public partial class OnlineMatchWindow : Window
                 : "Adversário encontrado. Aceite ou recuse a partida.";
         }
 
-        RoomStateText.Text = "Partida privada atribuída.";
+        RoomStateText.Text = "Partida atribuída pelo servidor.";
         QueueDetailText.Text = "O servidor atribuiu seu adversário.";
         SetModeButtons(false);
     }
@@ -358,7 +358,7 @@ public partial class OnlineMatchWindow : Window
                     return;
                 }
                 await Dispatcher.InvokeAsync(() => UpdateMatch(current));
-                if (_matchStatus != "assigned") return;
+                if (_matchStatus is not ("assigned" or "ready")) return;
             }
         }
         catch (OperationCanceledException) { }
@@ -379,7 +379,7 @@ public partial class OnlineMatchWindow : Window
             if (result["match"] is JsonObject match)
             {
                 UpdateMatch(match);
-                if (_matchStatus == "assigned") StartMatchLifecyclePolling();
+                if (_matchActive) StartMatchLifecyclePolling();
             }
         }
         catch (Exception ex)
