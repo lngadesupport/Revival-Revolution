@@ -52,11 +52,13 @@ dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.cs
 
 ## Estado multiplayer 0.8.1
 
-A central ONLINE atribui partidas no servidor, mas ainda não inicia P2P nem
-abre a luta automaticamente. O transporte experimental existente depende de
-bridge, scripts, AutoPunch/STUN e validação em duas máquinas. A API Render
-planejada hospeda HTTP/HTTPS; o relay UDP precisa de infraestrutura compatível
-separada. Não anunciar Ranked público nem aplicação de ELO nesta versão.
+A central ONLINE atribui partidas no servidor e integra aceite/recusa bilateral,
+acompanha a confirmação do adversário e restaura uma atribuição ativa ao
+reconectar a conta. Ainda não inicia P2P nem abre a luta automaticamente. O
+transporte experimental existente depende de bridge, scripts, AutoPunch/STUN e
+validação em duas máquinas. A API Render hospeda HTTP/HTTPS; o relay UDP precisa
+de infraestrutura compatível separada. Não anunciar Ranked público nem
+aplicação de ELO nesta versão.
 
 A interface ONLINE é uma janela WPF dedicada aberta pelo item de navegação;
 ainda não é uma aba embutida na janela principal. Recursos sociais de perfil,
