@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly GameLaunchService _gameLaunch = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly DistributionLocator _distributionLocator = new();
+    private readonly GoogleDriveDistributionDownloader _driveScripts = new();
     private string? _distributionRoot;
     private readonly LauncherUpdateService _updates = new();
     private readonly LauncherSettingsService _settingsService = new();
@@ -28,7 +29,6 @@ public partial class MainWindow : Window
     private DateTime _launchRequestedAt;
     private const int LaunchDetectionTimeoutSeconds = 45;
     private string _lastGameStateFooterStatus = string.Empty;
-    private string _lastDashboardState = string.Empty;
 
     public MainWindow()
     {
@@ -39,14 +39,23 @@ public partial class MainWindow : Window
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
-        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        try
+        {
+            SyncDistributionScripts(logChanges: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _distributionRoot = null;
+            Log("Não foi possível preparar a pasta OfflineScripts na inicialização: " + ex.Message);
+        }
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
         RefreshGameState();
         Log("Revival Revolution Launcher iniciado.");
-        Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
+        Log("Launcher instalado no diretório do jogo: " + _root);
+        Log("Selecione ou confirme o arquivo ufo.exe da instalação do jogo.");
     }
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
@@ -56,8 +65,6 @@ public partial class MainWindow : Window
         AnimateEntrance(WindowChrome, 45, 360, 4);
         AnimateEntrance(HeaderPanel, 90, 460, 8);
         AnimateEntrance(SidebarPanel, 130, 520, 12);
-        AnimateEntrance(HeroPanel, 190, 560, 14);
-        AnimateEntrance(QuickAccessPanel, 270, 520, 12);
         AnimateEntrance(BottomPanel, 340, 520, 10);
     }
 
@@ -118,20 +125,63 @@ public partial class MainWindow : Window
 
     private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
 
+    private void SyncDistributionScripts(bool logChanges)
+    {
+        if (string.IsNullOrWhiteSpace(_gameFolder))
+        {
+            _distributionRoot = null;
+            return;
+        }
+
+        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        if (logChanges)
+            Log(_distributionRoot is null
+                ? "Busca profunda concluída: um ou mais scripts offline ainda não foram localizados."
+                : $"Scripts offline localizados e reunidos em {_distributionRoot}.");
+    }
+
     private void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog
+        var dialog = new OpenFileDialog
         {
-            Title = "Selecione a pasta Metal Revolution",
+            Title = "Selecione o executável do Metal Revolution (ufo.exe)",
+            Filter = "Executável do jogo (ufo.exe)|ufo.exe|Executáveis (*.exe)|*.exe",
+            FileName = "ufo.exe",
+            CheckFileExists = true,
+            CheckPathExists = true,
             Multiselect = false,
-            FolderName = _gameFolder is not null && Directory.Exists(_gameFolder)
+            InitialDirectory = _gameFolder is not null && Directory.Exists(_gameFolder)
                 ? _gameFolder
-                : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+                : _root
         };
         if (dialog.ShowDialog(this) != true) return;
-        var folder = dialog.FolderName;
+        if (!string.Equals(Path.GetFileName(dialog.FileName), "ufo.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(this, "Selecione especificamente o arquivo ufo.exe da instalação do Metal Revolution.",
+                "Executável incorreto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var folder = Path.GetDirectoryName(Path.GetFullPath(dialog.FileName))!;
+        if (!IsValidFolder(folder))
+        {
+            MessageBox.Show(this, "A pasta do executável não contém ufo_Data\\Managed. Selecione o ufo.exe da instalação completa do jogo.",
+                "Instalação inválida", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         _gameFolder = folder;
-        _distributionRoot = _distributionLocator.Find(_root, folder);
+        try
+        {
+            SyncDistributionScripts(logChanges: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _distributionRoot = null;
+            Log("Não foi possível copiar os scripts offline para a pasta do jogo: " + ex.Message);
+            MessageBox.Show(this,
+                "Os scripts foram encontrados na pasta do jogo, mas não foi possível copiá-los para a pasta do launcher. " +
+                "Verifique as permissões e tente novamente.\n\n" + ex.Message,
+                "Falha ao copiar scripts", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
         GameFolderBox.Text = folder;
         _config.SaveGameFolder(_root, folder, _distributionRoot);
         RefreshGameState();
@@ -162,14 +212,36 @@ public partial class MainWindow : Window
             if (choice != MessageBoxResult.Yes) return;
         }
 
-        _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        try
+        {
+            SyncDistributionScripts(logChanges: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log("Falha ao sincronizar scripts offline: " + ex.Message);
+            MessageBox.Show(this, "Não foi possível copiar os scripts para a pasta do launcher.\n\n" + ex.Message,
+                "Falha ao copiar scripts", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         if (_distributionRoot is null)
         {
-            Log("Distribuição incompleta: não encontrei offline_launcher.py junto ao launcher nem na pasta acima do jogo.");
+            Log("Scripts offline não encontrados localmente. Tentando obter os arquivos da pasta pública do Google Drive.");
+            await RunBusyAsync("Baixando scripts offline...", async token =>
+            {
+                _distributionRoot = await _driveScripts.DownloadMissingAsync(_gameFolder!, token);
+                Log("Scripts offline ausentes baixados e validados na pasta OfflineScripts do jogo.");
+            });
+        }
+
+        if (_distributionRoot is null)
+        {
+            Log("Distribuição incompleta: scripts offline ausentes e fallback do Google Drive indisponível.");
             FooterStatus.Text = "Arquivos de inicialização ausentes.";
             MessageBox.Show(this,
-                "Não encontrei os scripts da distribuição (offline_launcher.py, inject_offline.py e inject_overlay.py). " +
-                "Mantenha esses arquivos na pasta do launcher ou na pasta que contém a pasta do jogo.",
+                "A busca profunda não encontrou todos os scripts offline e o download automático não conseguiu completar o conjunto. " +
+                "Verifique se os arquivos estão dentro da pasta do jogo ou se a pasta do Google Drive está compartilhada como 'Qualquer pessoa com o link — Leitor'. " +
+                "e tente novamente. Os arquivos esperados são offline_launcher.py, inject_offline.py e inject_overlay.py.",
                 "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -185,10 +257,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var offlineBridge = new[] {
-            Path.Combine(_distributionRoot, "MetalOfflineBridgeImGuiV3.dll"),
-            Path.Combine(_gameFolder!, "MetalOfflineBridgeImGuiV3.dll")
-        }.FirstOrDefault(File.Exists);
+        var offlineBridge = _distributionLocator.FindFile(_gameFolder!, "MetalOfflineBridgeImGuiV3.dll")
+            ?? _distributionLocator.FindFile(_root, "MetalOfflineBridgeImGuiV3.dll");
         if (offlineBridge is null)
         {
             Log("MetalOfflineBridgeImGuiV3.dll não encontrado na distribuição nem na pasta do jogo.");
@@ -206,19 +276,21 @@ public partial class MainWindow : Window
             Log("Aviso: DLLs vazias em Managed (mantendo o comportamento do launcher original): " +
                 string.Join(", ", emptyManagedDlls));
 
-        var python = _python.FindRuntime(_root);
+        var runtimeRoot = _gameFolder!;
+        var python = _python.FindRuntime(runtimeRoot);
         if (python is null && MessageBox.Show(this, "O Python portátil não está instalado. Deseja baixá-lo agora?",
             "Runtime necessário", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
         await RunBusyAsync("Preparando inicialização...", async token =>
         {
-            python ??= await _python.InstallAsync(_root, CreateProgress(), token);
+            python ??= await _python.InstallAsync(runtimeRoot, CreateProgress(), token);
             // The legacy bootstrap resolves its runtime marker from its own working directory/game folder.
             File.WriteAllText(Path.Combine(_distributionRoot!, "python-runtime.txt"), python);
             File.WriteAllText(Path.Combine(_gameFolder!, "python-runtime.txt"), python);
             _config.SaveGameFolder(_root, _gameFolder!, _distributionRoot);
-            _gameLaunch.StartOffline(python, script, _distributionRoot!);
+            // The bootstrap must resolve game assets and relative paths from the actual game root.
+            _gameLaunch.StartOffline(python, script, _gameFolder!);
             _launchPending = true;
             _launchRequestedAt = DateTime.UtcNow;
             Log("Inicialização offline iniciada. Aguardando o processo ufo.exe; o PLAY ficará bloqueado por até 45 segundos.");
@@ -274,7 +346,8 @@ public partial class MainWindow : Window
         else if (_launchPending && DateTime.UtcNow - _launchRequestedAt >= TimeSpan.FromSeconds(LaunchDetectionTimeoutSeconds))
         {
             _launchPending = false;
-            Log("O processo ufo.exe não foi detectado após 45 segundos. PLAY liberado; confira o log de inicialização se o jogo não abriu.");
+            var logDirectory = Path.Combine(_gameFolder ?? _root, "Launcher", "Logs");
+            Log($"O processo ufo.exe não foi detectado após {LaunchDetectionTimeoutSeconds} segundos. PLAY liberado. Verifique os logs em: {logDirectory}");
         }
 
         if (_gameRunning)
@@ -313,22 +386,7 @@ public partial class MainWindow : Window
             SetGameStateFooter("A pasta selecionada não passou na validação.");
         }
 
-        var dashboardState = _gameRunning ? "EM EXECUÇÃO"
-            : _launchPending ? "INICIANDO"
-            : valid ? "VALIDADA"
-            : string.IsNullOrWhiteSpace(_gameFolder) ? "NÃO CONFIGURADA" : "INVÁLIDA";
-        DashboardLocalStatus.Text = dashboardState;
-        DashboardLocalStatus.Foreground = new SolidColorBrush(_gameRunning || valid
-            ? Color.FromRgb(120, 225, 155)
-            : string.IsNullOrWhiteSpace(_gameFolder)
-                ? Color.FromRgb(210, 205, 220)
-                : Color.FromRgb(255, 125, 135));
-        if (!string.Equals(_lastDashboardState, dashboardState, StringComparison.Ordinal))
-        {
-            _lastDashboardState = dashboardState;
-            FadeStateChange(GameStateBorder);
-            FadeStateChange(DashboardLocalStatus);
-        }
+
     }
 
     private static void FadeStateChange(UIElement element)
@@ -358,8 +416,7 @@ public partial class MainWindow : Window
         {
             ("offline", OfflineNavButton), ("online", OnlineNavButton),
             ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
-            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton),
-            ("settings", SettingsNavButton)
+            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton)
         };
 
         foreach (var item in buttons)
@@ -419,7 +476,7 @@ public partial class MainWindow : Window
         if (_busy) return;
         await RunBusyAsync("Executando diagnóstico...", async token =>
         {
-            var python = _python.FindRuntime(_root);
+            var python = _python.FindRuntime(_gameFolder ?? _root);
             _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
             var items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python), token);
             foreach (var item in items)

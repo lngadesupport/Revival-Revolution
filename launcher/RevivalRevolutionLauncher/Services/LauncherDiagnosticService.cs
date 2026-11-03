@@ -16,12 +16,12 @@ public sealed class LauncherDiagnosticService
 
     private static readonly string[] RequiredOfflineLibraries =
     {
-        "MetalOfflineBridgeImGuiV3.dll"
+        "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll"
     };
 
     private static readonly string[] OptionalOnlineLibraries =
     {
-        "MetalNetplayBridgeV32.dll", "MetalImGuiOverlay.dll", "SDL3.dll"
+        "SDL3.dll"
     };
 
     private readonly DistributionLocator _locator = new();
@@ -45,22 +45,24 @@ public sealed class LauncherDiagnosticService
         {
             var candidates = new[] { distribution, gameFolder, root }
                 .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Select(path => Path.Combine(path!, name))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var found = candidates.FirstOrDefault(File.Exists);
+            var found = candidates
+                .Select(path => _locator.FindFile(path!, name))
+                .FirstOrDefault(path => path is not null);
             results.Add(new("Essencial offline: " + name, found is not null,
-                found ?? "Não encontrado. Locais verificados: " + string.Join("; ", candidates)));
+                found ?? "Não encontrado. Pastas verificadas: " + string.Join("; ", candidates)));
         }
 
         foreach (var name in OptionalOnlineLibraries)
         {
             var candidates = new[] { distribution, gameFolder, root }
                 .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Select(path => Path.Combine(path!, name))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var found = candidates.FirstOrDefault(File.Exists);
+            var found = candidates
+                .Select(path => _locator.FindFile(path!, name))
+                .FirstOrDefault(path => path is not null);
             results.Add(new("Opcional online: " + name, true,
                 found ?? "Não instalado; não é necessário para iniciar no modo offline.", Optional: true));
         }
@@ -72,7 +74,7 @@ public sealed class LauncherDiagnosticService
         CheckEmptyManagedLibraries(results, managed);
         if (distribution is null)
             results.Add(new("Raiz da distribuição", false,
-                "Não foi possível localizar offline_launcher.py na pasta do launcher nem na pasta acima do jogo."));
+                "Não foi possível localizar o conjunto completo dos três scripts offline na distribuição. Verifique se offline_launcher.py, inject_offline.py e inject_overlay.py estão juntos na pasta do launcher, na pasta do jogo ou em uma subpasta próxima."));
         else
             results.Add(new("Raiz da distribuição", true, distribution));
         return results;

@@ -41,7 +41,11 @@ dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.cs
 
 O pacote self-contained inclui o runtime .NET necessário. O SDK só é necessário na máquina que compila. O single-file não é forçado por causa das particularidades de WPF e componentes nativos.
 
-## Atualizações do launcher\n\nO launcher consulta automaticamente as GitHub Releases ao iniciar. Para publicar uma versão, crie uma tag `vX.Y.Z` sobre um commit já integrado à `main`; o workflow publica o ZIP self-contained e o manifesto com SHA-256. Tags com sufixo, como `v0.7.0-rc.1`, são publicadas como pré-lançamentos e não substituem a Release estável mais recente. Consulte `launcher/RevivalRevolutionLauncher/README.md` para o procedimento.\n\n## Configuração antes de uma versão pública
+## Atualizações do launcher
+
+O launcher consulta automaticamente as GitHub Releases ao iniciar. Para publicar uma versão, crie uma tag `vX.Y.Z` sobre um commit já integrado à `main`; o workflow publica o ZIP self-contained e o manifesto com SHA-256. Tags com sufixo, como `v0.7.0-rc.1`, são publicadas como pré-lançamentos e não substituem a Release estável mais recente. Consulte `launcher/RevivalRevolutionLauncher/README.md` para o procedimento.
+
+## Configuração antes de uma versão pública
 
 1. Obter e publicar hashes SHA-256 confiáveis dos pacotes de distribuição por canal independente dos ZIPs.
 2. Conferir o formato e os caminhos de `SHA256SUMS.json` contra os ZIPs reais.
@@ -66,4 +70,4 @@ Os scripts, bridges e DLLs existentes da distribuição não devem ser substitu�
 
 ## Estado de validação
 
-O código WPF foi compilado com sucesso pelo workflow Windows do GitHub Actions no commit registrado na PR. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. Não declare uma versão como pronta para distribuição até que esses testes sejam concluídos.
+A validação de cada versão deve incluir o workflow Windows do GitHub Actions e testes manuais em Windows x64. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. Não declare uma versão como pronta para distribuição até que esses testes sejam concluídos.

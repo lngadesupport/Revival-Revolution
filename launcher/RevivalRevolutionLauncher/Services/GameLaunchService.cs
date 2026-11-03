@@ -9,10 +9,13 @@ public sealed class GameLaunchService
         File.Exists(Path.Combine(folder, "ufo.exe")) &&
         Directory.Exists(Path.Combine(folder, "ufo_Data", "Managed"));
 
-    public void StartOffline(string pythonExe, string scriptPath, string workingDirectory)
+    public void StartOffline(string pythonExe, string scriptPath, string gameFolder)
     {
+        var workingDirectory = Path.GetFullPath(gameFolder);
         if (!File.Exists(pythonExe)) throw new FileNotFoundException("Python portátil não encontrado.", pythonExe);
         if (!File.Exists(scriptPath)) throw new FileNotFoundException("Script offline não encontrado.", scriptPath);
+        if (!File.Exists(Path.Combine(workingDirectory, "ufo.exe")))
+            throw new FileNotFoundException("ufo.exe não foi encontrado na pasta de trabalho do jogo.", Path.Combine(workingDirectory, "ufo.exe"));
         var logDirectory = Path.Combine(workingDirectory, "Launcher", "Logs");
         Directory.CreateDirectory(logDirectory);
         var logPath = Path.Combine(logDirectory, $"launcher-{DateTime.Now:yyyyMMdd-HHmmss-fff}.log");

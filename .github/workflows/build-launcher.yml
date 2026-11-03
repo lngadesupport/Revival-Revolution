@@ -2,7 +2,7 @@ name: Build Windows launcher
 
 on:
   push:
-    branches: [ main, feature/modern-wpf-launcher ]
+    branches: [ main, feature/modern-wpf-launcher, release/0.7.2-stabilization ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - ".github/workflows/build-launcher.yml"
@@ -39,12 +39,34 @@ jobs:
           foreach ($asset in @("Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png")) {
             if (!(Test-Path (Join-Path $publish $asset))) { throw "Required launcher asset missing from publish output: $asset" }
           }
+          $offlineFiles = @("offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll")
+          foreach ($file in $offlineFiles) {
+            $path = Join-Path $publish ("OfflineScripts/" + $file)
+            if (!(Test-Path $path -PathType Leaf)) { throw "Required offline package file missing: $path" }
+            if ((Get-Item $path).Length -le 0) { throw "Required offline package file is empty: $path" }
+          }
           $config = Get-Content $configPath -Raw | ConvertFrom-Json
           if ($config.manifestUrl -ne "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json") { throw "Updater manifest URL is not the official GitHub Releases endpoint." }
-      - name: Upload Windows launcher artifact
+      - name: Package portable ZIP
+        shell: pwsh
+        run: |
+          $publish = ".\\artifacts\\RevivalRevolution-win-x64"
+          $archive = ".\\artifacts\\RevivalRevolution-Portable-0.7.3-win-x64.zip"
+          Compress-Archive -Path (Join-Path $publish "*") -DestinationPath $archive -CompressionLevel Optimal
+          if (!(Test-Path $archive)) { throw "Portable ZIP archive was not created." }
+          if ((Get-Item $archive).Length -lt 10MB) { throw "Portable ZIP archive is unexpectedly small." }
+          $offlineFiles = @("offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll")
+          $verify = ".\\artifacts\\portable-verify"
+          if (Test-Path $verify) { Remove-Item $verify -Recurse -Force }
+          Expand-Archive -Path $archive -DestinationPath $verify -Force
+          foreach ($file in $offlineFiles) {
+            $path = Join-Path $verify ("OfflineScripts/" + $file)
+            if (!(Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -le 0) { throw "Portable ZIP is missing or contains an empty offline file: $file" }
+          }
+      - name: Upload portable Windows launcher
         uses: actions/upload-artifact@v4
         with:
-          name: RevivalRevolution-win-x64
-          path: .\artifacts\RevivalRevolution-win-x64\
+          name: RevivalRevolution-Portable-win-x64
+          path: .\\artifacts\\RevivalRevolution-Portable-0.7.3-win-x64.zip
           if-no-files-found: error
           retention-days: 14
