@@ -34,6 +34,23 @@ class PeerConnectionCodeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             peer_session.decode_connection_code(tampered)
 
+
+    def test_encode_rejects_invalid_endpoint_and_key(self):
+        with self.assertRaises(ValueError):
+            peer_session.encode_code("0.0.0.0", 27015, self.key)
+        with self.assertRaises(ValueError):
+            peer_session.encode_code("203.0.113.10", 0, self.key)
+        with self.assertRaises(ValueError):
+            peer_session.encode_code("203.0.113.10", 27015, b"short")
+        with self.assertRaises(ValueError):
+            peer_session.encode_code(
+                "203.0.113.10", 27015, self.key, relay=("224.0.0.1", 14763)
+            )
+
+    def test_decoder_rejects_non_text_code(self):
+        with self.assertRaises(ValueError):
+            peer_session.decode_connection_code(None)
+
     def test_module_import_does_not_require_legacy_diagnostic_file(self):
         # fighter_input_test.py is not included in this repository snapshot.
         # Its absence must not prevent loading the supported live-play module.
