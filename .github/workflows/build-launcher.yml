@@ -31,6 +31,8 @@ on:
       - "selection_sync.py"
       - "live_fighter.py"
       - "autopunch_transport.py"
+      - "ranked_server/**"
+      - "launcher/RevivalRevolutionLauncher/Services/RadminHostService.cs"
       - "scripts/start-radmin-ranked-host.ps1"
       - ".github/workflows/build-launcher.yml"
   workflow_dispatch:
@@ -76,7 +78,7 @@ jobs:
             "Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png",
             "offline_launcher.py", "inject_offline.py", "inject_overlay.py",
             "peer_session.py", "peer_native.py", "selection_sync.py", "live_fighter.py", "autopunch_transport.py",
-            "ranked_server/__main__.py", "ranked_server/server.py", "ranked_server/storage.py", "ranked_server/social.py",
+            "ranked_server/__main__.py", "ranked_server/server.py", "ranked_server/storage.py", "ranked_server/social.py", "ranked_server/host_agent.py",
             "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll",
             "scripts/enable-radmin-peer-firewall.ps1"
           )) {
