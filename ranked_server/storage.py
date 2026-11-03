@@ -221,7 +221,7 @@ class RankedStore:
         opponent_id = row["player_two"] if own else row["player_one"]
         opponent = db.execute("SELECT display_name,rating FROM players WHERE player_id=?", (opponent_id,)).fetchone()
         room = db.execute(
-            "SELECT status,host_player,guest_player FROM private_rooms WHERE match_id=?",
+            "SELECT status,host_player,guest_player,connection_code FROM private_rooms WHERE match_id=?",
             (match_id,),
         ).fetchone()
         return {
