@@ -135,7 +135,6 @@ public sealed class RadminHostService
                 <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
                 <StartWhenAvailable>true</StartWhenAvailable>
                 <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-                <RestartOnFailure><Interval>PT1M</Interval><Count>999</Count></RestartOnFailure>
                 <Enabled>true</Enabled>
                 <Hidden>true</Hidden>
               </Settings>
