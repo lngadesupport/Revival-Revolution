@@ -100,7 +100,7 @@
                     <Border Grid.Row="1" Background="#66161A2A" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="SEU CÓDIGO DE CONVITE" Foreground="{StaticResource Muted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBox x:Name="RoomCodeDisplayBox" IsReadOnly="True" Text="------" FontSize="30" FontWeight="Black" LetterSpacing="5" HorizontalContentAlignment="Center" TextAlignment="Center" Margin="0,10,0,8" Padding="12"/>
+                            <TextBox x:Name="RoomCodeDisplayBox" IsReadOnly="True" Text="------" FontSize="30" FontWeight="Black" HorizontalContentAlignment="Center" TextAlignment="Center" Margin="0,10,0,8" Padding="12"/>
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                 <Button x:Name="CreateRoomButton" Content="CRIAR SALA" Click="CreateRoom_Click" IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="14,13"/>
