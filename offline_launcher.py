@@ -33,7 +33,7 @@ def main():
   if not (ROOT/name).exists():raise RuntimeError('Missing package file: '+name)
  pid=game_pid(game)
  if not pid:
-  subprocess.Popen([str(game/'ufo.exe')],cwd=game);print('Game started. Click Play! in the game configuration window.')
+  subprocess.Popen([str(game/'ufo.exe'),'-screen-fullscreen','1'],cwd=game);print('Game started directly in fullscreen mode; waiting for the game process.')
   for _ in range(100):
    pid=game_pid(game)
    if pid:break
