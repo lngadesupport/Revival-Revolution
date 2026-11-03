@@ -451,9 +451,11 @@ public partial class MainWindow : Window
         catch (Exception ex) { Log("ERRO ao atualizar: " + ex.Message); FooterStatus.Text = "Falha ao verificar/aplicar atualização."; }
     }
 
-    private void ShowUpdateProgress(string version)
+    private void ShowUpdateProgress(string version, bool repair)
     {
-        UpdateVersionText.Text = $"Versão {version} pronta para instalação";
+        UpdateVersionText.Text = repair
+            ? $"Reparo seletivo dos arquivos do launcher — {version}"
+            : $"Versão {version} pronta para instalação";
         UpdateStageText.Text = "Conectando ao servidor oficial...";
         UpdateProgressDetail.Text = "Aguardando início do download...";
         UpdatePercentText.Text = "—";
@@ -483,20 +485,25 @@ public partial class MainWindow : Window
                 return;
             }
 
-            Log($"Nova versão disponível: {update.Version}");
+            Log(update.IsRepair
+                ? $"Arquivos do launcher ausentes ou alterados; reparo seletivo da versão {update.Version} disponível."
+                : $"Nova versão disponível: {update.Version}");
             if (string.IsNullOrWhiteSpace(update.PackageUrl) || update.Files.Count == 0)
                 throw new InvalidDataException("Manifesto remoto incompleto: packageUrl/files ausentes.");
 
-            var choice = MessageBox.Show(this,
-                $"A versão {update.Version} está disponível.\n\n{update.ReleaseNotes}\n\nDeseja baixar e instalar agora?",
-                "Atualização disponível", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            var prompt = update.IsRepair
+                ? $"Foram encontrados {update.Files.Count} arquivo(s) do launcher ausentes ou com SHA-256 diferente.\n\nA versão instalada é {update.Version}. Somente os arquivos divergentes serão substituídos.\n\nDeseja reparar agora?"
+                : $"A versão {update.Version} está disponível.\n\n{update.ReleaseNotes}\n\nDeseja baixar e instalar agora?";
+            var choice = MessageBox.Show(this, prompt,
+                update.IsRepair ? "Reparo do launcher" : "Atualização disponível",
+                MessageBoxButton.YesNo, MessageBoxImage.Information);
             if (choice != MessageBoxResult.Yes)
             {
                 Log("Atualização adiada pelo usuário.");
                 return;
             }
 
-            ShowUpdateProgress(update.Version);
+            ShowUpdateProgress(update.Version, update.IsRepair);
             string script;
             try
             {
@@ -550,7 +557,9 @@ public partial class MainWindow : Window
                 throw;
             }
 
-            Log("Atualização verificada e preparada. O launcher será fechado para aplicar os arquivos.");
+            Log(update.IsRepair
+                ? $"Reparo seletivo de {update.Files.Count} arquivo(s) verificado e preparado."
+                : "Atualização verificada e preparada. O launcher será fechado para aplicar os arquivos.");
             var apply = new ProcessStartInfo("cmd.exe") { WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true };
             apply.ArgumentList.Add("/c");
             apply.ArgumentList.Add(script);
