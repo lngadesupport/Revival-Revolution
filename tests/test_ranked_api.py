@@ -315,5 +315,28 @@ class RankedApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(denied["error"], "invalid_request")
 
+    def test_private_room_connection_code_is_shared_only_after_host_start(self):
+        host = self.register("CODE-API-HOST")
+        guest = self.register("CODE-API-GUEST")
+        _, created = self.request("POST", "/v1/rooms/create", {}, host["token"])
+        _, joined = self.request("POST", "/v1/rooms/join", {"code": created["room"]["room_code"]}, guest["token"])
+        self.assertEqual(joined["match"]["connection_code"], None)
+
+        status, started = self.request("POST", "/v1/rooms/start", {}, host["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(started["room"]["status"], "starting")
+        code = "MR1-" + "A" * 42
+        status, published = self.request("POST", "/v1/rooms/connection-code", {"code": code}, host["token"])
+        self.assertEqual(status, 200)
+        self.assertTrue(published["connection_code_published"])
+
+        status, current = self.request("GET", "/v1/match", token=guest["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(current["match"]["connection_code"], code)
+
+        status, denied = self.request("POST", "/v1/rooms/connection-code", {"code": code}, guest["token"])
+        self.assertEqual(status, 400)
+        self.assertEqual(denied["error"], "invalid_request")
+
 if __name__ == "__main__":
     unittest.main()
