@@ -66,6 +66,34 @@ public sealed class OnlineGameSessionService : IDisposable
         StartPeer("join", address, connectionCode);
     }
 
+    public async Task WaitForPeerReadyAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_peerProcess is { HasExited: true })
+                throw new InvalidOperationException("A sessão P2P encerrou: " + ReadPeerError(statusPath));
+            try
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(statusPath, cancellationToken));
+                var root = json.RootElement;
+                if (root.TryGetProperty("state", out var state) && state.GetString() == "error")
+                    throw new InvalidOperationException(root.TryGetProperty("message", out var message)
+                        ? message.GetString() ?? "erro sem detalhes" : "erro sem detalhes");
+                var connected = root.TryGetProperty("peer_connected", out var peer) && peer.GetBoolean();
+                var localReady = root.TryGetProperty("local_vs_ready", out var local) && local.GetBoolean();
+                var remoteReady = root.TryGetProperty("remote_vs_ready", out var remote) && remote.GetBoolean();
+                if (connected && localReady && remoteReady) return;
+            }
+            catch (System.Text.Json.JsonException) { }
+            catch (IOException) { }
+            await Task.Delay(300, cancellationToken);
+        }
+        throw new TimeoutException("A sessão não concluiu o handshake UDP e a entrada VS no tempo limite. Confira peer-status.json e peer-summary.txt.");
+    }
+
     private async Task PrepareGameAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(_pythonExe))
@@ -154,6 +182,8 @@ public sealed class OnlineGameSessionService : IDisposable
         start.ArgumentList.Add("--port");
         start.ArgumentList.Add(PeerPort.ToString());
         start.ArgumentList.Add("--skip-native-preflight");
+        start.ArgumentList.Add("--setup-timeout");
+        start.ArgumentList.Add("600");
         if (mode == "host")
             start.ArgumentList.Add("--advertise");
         if (mode == "host")
