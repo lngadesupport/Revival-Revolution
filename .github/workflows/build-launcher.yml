@@ -54,8 +54,15 @@ jobs:
           if ($fileVersion -ne "0.8.1.0") { throw "Expected launcher FileVersion 0.8.1.0, got $fileVersion." }
           $configPath = Join-Path $publish "launcher-update.json"
           if (!(Test-Path $configPath)) { throw "Updater configuration missing from publish output." }
-          foreach ($asset in @("Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png")) {
-            if (!(Test-Path (Join-Path $publish $asset))) { throw "Required launcher asset missing from publish output: $asset" }
+          foreach ($asset in @(
+            "Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png",
+            "offline_launcher.py", "inject_offline.py", "inject_overlay.py",
+            "peer_session.py", "peer_native.py", "selection_sync.py", "live_fighter.py", "autopunch_transport.py",
+            "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll"
+          )) {
+            $assetPath = Join-Path $publish $asset
+            if (!(Test-Path $assetPath)) { throw "Required ONLINE runtime file missing from publish output: $asset" }
+            if ($asset.EndsWith(".dll") -and (Get-Item $assetPath).Length -le 0) { throw "Required DLL is empty: $asset" }
           }
           $config = Get-Content $configPath -Raw | ConvertFrom-Json
           if ($config.manifestUrl -ne "https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json") { throw "Updater manifest URL is not the official GitHub Releases endpoint." }
