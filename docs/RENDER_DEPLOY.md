@@ -12,6 +12,7 @@ O repositório contém um Blueprint em `render.yaml` para criar o serviço web
 - Disco persistente de 1 GB.
 - Plano `0.5c-512mb` (equivalente ao antigo Starter).
 - Deploy automático somente depois de os checks de CI passarem (`checksPass`).
+- O comando de build compila o backend/scripts e executa toda a suíte `unittest`; uma falha bloqueia o deploy.
 
 O serviço SQLite com disco persistente deve operar como instância única.
 Não escale horizontalmente esse serviço nem execute múltiplos processos
