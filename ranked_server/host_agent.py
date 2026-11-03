@@ -58,6 +58,7 @@ def main() -> None:
 
     python = Path(sys.executable).with_name("python.exe")
     child: subprocess.Popen | None = None
+    unhealthy_since: float | None = None
     logging.info("Host agent started; waiting for Radmin IPv4 %s", args.host)
 
     while True:
@@ -75,10 +76,23 @@ def main() -> None:
             continue
 
         if healthy(args.host, args.port):
+            unhealthy_since = None
             if child is not None and child.poll() is not None:
                 child = None
             time.sleep(5)
             continue
+
+        if child is not None and child.poll() is None:
+            unhealthy_since = unhealthy_since or time.monotonic()
+            if time.monotonic() - unhealthy_since > 30:
+                logging.warning("Ranked API process is alive but unhealthy; restarting it.")
+                child.terminate()
+                try:
+                    child.wait(timeout=8)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                child = None
+                unhealthy_since = None
 
         if child is None or child.poll() is not None:
             command = [
