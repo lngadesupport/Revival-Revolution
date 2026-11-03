@@ -72,8 +72,20 @@ class RankedStore:
                     created_at REAL NOT NULL,
                     CHECK(player_one <> player_two)
                 );
+                CREATE TABLE IF NOT EXISTS private_rooms (
+                    room_code TEXT PRIMARY KEY,
+                    host_player TEXT NOT NULL REFERENCES players(player_id),
+                    guest_player TEXT REFERENCES players(player_id),
+                    region TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'waiting',
+                    match_id TEXT UNIQUE REFERENCES matches(match_id),
+                    created_at REAL NOT NULL,
+                    expires_at REAL NOT NULL,
+                    CHECK(guest_player IS NULL OR host_player <> guest_player)
+                );
                 CREATE INDEX IF NOT EXISTS queue_region_time ON queue(region, joined_at);
                 CREATE INDEX IF NOT EXISTS matches_players ON matches(player_one, player_two, created_at);
+                CREATE INDEX IF NOT EXISTS private_rooms_host_status ON private_rooms(host_player, status);
             """)
 
     @staticmethod
@@ -141,6 +153,12 @@ class RankedStore:
             ).fetchone()
             if active:
                 raise ValueError("player already has an assigned match")
+            open_room = db.execute(
+                "SELECT 1 FROM private_rooms WHERE host_player=? AND status='waiting' AND expires_at>?",
+                (player_id, now),
+            ).fetchone()
+            if open_room:
+                raise ValueError("player already owns an open private room")
             existing = db.execute("SELECT region,joined_at FROM queue WHERE player_id=?", (player_id,)).fetchone()
             if existing:
                 if existing["region"] != region:
@@ -218,6 +236,133 @@ class RankedStore:
                 (row["region"], row["joined_at"], row["joined_at"], player_id),
             ).fetchone()[0]
             return {"queued": True, "region": row["region"], "joined_at": row["joined_at"], "position": position}
+
+
+    @staticmethod
+    def _normalize_room_code(code: str) -> str:
+        if not isinstance(code, str):
+            raise ValueError("room code must be a string")
+        normalized = "".join(ch for ch in code.upper().strip() if ch not in " -")
+        if len(normalized) != 6 or not all(ch in "23456789ABCDEFGHJKLMNPQRSTUVWXYZ" for ch in normalized):
+            raise ValueError("invalid room code")
+        return normalized
+
+    def create_private_room(self, player_id: str, region: str = "sa-east", *, ttl_seconds: int = 900) -> dict:
+        region = str(region).strip().lower()
+        if not region or len(region) > 24 or not all(c.isalnum() or c in "-_" for c in region):
+            raise ValueError("invalid region")
+        now = self.clock()
+        alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+        with self.transaction() as db:
+            player = db.execute("SELECT 1 FROM players WHERE player_id=?", (player_id,)).fetchone()
+            if player is None:
+                raise ValueError("unknown player")
+            db.execute(
+                "UPDATE private_rooms SET status='expired' WHERE status='waiting' AND expires_at<=?",
+                (now,),
+            )
+            if db.execute("SELECT 1 FROM queue WHERE player_id=?", (player_id,)).fetchone():
+                raise ValueError("leave the random queue before creating a private room")
+            if db.execute(
+                "SELECT 1 FROM matches WHERE status='assigned' AND (player_one=? OR player_two=?)",
+                (player_id, player_id),
+            ).fetchone():
+                raise ValueError("player already has an assigned match")
+            if db.execute(
+                "SELECT 1 FROM private_rooms WHERE host_player=? AND status='waiting'",
+                (player_id,),
+            ).fetchone():
+                raise ValueError("player already owns an open private room")
+            for _ in range(20):
+                code = "".join(secrets.choice(alphabet) for _ in range(6))
+                if not db.execute("SELECT 1 FROM private_rooms WHERE room_code=?", (code,)).fetchone():
+                    break
+            else:
+                raise RuntimeError("could not allocate a unique room code")
+            expires_at = now + max(60, min(int(ttl_seconds), 3600))
+            db.execute(
+                "INSERT INTO private_rooms(room_code,host_player,region,status,created_at,expires_at) VALUES(?,?,?,'waiting',?,?)",
+                (code, player_id, region, now, expires_at),
+            )
+            return {"room_code": code, "status": "waiting", "region": region,
+                    "created_at": now, "expires_at": expires_at}
+
+    def join_private_room(self, player_id: str, code: str) -> dict:
+        code = self._normalize_room_code(code)
+        now = self.clock()
+        with self.transaction() as db:
+            db.execute(
+                "UPDATE private_rooms SET status='expired' WHERE status='waiting' AND expires_at<=?",
+                (now,),
+            )
+            room = db.execute(
+                "SELECT * FROM private_rooms WHERE room_code=? AND status='waiting'",
+                (code,),
+            ).fetchone()
+            if room is None:
+                raise ValueError("room not found, expired, or already used")
+            if room["host_player"] == player_id:
+                raise ValueError("you cannot join your own room")
+            if db.execute("SELECT 1 FROM queue WHERE player_id=?", (player_id,)).fetchone():
+                raise ValueError("leave the random queue before joining a private room")
+            if db.execute(
+                "SELECT 1 FROM matches WHERE status='assigned' AND (player_one=? OR player_two=?)",
+                (player_id, player_id),
+            ).fetchone():
+                raise ValueError("player already has an assigned match")
+            if db.execute(
+                "SELECT 1 FROM private_rooms WHERE host_player=? AND status='waiting' AND expires_at>?",
+                (player_id, now),
+            ).fetchone():
+                raise ValueError("cancel your own private room before joining another")
+            host_id = room["host_player"]
+            host = db.execute("SELECT rating FROM players WHERE player_id=?", (host_id,)).fetchone()
+            guest = db.execute("SELECT rating FROM players WHERE player_id=?", (player_id,)).fetchone()
+            if host is None or guest is None:
+                raise ValueError("room player no longer exists")
+            first_id, second_id = sorted((host_id, player_id))
+            first = db.execute("SELECT rating FROM players WHERE player_id=?", (first_id,)).fetchone()
+            second = db.execute("SELECT rating FROM players WHERE player_id=?", (second_id,)).fetchone()
+            match_id = str(uuid.uuid4())
+            db.execute(
+                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]),
+                 room["region"], "assigned", now),
+            )
+            db.execute(
+                "UPDATE private_rooms SET guest_player=?,status='matched',match_id=? WHERE room_code=? AND status='waiting'",
+                (player_id, match_id, code),
+            )
+            return self._match_payload(db, match_id, player_id)
+
+    def current_private_room(self, player_id: str) -> dict:
+        now = self.clock()
+        with self.transaction() as db:
+            db.execute(
+                "UPDATE private_rooms SET status='expired' WHERE host_player=? AND status='waiting' AND expires_at<=?",
+                (player_id, now),
+            )
+            room = db.execute(
+                "SELECT * FROM private_rooms WHERE host_player=? AND status IN ('waiting','matched') ORDER BY created_at DESC LIMIT 1",
+                (player_id,),
+            ).fetchone()
+            if room is None:
+                return {"room": None, "match": None}
+            payload = {
+                "room_code": room["room_code"], "status": room["status"],
+                "region": room["region"], "created_at": room["created_at"],
+                "expires_at": room["expires_at"],
+            }
+            match = self._match_payload(db, room["match_id"], player_id) if room["match_id"] else None
+            return {"room": payload, "match": match}
+
+    def cancel_private_room(self, player_id: str) -> bool:
+        with self.transaction() as db:
+            result = db.execute(
+                "UPDATE private_rooms SET status='cancelled' WHERE host_player=? AND status='waiting'",
+                (player_id,),
+            )
+            return result.rowcount > 0
 
     def player_profile(self, player_id: str) -> dict:
         with self._connect() as db:
