@@ -79,6 +79,51 @@ class RankedStoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.register("")
 
+    def _create_assigned_match(self):
+        self.store.join_queue(self.one["player_id"])
+        self.store.join_queue(self.two["player_id"])
+        return self.store.current_match(self.one["player_id"])
+
+    def test_match_requires_both_acceptances(self):
+        match = self._create_assigned_match()
+        first = self.store.accept_match(self.one["player_id"])
+        self.assertEqual(first["status"], "assigned")
+        self.assertTrue(first["accepted"])
+        self.assertFalse(first["opponent_accepted"])
+        second = self.store.accept_match(self.two["player_id"])
+        self.assertEqual(second["status"], "ready")
+        self.assertTrue(second["accepted"])
+        self.assertTrue(second["opponent_accepted"])
+        self.assertEqual(self.store.current_match(self.one["player_id"])["status"], "ready")
+
+    def test_decline_releases_both_players_from_active_match(self):
+        self._create_assigned_match()
+        result = self.store.decline_match(self.one["player_id"])
+        self.assertEqual(result["status"], "declined")
+        self.assertIsNone(self.store.current_match(self.two["player_id"]))
+        self.assertIsNone(self.store.join_queue(self.one["player_id"]))
+
+    def test_unaccepted_match_expires_after_ninety_seconds(self):
+        self._create_assigned_match()
+        self.now += 91
+        self.assertIsNone(self.store.current_match(self.one["player_id"]))
+        self.assertIsNone(self.store.current_match(self.two["player_id"]))
+        self.assertIsNone(self.store.join_queue(self.one["player_id"]))
+
+    def test_ready_match_finishes_only_after_both_confirm(self):
+        self._create_assigned_match()
+        self.store.accept_match(self.one["player_id"])
+        self.store.accept_match(self.two["player_id"])
+        first = self.store.confirm_match_finished(self.one["player_id"])
+        self.assertEqual(first["status"], "awaiting_opponent_confirmation")
+        self.assertFalse(first["opponent_confirmed"])
+        self.assertFalse(first["rating_changed"])
+        second = self.store.confirm_match_finished(self.two["player_id"])
+        self.assertEqual(second["status"], "completed")
+        self.assertTrue(second["opponent_confirmed"])
+        self.assertFalse(second["rating_changed"])
+        self.assertIsNone(self.store.current_match(self.one["player_id"]))
+
     def test_rating_is_not_changed_by_client_completion(self):
         before = self.store.player_profile(self.one["player_id"])["rating"]
         self.store.join_queue(self.one["player_id"])
