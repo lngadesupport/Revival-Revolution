@@ -140,7 +140,7 @@ public sealed class RadminHostService
               </Settings>
               <Actions Context="Author"><Exec><Command>{Xml(executable)}</Command><Arguments>{Xml(arguments)}</Arguments><WorkingDirectory>{Xml(root)}</WorkingDirectory></Exec></Actions>
             </Task>
-            """;
+            """.TrimStart();
         var taskFile = Path.Combine(dataRoot, "host-agent-task.xml");
         await File.WriteAllTextAsync(taskFile, taskXml, Encoding.Unicode, token);
 
