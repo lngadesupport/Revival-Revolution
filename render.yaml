@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: revival-revolution-ranked
+    runtime: python
+    plan: starter
+    buildCommand: python -m compileall -q ranked_server
+    startCommand: python -m ranked_server --host 0.0.0.0 --port $PORT --database /var/data/ranked.sqlite3
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    disk:
+      name: revival-ranked-data
+      mountPath: /var/data
+      sizeGB: 1
