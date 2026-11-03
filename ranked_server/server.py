@@ -20,7 +20,7 @@ def make_handler(store: RankedStore):
     social = SocialStore(store.database, clock=store.clock)
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = "RevivalRanked/0.1"
+        server_version = "RevivalRanked/0.8.1"
 
         def log_message(self, fmt, *args):
             # Keep access logs useful without logging Authorization headers.
@@ -60,7 +60,7 @@ def make_handler(store: RankedStore):
             parsed = urlparse(self.path)
             path = parsed.path
             if path == "/health":
-                return self._json(200, {"ok": True, "service": "revival-ranked", "version": "0.1"})
+                return self._json(200, {"ok": True, "service": "revival-ranked", "version": "0.8.1"})
             player = self._player()
             if player is None:
                 return self._json(401, {"error": "authentication_required"})
