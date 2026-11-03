@@ -13,6 +13,7 @@ public partial class OnlineMatchWindow : Window
     private readonly OnlineGameSessionService _gameSession;
     private bool _guestSessionStarted;
     private bool _hostSessionActive;
+    private readonly CancellationTokenSource _sessionCancellation = new();
     private CancellationTokenSource? _polling;
     private string? _token;
     private string? _playerId;
@@ -437,14 +438,14 @@ public partial class OnlineMatchWindow : Window
             await _api.PostAsync("/v1/rooms/start", new JsonObject());
             MatchStateText.Text = "Abrindo o jogo e preparando a sessão UDP pela Radmin...";
             StatusText.Text = "O jogo será iniciado nos dois PCs. Se aparecer a janela de configuração do Metal Revolution, pressione Play.";
-            var code = await _gameSession.StartHostAsync();
+            var code = await _gameSession.StartHostAsync(_sessionCancellation.Token);
             await _api.PostAsync("/v1/rooms/connection-code", new JsonObject { ["code"] = code });
             connectionCodePublished = true;
             MatchStateText.Text = "Sessão do anfitrião iniciada. Aguardando o convidado conectar pela Radmin.";
             StatusText.Text = "Código de conexão autenticado enviado ao convidado. Aguardando handshake UDP e sincronização.";
             StartRoomButton.Content = "AGUARDANDO CONVIDADO";
             StartMatchLifecyclePolling();
-            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9));
+            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9), _sessionCancellation.Token);
             MatchStateText.Text = "Conexão Radmin estabelecida. A seleção sincronizada está abrindo nos dois PCs.";
             StatusText.Text = "Handshake UDP autenticado e entrada VS confirmados. Escolham os personagens e confirmem Ready no jogo.";
         }
@@ -452,6 +453,7 @@ public partial class OnlineMatchWindow : Window
         {
             _hostSessionActive = false;
             _gameSession.Stop();
+            if (!IsVisible) return;
             if (connectionCodePublished)
             {
                 try { await _api.PostAsync("/v1/match/decline", new JsonObject()); }
@@ -475,8 +477,8 @@ public partial class OnlineMatchWindow : Window
                 MatchStateText.Text = "O anfitrião iniciou. Abrindo o jogo e preparando a conexão UDP...";
                 StatusText.Text = "Se aparecer a janela de configuração do Metal Revolution, pressione Play.";
             });
-            await _gameSession.StartGuestAsync(connectionCode);
-            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9));
+            await _gameSession.StartGuestAsync(connectionCode, _sessionCancellation.Token);
+            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9), _sessionCancellation.Token);
             await Dispatcher.InvokeAsync(() =>
             {
                 MatchStateText.Text = "Conexão Radmin estabelecida. A seleção sincronizada está abrindo nos dois PCs.";
@@ -485,6 +487,7 @@ public partial class OnlineMatchWindow : Window
         }
         catch (Exception ex)
         {
+            if (!IsVisible) return;
             await Dispatcher.InvokeAsync(() =>
             {
                 MatchStateText.Text = "Não foi possível iniciar o cliente P2P.";
@@ -594,6 +597,7 @@ public partial class OnlineMatchWindow : Window
 
     private async void Window_Closing(object? sender, CancelEventArgs e)
     {
+        _sessionCancellation.Cancel();
         _polling?.Cancel();
         if (!string.IsNullOrWhiteSpace(_token))
         {
@@ -615,5 +619,6 @@ public partial class OnlineMatchWindow : Window
         }
         _polling?.Dispose();
         _gameSession.Dispose();
+        _sessionCancellation.Dispose();
     }
 }
