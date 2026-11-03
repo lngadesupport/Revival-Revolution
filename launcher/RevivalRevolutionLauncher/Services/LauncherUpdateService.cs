@@ -101,10 +101,35 @@ public sealed class LauncherUpdateService
         if (fileHashes.Count != files.Length || files.Any(path => !fileHashes.ContainsKey(path)))
             throw new InvalidDataException("Todo arquivo autorizado precisa ter exatamente um hash SHA-256.");
 
+        var changedFiles = await FindFilesNeedingUpdateAsync(root, files, fileHashes, token);
+        if (changedFiles.Count == 0) return null;
+        var isRepair = remoteVersion == localVersion;
+        return new LauncherUpdateInfo(
+            versionText,
+            data.GetProperty("packageUrl").GetString() ?? "",
+            data.GetProperty("sha256").GetString() ?? "",
+            data.TryGetProperty("releaseNotes", out var notes) ? notes.GetString() ?? "" : "",
+            changedFiles,
+            isRepair);
+    }
+
+    public static async Task<IReadOnlyList<string>> FindFilesNeedingUpdateAsync(
+        string root,
+        IReadOnlyList<string> files,
+        IReadOnlyDictionary<string, string> expectedHashes,
+        CancellationToken token = default)
+    {
         var changedFiles = new List<string>();
         foreach (var relative in files)
         {
             token.ThrowIfCancellationRequested();
+            ValidateRelativePath(relative);
+            if (IsProtectedPath(relative))
+                throw new InvalidDataException($"O atualizador não pode reparar este arquivo protegido: {relative}");
+            if (!expectedHashes.TryGetValue(relative, out var expectedHash) ||
+                expectedHash.Length != 64 || !expectedHash.All(Uri.IsHexDigit))
+                throw new InvalidDataException($"Hash SHA-256 ausente ou inválido: {relative}");
+
             EnsureSafeDestination(root, relative);
             var localPath = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(localPath))
@@ -115,19 +140,10 @@ public sealed class LauncherUpdateService
 
             await using var localStream = File.OpenRead(localPath);
             var localHash = Convert.ToHexString(await SHA256.HashDataAsync(localStream, token));
-            if (!localHash.Equals(fileHashes[relative], StringComparison.OrdinalIgnoreCase))
+            if (!localHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
                 changedFiles.Add(relative);
         }
-
-        if (changedFiles.Count == 0) return null;
-        var isRepair = remoteVersion == localVersion;
-        return new LauncherUpdateInfo(
-            versionText,
-            data.GetProperty("packageUrl").GetString() ?? "",
-            data.GetProperty("sha256").GetString() ?? "",
-            data.TryGetProperty("releaseNotes", out var notes) ? notes.GetString() ?? "" : "",
-            changedFiles,
-            isRepair);
+        return changedFiles;
     }
 
     public async Task<string> DownloadAndStageAsync(
