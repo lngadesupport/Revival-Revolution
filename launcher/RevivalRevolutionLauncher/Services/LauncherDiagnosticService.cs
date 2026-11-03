@@ -11,7 +11,8 @@ public sealed class LauncherDiagnosticService
 
     private static readonly string[] OptionalOnlineScripts =
     {
-        "peer_session.py", "autopunch_transport.py", "selection_sync.py", "live_fighter.py"
+        "peer_session.py", "autopunch_transport.py", "selection_sync.py", "live_fighter.py",
+        "peer_native.py", "bridge_command.py", "fighter_input_test.py"
     };
 
     private static readonly string[] RequiredOfflineLibraries =
@@ -21,7 +22,7 @@ public sealed class LauncherDiagnosticService
 
     private static readonly string[] OptionalOnlineLibraries =
     {
-        "MetalNetplayBridgeV32.dll", "MetalImGuiOverlay.dll", "SDL3.dll"
+        "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll", "MetalGekko.dll", "SDL3.dll"
     };
 
     private readonly DistributionLocator _locator = new();
@@ -38,7 +39,7 @@ public sealed class LauncherDiagnosticService
         {
             var path = Path.Combine(scriptRoot, name);
             results.Add(new("Opcional online: " + name, true,
-                File.Exists(path) ? path : "Não instalado; não é necessário para iniciar no modo offline.", Optional: true));
+                File.Exists(path) ? path : "Ausente; recursos multiplayer que dependem deste componente ficam indisponíveis. O modo offline continua independente.", Optional: true));
         }
 
         foreach (var name in RequiredOfflineLibraries)
