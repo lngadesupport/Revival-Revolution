@@ -1,6 +1,6 @@
-# Radmin private-room start flow (0.8.1 test branch)
+# Private Match by room code (0.8.1 test branch)
 
-The ONLINE window uses the fixed private API endpoint:
+The **PRIVATE MATCH** window is dedicated to room-code invitations and uses the fixed private API endpoint:
 
 `http://26.226.57.19:8765`
 
@@ -19,14 +19,17 @@ Do not start a second server while the old process still owns TCP 8765.
 
 ## Private room lifecycle
 
-1. The host creates a six-character room code.
-2. The guest enters the code.
+1. The **PRIVATE MATCH** page first shows the invitation screen.
+2. The host creates a six-character code and shares it; the guest enters that code.
 3. The API creates one private match and marks both room participants accepted automatically.
-4. The host sees the **INICIAR PARTIDA** button. The guest sees a waiting message.
-5. Only the authenticated host can call `POST /v1/rooms/start`.
-6. The host launches the game bootstrap and direct UDP peer runtime bound to its local Radmin IPv4 address, then publishes the MR1 code through `POST /v1/rooms/connection-code`.
-7. The guest receives that code through `GET /v1/match`, launches the game bootstrap and joins the host over UDP port 8766.
-8. Both clients observe the peer session status in `peer-status.json` and `peer-summary.txt`.
+4. Both launchers replace the invitation screen with the VS lobby: profile photo and nickname on each side, with **VS** between them.
+5. Only the authenticated host sees and can press **INICIAR PARTIDA**. The guest waits in the VS lobby.
+6. Only the authenticated host can call `POST /v1/rooms/start`.
+7. The host launches the game bootstrap and direct UDP peer runtime bound to its local Radmin IPv4 address, then publishes the MR1 code through `POST /v1/rooms/connection-code`.
+8. The guest receives that code through `GET /v1/match`, launches the game bootstrap and joins the host over UDP port 8766.
+9. Both clients observe the peer session status in `peer-status.json` and `peer-summary.txt`.
+
+Players can upload a PNG/JPEG profile photo from the Private Match header. If no photo is set, the lobby displays nickname initials. The opponent photo is loaded through the authenticated avatar endpoint.
 
 The endpoint is idempotent for the host. A guest cannot start another player's room. A private match has a two-hour setup expiry after the guest joins.
 
@@ -34,11 +37,11 @@ The endpoint is idempotent for the host. A guest cannot start another player's r
 
 Run `scripts/enable-radmin-peer-firewall.ps1` as Administrator on **both** PCs. It opens inbound UDP 8766 only from the Radmin 26.0.0.0/8 range. Keep both PCs connected to the same private Radmin network.
 
-The ONLINE bootstrap invokes `offline_launcher.py` to start/attach the game bridge. If the game's configuration window appears, press its Play button so the Mono runtime can load and the bridge can attach.
+The Private Match bootstrap invokes `offline_launcher.py` to start/attach the game bridge. It launches `ufo.exe` with Unity's `-screen-fullscreen 1` startup argument so the interactive Metal Revolution Configuration selector is skipped and the game can start directly. The target PC must still be checked to confirm that this Unity build honors the argument.
 
 ## Important implementation boundary
 
-The branch now wires the full launch sequence in code: the host start transition, MR1 key-code exchange, game bootstrap on both clients, direct Radmin UDP peer startup, authenticated handshake, and coordinated local VS readiness. This has passed code/build checks only; no real two-PC game session has been run in this environment, so live gameplay and bridge compatibility are not yet certified.
+The branch implements the invitation-first Private Match UI, profile-photo upload/display, the host-only VS start control, MR1 key-code exchange, game bootstrap on both clients, direct Radmin UDP peer startup, authenticated handshake, and coordinated local VS readiness. This has passed code/build checks only; no real two-PC game session has been run in this environment, so live gameplay, the Unity configuration bypass, and bridge compatibility are not yet certified.
 
 The current peer runtime requires:
 - a running `ufo.exe` with the netplay bridge attached and `netplay-pid.txt` available;
