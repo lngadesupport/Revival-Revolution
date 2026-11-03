@@ -55,4 +55,4 @@ Run the backend checks with:
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-The Windows GitHub Actions workflow also builds and publishes the launcher artifact for this feature branch. A passing build does not replace a real two-PC game/P2P test.
+The Ranked CI runs 61 backend/protocol tests, including a real localhost UDP HMAC handshake and coordinated VS-state test using a fake game bridge. The Windows workflow builds and verifies the self-contained launcher package, its Python runtime scripts, the three non-empty bridge/overlay DLLs, and the Radmin firewall helper. These automated checks do not replace a real two-PC Radmin/game/rollback test.
