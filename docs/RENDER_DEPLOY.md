@@ -10,11 +10,14 @@ O repositório contém um Blueprint em `render.yaml` para criar o serviço web
 - Bind em `0.0.0.0` usando a porta `PORT` fornecida pelo Render.
 - SQLite em `/var/data/ranked.sqlite3`.
 - Disco persistente de 1 GB.
-- Plano Starter, pois o SQLite precisa de armazenamento persistente.
+- Plano `0.5c-512mb` (equivalente ao antigo Starter).
+- Deploy automático somente depois de os checks de CI passarem (`checksPass`).
 
 O serviço SQLite com disco persistente deve operar como instância única.
 Não escale horizontalmente esse serviço nem execute múltiplos processos
-concorrentes usando o mesmo arquivo SQLite.
+concorrentes usando o mesmo arquivo SQLite. O disco também causa uma pequena
+indisponibilidade durante redeploys, pois o Render para a instância antiga
+antes de iniciar a nova; isso é uma limitação documentada de persistent disks.
 
 ## Publicação controlada
 
