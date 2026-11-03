@@ -37,6 +37,25 @@ class RankedStoreTests(unittest.TestCase):
         match = self.store.join_queue(self.two["player_id"], "sa-east")
         self.assertIsNotNone(match)
 
+
+    def test_queue_polling_triggers_match_when_rating_window_expands(self):
+        with self.store.transaction() as db:
+            db.execute("UPDATE players SET rating=1000 WHERE player_id=?", (self.one["player_id"],))
+            db.execute("UPDATE players SET rating=1250 WHERE player_id=?", (self.two["player_id"],))
+        self.assertIsNone(self.store.join_queue(self.one["player_id"], "sa-east"))
+        self.assertIsNone(self.store.join_queue(self.two["player_id"], "sa-east"))
+        self.assertTrue(self.store.queue_status(self.one["player_id"])["queued"])
+
+        self.now += 30
+        status = self.store.queue_status(self.one["player_id"])
+        self.assertFalse(status["queued"])
+        first_match = self.store.current_match(self.one["player_id"])
+        second_match = self.store.current_match(self.two["player_id"])
+        self.assertIsNotNone(first_match)
+        self.assertIsNotNone(second_match)
+        self.assertEqual(first_match["match_id"], second_match["match_id"])
+        self.assertEqual(first_match["opponent"]["display_name"], "PC-PLAYER-TWO")
+
     def test_regions_do_not_mix(self):
         self.store.join_queue(self.one["player_id"], "sa-east")
         self.assertIsNone(self.store.join_queue(self.two["player_id"], "eu-west"))
