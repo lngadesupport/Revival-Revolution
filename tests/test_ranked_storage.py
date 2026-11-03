@@ -179,7 +179,7 @@ class RankedStoreTests(unittest.TestCase):
         room = self.store.create_private_room(host["player_id"], "sa-east")
         self.store.join_private_room(guest["player_id"], room["room_code"])
         self.store.start_private_room(host["player_id"])
-        code = encode_code("26.10.20.30", 8766, b"\\x11" * 16)
+        code = encode_code("26.10.20.30", 8766, b"\x11" * 16)
         result = self.store.publish_private_room_code(host["player_id"], code)
         self.assertTrue(result["connection_code_published"])
         self.assertEqual(self.store.current_match(guest["player_id"])["connection_code"], code)
