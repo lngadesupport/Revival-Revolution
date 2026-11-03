@@ -11,22 +11,18 @@ Esta configuração substitui o endpoint hospedado por uma API executada no PC a
 
 Não compartilhe as credenciais da rede com desconhecidos: qualquer membro da rede privada poderá tentar alcançar os serviços nela publicados.
 
-## 2. Iniciar a API no anfitrião
+## 2. Inicialização automática do servidor
 
-Requisitos: Windows 10/11, Python 3.10 ou superior e o repositório completo.
+A distribuição atual integra o servidor Ranked ao launcher. Na primeira execução no PC anfitrião:
 
-No PowerShell, na raiz do repositório:
+1. Ligue o Radmin VPN e entre na rede privada.
+2. Abra o Revival Revolution Launcher.
+3. O launcher identifica automaticamente o IP Radmin configurado, instala o runtime portátil necessário se ainda não existir, solicita autorização administrativa uma única vez para as regras restritas do Firewall do Windows e registra uma tarefa oculta no Agendador de Tarefas.
+4. O agente automático inicia a API em segundo plano, mantém o banco em `%LOCALAPPDATA%\\RevivalRevolution\\RankedServer\\ranked.sqlite3` e reinicia o processo se ele falhar.
 
-    Set-ExecutionPolicy -Scope Process Bypass
-    .\scripts\start-radmin-ranked-host.ps1
+Depois dessa preparação inicial, não é necessário abrir PowerShell, executar scripts ou manter uma janela de terminal aberta. A tarefa inicia no logon do Windows e aguarda a interface Radmin ficar disponível; quando o Radmin conecta, a API sobe automaticamente. O launcher também verifica a saúde da API enquanto está aberto.
 
-O script:
-- procura o IPv4 Radmin (26.x.x.x);
-- cria o banco persistente em %LOCALAPPDATA%\RevivalRevolution\RankedServer\ranked.sqlite3;
-- cria uma regra de firewall TCP 8765 limitada a origem 26.0.0.0/8 e ao endereço local Radmin;
-- inicia a API vinculada somente ao endereço Radmin, não a todas as interfaces.
-
-A janela do servidor precisa permanecer aberta. Para encerrar, pressione Ctrl+C. Não exponha a porta no roteador e não crie regras de encaminhamento WAN.
+No primeiro uso de PRIVATE MATCH em cada computador, o launcher configura a regra UDP de entrada para o runtime Python, limitada à rede Radmin. O Windows pode solicitar autorização administrativa uma única vez. A regra TCP da API no anfitrião fica limitada ao IP local Radmin, porta 8765 e origem 26.0.0.0/8. Nenhuma porta é aberta no roteador.
 
 ## 3. Conectar os launchers dos jogadores
 
