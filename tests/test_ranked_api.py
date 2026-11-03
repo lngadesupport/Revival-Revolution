@@ -215,5 +215,64 @@ class RankedApiTests(unittest.TestCase):
         self.assertTrue(any(entry["player_id"] == two["player_id"] and entry["has_avatar"] for entry in board["entries"]))
         self.assertNotIn("last_seen", board["entries"][0])
 
+
+    def test_private_room_host_and_guest_receive_same_match(self):
+        host = self.register("ROOM-HOST")
+        guest = self.register("ROOM-GUEST")
+        status, created = self.request("POST", "/v1/rooms/create", {"region": "sa-east"}, host["token"])
+        self.assertEqual(status, 201)
+        code = created["room"]["room_code"]
+        self.assertEqual(len(code), 6)
+        status, joined = self.request("POST", "/v1/rooms/join", {"code": code.lower()}, guest["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(joined["match"]["opponent"]["display_name"], "ROOM-HOST")
+        status, host_room = self.request("GET", "/v1/rooms/current", token=host["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(host_room["room"]["status"], "matched")
+        self.assertEqual(host_room["match"]["match_id"], joined["match"]["match_id"])
+        status, guest_match = self.request("GET", "/v1/match", token=guest["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(guest_match["match"]["match_id"], joined["match"]["match_id"])
+
+    def test_private_room_rejects_host_join_and_reuse(self):
+        host = self.register("ROOM-OWNER")
+        guest = self.register("ROOM-OTHER")
+        _, created = self.request("POST", "/v1/rooms/create", {}, host["token"])
+        code = created["room"]["room_code"]
+        status, _ = self.request("POST", "/v1/rooms/join", {"code": code}, host["token"])
+        self.assertEqual(status, 400)
+        status, _ = self.request("POST", "/v1/rooms/join", {"code": code}, guest["token"])
+        self.assertEqual(status, 200)
+        status, _ = self.request("POST", "/v1/rooms/join", {"code": code}, self.register("ROOM-THIRD")["token"])
+        self.assertEqual(status, 400)
+
+    def test_private_room_can_be_cancelled_and_code_becomes_invalid(self):
+        host = self.register("ROOM-CANCEL")
+        guest = self.register("ROOM-TRY")
+        _, created = self.request("POST", "/v1/rooms/create", {}, host["token"])
+        code = created["room"]["room_code"]
+        status, result = self.request("POST", "/v1/rooms/cancel", {}, host["token"])
+        self.assertEqual(status, 200)
+        self.assertTrue(result["cancelled"])
+        status, _ = self.request("POST", "/v1/rooms/join", {"code": code}, guest["token"])
+        self.assertEqual(status, 400)
+
+    def test_private_room_and_random_queue_are_mutually_exclusive(self):
+        player = self.register("ROOM-QUEUE")
+        other = self.register("QUEUE-OTHER")
+        status, _ = self.request("POST", "/v1/queue/join", {"region": "sa-east"}, player["token"])
+        self.assertEqual(status, 202)
+        status, _ = self.request("POST", "/v1/rooms/create", {}, player["token"])
+        self.assertEqual(status, 400)
+        self.request("POST", "/v1/queue/leave", {}, player["token"])
+        _, _ = self.request("POST", "/v1/rooms/create", {}, player["token"])
+        status, _ = self.request("POST", "/v1/queue/join", {"region": "sa-east"}, player["token"])
+        self.assertEqual(status, 400)
+
+    def test_private_room_rejects_malformed_code(self):
+        guest = self.register("ROOM-BAD-CODE")
+        status, _ = self.request("POST", "/v1/rooms/join", {"code": "123"}, guest["token"])
+        self.assertEqual(status, 400)
+
 if __name__ == "__main__":
     unittest.main()
