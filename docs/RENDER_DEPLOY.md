@@ -1,4 +1,4 @@
-# Publicar a API Ranked no Render
+# Publicar a API Ranked no Render — base 0.8.1
 
 O repositório contém um Blueprint em `render.yaml` para criar o serviço web
 `revival-revolution-ranked`.
@@ -9,33 +9,41 @@ O repositório contém um Blueprint em `render.yaml` para criar o serviço web
 - Health check em `/health`.
 - Bind em `0.0.0.0` usando a porta `PORT` fornecida pelo Render.
 - SQLite em `/var/data/ranked.sqlite3`.
-- Disco persistente de 1 GB montado em `/var/data`.
+- Disco persistente de 1 GB.
+- Plano Starter, pois o SQLite precisa de armazenamento persistente.
 
-O serviço está configurado no plano Starter porque o banco SQLite precisa de
-disco persistente. O plano gratuito não oferece esse disco para o serviço web;
-usar armazenamento efêmero poderia apagar contas, salas e dados quando a
-instância reiniciasse ou fosse substituída.
+O serviço SQLite com disco persistente deve operar como instância única.
+Não escale horizontalmente esse serviço nem execute múltiplos processos
+concorrentes usando o mesmo arquivo SQLite.
 
-## Publicação
+## Publicação controlada
 
-1. Entre no Render e conecte a conta GitHub que tem acesso a
+1. Conecte no Render a conta GitHub com acesso a
    `lngadesupport/Revival-Revolution`.
-2. Crie um **Blueprint** e selecione o repositório.
-3. Selecione a branch `feature/ranked-match-backend-v2` enquanto a integração
-   estiver em validação.
-4. Revise o plano Starter e o disco persistente antes de confirmar a criação.
-5. Aguarde o deploy e abra `https://SEU-SERVICO.onrender.com/health`.
-6. Quando a resposta indicar `"ok": true`, copie a URL base HTTPS e informe-a
-   no campo de endereço da API Ranked no launcher.
+2. Crie um Blueprint a partir do repositório.
+3. Selecione a branch `release/0.8.1-stabilization` durante a validação.
+4. Revise plano, disco persistente, região e custo antes de criar o serviço.
+5. Aguarde o deploy e verifique
+   `https://SEU-SERVICO.onrender.com/health`.
+6. Confirme `"ok": true` e versão `"0.8.1"` antes de configurar o launcher.
 
-Não coloque tokens de jogadores em variáveis públicas nem em arquivos do
-repositório. O token individual continua guardado no Gerenciador de Credenciais
-do Windows.
+Não coloque tokens de jogadores em variáveis públicas ou arquivos do
+repositório. O token individual continua no Gerenciador de Credenciais do
+Windows.
+
+## Limite de função do Render
+
+O Render deste Blueprint hospeda a API HTTP/HTTPS e o banco SQLite. Isso não
+cria um relay UDP nem garante conectividade P2P. O código AutoPunch atual
+consulta STUN e usa por padrão um relay externo configurável. Para controlar
+a infraestrutura multiplayer, precisaremos hospedar/operar um serviço UDP
+compatível em separado (por exemplo, numa VPS), ou escolher outra arquitetura
+de transporte e testá-la.
 
 ## Antes de abrir ao público
 
-O Blueprint é uma configuração inicial de hospedagem, não uma certificação de
-produção. Antes de anunciar o servidor, configure backups do disco, monitore
-erros e uso, estabeleça política de privacidade e implemente proteção contra
-abuso/rate limiting. A integração de ticket P2P com a bridge ainda precisa ser
-concluída; publicar a API não inicia partidas de jogo por si só.
+O Blueprint é configuração inicial, não certificação de produção. Antes de
+anunciar o servidor, configurar backups e monitoramento, revisar rate limits
+globais, proteção de cadastro, política de privacidade/retenção e resposta a
+incidentes. A integração de ticket P2P com a bridge e o teste entre duas
+máquinas continuam obrigatórios.
