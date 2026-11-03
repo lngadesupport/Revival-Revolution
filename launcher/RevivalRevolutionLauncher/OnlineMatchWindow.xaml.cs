@@ -339,14 +339,18 @@ public partial class OnlineMatchWindow : Window
 
         if (_matchStatus == "ready" && role is "host" or "guest")
         {
-            VersusStateText.Text = roomStatus == "starting"
-                ? (role == "host" ? "Preparando o jogo e aguardando o adversário conectar..." : "O anfitrião iniciou a partida. Preparando sua conexão...")
-                : (role == "host" ? "Seu adversário entrou. Quando estiver pronto, inicie a partida." : "Você entrou na sala. Aguarde o anfitrião iniciar a partida.");
+            VersusStateText.Text = _peerReady
+                ? "Conexão P2P estabelecida. A tela VS está aberta nos dois PCs; escolham personagens, roupas e cenário e confirmem Ready."
+                : roomStatus == "starting"
+                    ? (role == "host" ? "Preparando o jogo e aguardando o adversário conectar..." : "O anfitrião iniciou a partida. Preparando sua conexão...")
+                    : (role == "host" ? "Seu adversário entrou. Quando estiver pronto, inicie a partida." : "Você entrou na sala. Aguarde o anfitrião iniciar a partida.");
             LeaveRoomButton.Content = "SAIR DA SALA";
             LeaveRoomButton.IsEnabled = true;
-            StatusText.Text = roomStatus == "starting"
-                ? "Inicialização em andamento pela rede privada Radmin."
-                : "Os dois jogadores estão na sala VS.";
+            StatusText.Text = _peerReady
+                ? "Conexão P2P estabelecida pela rede privada Radmin."
+                : roomStatus == "starting"
+                    ? "Inicialização em andamento pela rede privada Radmin."
+                    : "Os dois jogadores estão na sala VS.";
         }
         else
         {
