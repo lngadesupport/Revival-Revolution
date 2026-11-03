@@ -156,7 +156,7 @@ public sealed class OnlineGameSessionService : IDisposable
         var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromMinutes(6));
+        timeout.CancelAfter(TimeSpan.FromMinutes(8));
         try
         {
             await process.WaitForExitAsync(timeout.Token);
