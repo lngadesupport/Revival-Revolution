@@ -186,6 +186,17 @@ public sealed class RadminHostService
         return (process.ExitCode, (await outputTask) + (await errorTask));
     }
 
+    public async Task WaitForServerAsync(string hostAddress, CancellationToken token)
+    {
+        for (var attempt = 0; attempt < 35; attempt++)
+        {
+            token.ThrowIfCancellationRequested();
+            if (await IsHealthyAsync(hostAddress, token)) return;
+            await Task.Delay(TimeSpan.FromSeconds(1), token);
+        }
+        throw new HttpRequestException($"O servidor Radmin {hostAddress}:{ServerPort} não respondeu. Confirme se o anfitrião está ligado à rede VPN.");
+    }
+
     private static async Task<bool> IsHealthyAsync(string hostAddress, CancellationToken token)
     {
         try
