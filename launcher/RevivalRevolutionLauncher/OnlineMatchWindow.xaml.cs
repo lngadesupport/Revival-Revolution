@@ -360,7 +360,20 @@ public partial class OnlineMatchWindow : Window
                    string.Equals(matchId, _activeMatchId, StringComparison.Ordinal))
             {
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                var result = await _api.GetAsync("/v1/match", cancellationToken);
+                JsonObject result;
+                try
+                {
+                    result = await _api.GetAsync("/v1/match", cancellationToken);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                        StatusText.Text = "Conexão instável ao atualizar a partida; tentando novamente: " + ex.Message);
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    continue;
+                }
+
                 if (result["match"] is not JsonObject current)
                 {
                     await Dispatcher.InvokeAsync(() => ResetMatchState(
@@ -372,11 +385,6 @@ public partial class OnlineMatchWindow : Window
             }
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            await Dispatcher.InvokeAsync(() =>
-                StatusText.Text = "Não foi possível atualizar o aceite da partida: " + ex.Message);
-        }
     }
 
     private async void AcceptMatch_Click(object sender, RoutedEventArgs e)
