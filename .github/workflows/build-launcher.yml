@@ -2,7 +2,7 @@ name: Build Windows launcher
 
 on:
   push:
-    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, release/0.8.1-stabilization, ops/windows-local-ranked-host ]
+    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, release/0.8.1-stabilization, ops/windows-local-ranked-host, test/0.8.0-radmin ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - "scripts/start-radmin-ranked-host.ps1"
@@ -13,6 +13,7 @@ on:
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - "scripts/start-radmin-ranked-host.ps1"
+      - "tests/LauncherIntegritySmoke/**"
       - ".github/workflows/build-launcher.yml"
   workflow_dispatch:
 
@@ -40,15 +41,15 @@ jobs:
       - name: Run launcher integrity smoke tests
         run: dotnet run --project .\tests\LauncherIntegritySmoke\LauncherIntegritySmoke.csproj --configuration Release
       - name: Publish self-contained Windows x64
-        run: dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\RevivalRevolution-win-x64
+        run: dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\RevivalRevolution-0.8.0-Radmin-win-x64
       - name: Verify published files
         shell: pwsh
         run: |
-          $publish = ".\artifacts\RevivalRevolution-win-x64"
+          $publish = ".\artifacts\RevivalRevolution-0.8.0-Radmin-win-x64"
           $exePath = Join-Path $publish "RevivalRevolution.exe"
           if (!(Test-Path $exePath)) { throw "Launcher executable missing from publish output." }
           $fileVersion = (Get-Item $exePath).VersionInfo.FileVersion
-          if ($fileVersion -ne "0.8.1.0") { throw "Expected launcher FileVersion 0.8.1.0, got $fileVersion." }
+          if ($fileVersion -ne "0.8.0.0") { throw "Expected launcher FileVersion 0.8.0.0, got $fileVersion." }
           $configPath = Join-Path $publish "launcher-update.json"
           if (!(Test-Path $configPath)) { throw "Updater configuration missing from publish output." }
           foreach ($asset in @("Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png")) {
@@ -59,7 +60,7 @@ jobs:
       - name: Upload Windows launcher artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RevivalRevolution-win-x64
-          path: .\artifacts\RevivalRevolution-win-x64\
+          name: RevivalRevolution-0.8.0-Radmin-win-x64
+          path: .\artifacts\RevivalRevolution-0.8.0-Radmin-win-x64\
           if-no-files-found: error
           retention-days: 14
