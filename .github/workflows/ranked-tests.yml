@@ -2,7 +2,7 @@ name: Ranked backend tests
 
 on:
   push:
-    branches: [ main, "feature/ranked-match-backend*" ]
+    branches: [ main, "feature/ranked-match-backend*", "release/0.8.1-stabilization" ]
     paths:
       - "ranked_server/**"
       - "tests/**"
