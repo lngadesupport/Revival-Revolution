@@ -107,7 +107,7 @@ public sealed class RadminHostService
     public async Task EnsureHostServerAsync(string root, string pythonExe, string hostAddress,
         CancellationToken token)
     {
-        if (await IsHealthyAsync(hostAddress, token)) return;
+        // Register the persistent task even when an older manually-started API is already healthy.
         var module = Path.Combine(root, "ranked_server", "host_agent.py");
         if (!File.Exists(module))
             throw new FileNotFoundException("O agente automático do servidor não foi incluído na distribuição.", module);
