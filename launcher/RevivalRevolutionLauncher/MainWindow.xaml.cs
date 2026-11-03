@@ -632,7 +632,22 @@ public partial class MainWindow : Window
         SetActiveNavigation("private");
         FooterStatus.Text = "ONLINE — abrindo matchmaking.";
         Log("Central Online aberta.");
-        var window = new OnlineMatchWindow { Owner = this };
+        var distributionRoot = _distributionRoot ?? _distributionLocator.Find(_root, _gameFolder);
+        var python = _python.FindRuntime(_root);
+        if (string.IsNullOrWhiteSpace(_gameFolder) || distributionRoot is null)
+        {
+            MessageBox.Show(this, "Configure a pasta do jogo e mantenha os scripts/DLLs da distribuição junto ao launcher antes de abrir o ONLINE.",
+                "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (python is null)
+        {
+            MessageBox.Show(this, "O runtime Python portátil ainda não está instalado. Inicie o modo offline uma vez para instalar o runtime e depois tente novamente.",
+                "Runtime necessário", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        _config.SaveGameFolder(_root, _gameFolder, distributionRoot);
+        var window = new OnlineMatchWindow(distributionRoot, _gameFolder, python) { Owner = this };
         window.ShowDialog();
         RefreshGameState();
     }
