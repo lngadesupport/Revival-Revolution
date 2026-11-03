@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.Json.Nodes;
 
 namespace RevivalRevolution.Services;
 
@@ -83,6 +84,18 @@ public sealed class OnlineGameSessionService : IDisposable
         var missing = required.Where(name => !File.Exists(Path.Combine(_distributionRoot, name))).ToArray();
         if (missing.Length > 0)
             throw new FileNotFoundException("Distribuição ONLINE incompleta: " + string.Join(", ", missing));
+
+        var configPath = Path.Combine(_distributionRoot, "launcher-config.json");
+        JsonObject launcherConfig;
+        try
+        {
+            launcherConfig = File.Exists(configPath)
+                ? JsonNode.Parse(await File.ReadAllTextAsync(configPath, cancellationToken)) as JsonObject ?? new JsonObject()
+                : new JsonObject();
+        }
+        catch (System.Text.Json.JsonException) { launcherConfig = new JsonObject(); }
+        launcherConfig["game_folder"] = _gameFolder;
+        await File.WriteAllTextAsync(configPath, launcherConfig.ToJsonString(), cancellationToken);
 
         var bootstrap = Path.Combine(_distributionRoot, "offline_launcher.py");
         var start = new ProcessStartInfo(_pythonExe)
