@@ -43,7 +43,7 @@ este servidor HTTP de desenvolvimento diretamente à internet.
 - `POST /v1/queue/leave` — sai da fila.
 - `GET /v1/match` — partida atualmente atribuída.
 - `POST /v1/rooms/create` — cria uma sala privada com código aleatório de 6 caracteres; expira em 15 minutos.
-- `POST /v1/rooms/join` — JSON `{"code":"ABC234"}`; valida o código e atribui a mesma partida aos dois jogadores.
+- `POST /v1/rooms/join` — JSON `{"code":"ABC234"}`; valida o código, limita tentativas a 20 por minuto por conta e atribui a mesma partida aos dois jogadores.
 - `GET /v1/rooms/current` — estado da sala criada pelo jogador anfitrião e partida quando o convidado entra.
 - `POST /v1/rooms/cancel` — cancela uma sala ainda aguardando convidado.
 
