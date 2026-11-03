@@ -218,7 +218,10 @@ class RankedStore:
         }
 
     def current_match(self, player_id: str) -> dict | None:
-        with self._connect() as db:
+        with self.transaction() as db:
+            queued = db.execute("SELECT region FROM queue WHERE player_id=?", (player_id,)).fetchone()
+            if queued:
+                self._match_queued_in_region(db, queued["region"], self.clock())
             row = db.execute("""
                 SELECT match_id FROM matches
                 WHERE status='assigned' AND (player_one=? OR player_two=?)
@@ -232,7 +235,11 @@ class RankedStore:
             return result.rowcount > 0
 
     def queue_status(self, player_id: str) -> dict:
-        with self._connect() as db:
+        with self.transaction() as db:
+            row = db.execute("SELECT region,joined_at FROM queue WHERE player_id=?", (player_id,)).fetchone()
+            if not row:
+                return {"queued": False}
+            self._match_queued_in_region(db, row["region"], self.clock())
             row = db.execute("SELECT region,joined_at FROM queue WHERE player_id=?", (player_id,)).fetchone()
             if not row:
                 return {"queued": False}
