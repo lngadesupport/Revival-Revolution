@@ -21,14 +21,39 @@ PROTOCOL=1
 BUILD='metal-99.4.3.895-gekko-9da2363-peer9'
 
 def encode_code(address,port,key,relay=None):
-    body=socket.inet_aton(address)+struct.pack('!H',port)+key
-    if relay:body+=socket.inet_aton(relay[0])+struct.pack('!H',relay[1])
-    return ('MR2-' if relay else 'MR1-')+base64.b32encode(body+struct.pack('!I',zlib.crc32(body))).decode().rstrip('=')
+    try:
+        host_ip=ipaddress.IPv4Address(address)
+    except ipaddress.AddressValueError as exc:
+        raise ValueError('Invalid IPv4 host address') from exc
+    if type(port) is not int or not 1<=port<=65535:
+        raise ValueError('Invalid host UDP port')
+    if not isinstance(key,bytes) or len(key)!=16:
+        raise ValueError('Connection key must contain exactly 16 bytes')
+    if host_ip.is_unspecified or host_ip.is_multicast or int(host_ip)==0xffffffff:
+        raise ValueError('Invalid host endpoint address')
+    body=host_ip.packed+struct.pack('!H',port)+key
+    if relay is not None:
+        if not isinstance(relay,(tuple,list)) or len(relay)!=2:
+            raise ValueError('Invalid AutoPunch relay endpoint')
+        try:
+            relay_ip=ipaddress.IPv4Address(relay[0])
+        except ipaddress.AddressValueError as exc:
+            raise ValueError('Invalid AutoPunch relay address') from exc
+        relay_port=relay[1]
+        if type(relay_port) is not int or not 1<=relay_port<=65535:
+            raise ValueError('Invalid AutoPunch relay port')
+        if relay_ip.is_unspecified or relay_ip.is_multicast or int(relay_ip)==0xffffffff:
+            raise ValueError('Invalid AutoPunch relay address')
+        body+=relay_ip.packed+struct.pack('!H',relay_port)
+    prefix='MR2-' if relay is not None else 'MR1-'
+    return prefix+base64.b32encode(body+struct.pack('!I',zlib.crc32(body))).decode().rstrip('=')
 
 def decode_code(code):
     endpoint,key,relay=decode_connection_code(code);return endpoint,key
 
 def decode_connection_code(code):
+    if not isinstance(code,str):
+        raise ValueError('Connection code must be text')
     code=code.strip().upper()
     if code[:4] not in ('MR1-','MR2-') or len(code)>96:raise ValueError('Invalid MR1/MR2 connection code')
     text=code[4:];raw=base64.b32decode(text+'='*((-len(text))%8))
