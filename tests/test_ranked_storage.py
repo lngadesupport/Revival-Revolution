@@ -27,6 +27,7 @@ class RankedStoreTests(unittest.TestCase):
         match = self.store.join_queue(self.two["player_id"], "sa-east")
         self.assertIsNotNone(match)
         self.assertEqual(match["opponent"]["display_name"], "PC-PLAYER-ONE")
+        self.assertEqual(match["opponent"]["player_id"], self.one["player_id"])
         self.assertIsNotNone(self.store.current_match(self.one["player_id"]))
 
     def test_longest_wait_expands_rating_window_for_new_arrival(self):
