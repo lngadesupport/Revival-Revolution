@@ -50,7 +50,7 @@ def main() -> None:
     database = Path(args.database).resolve()
     database.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
-        filename=str(database.with_suffix(".agent.log")),
+        filename=str(Path(str(database) + ".agent.log")),
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
         encoding="utf-8",
@@ -100,7 +100,7 @@ def main() -> None:
                 "--host", args.host, "--port", str(args.port),
                 "--database", str(database),
             ]
-            log = open(database.with_suffix(".log"), "a", encoding="utf-8")
+            log = open(Path(str(database) + ".log"), "a", encoding="utf-8")
             try:
                 child = subprocess.Popen(
                     command, cwd=str(root), stdin=subprocess.DEVNULL,
