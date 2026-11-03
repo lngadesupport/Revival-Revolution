@@ -24,8 +24,8 @@ public sealed class OnlineGameSessionService : IDisposable
 
     public async Task<string> StartHostAsync(CancellationToken cancellationToken = default)
     {
-        await PrepareGameAsync(cancellationToken);
         var address = FindRadminAddress();
+        await PrepareGameAsync(cancellationToken);
         ResetPeerFiles();
         StartPeer("host", address, null);
 
@@ -60,8 +60,8 @@ public sealed class OnlineGameSessionService : IDisposable
             connectionCode.Length != 46)
             throw new InvalidOperationException("O servidor não forneceu um código MR1 Radmin válido.");
 
-        await PrepareGameAsync(cancellationToken);
         var address = FindRadminAddress();
+        await PrepareGameAsync(cancellationToken);
         ResetPeerFiles();
         StartPeer("join", address, connectionCode);
     }
