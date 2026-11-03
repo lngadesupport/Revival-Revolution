@@ -149,5 +149,28 @@ class RankedStoreTests(unittest.TestCase):
             self.store.join_private_room(self.one["player_id"], room["room_code"])
 
 
+    def test_private_room_host_is_auto_ready_and_host_controls_start(self):
+        host = self.store.register("AUTO-ROOM-HOST")
+        guest = self.store.register("AUTO-ROOM-GUEST")
+        room = self.store.create_private_room(host["player_id"], "sa-east")
+        guest_match = self.store.join_private_room(guest["player_id"], room["room_code"])
+
+        self.assertEqual(guest_match["status"], "ready")
+        self.assertTrue(guest_match["accepted"])
+        self.assertTrue(guest_match["opponent_accepted"])
+        self.assertEqual(guest_match["room_role"], "guest")
+        self.assertEqual(guest_match["room_status"], "matched")
+
+        host_room = self.store.current_private_room(host["player_id"])
+        self.assertEqual(host_room["match"]["room_role"], "host")
+        self.assertEqual(host_room["match"]["room_status"], "matched")
+
+        started = self.store.start_private_room(host["player_id"])
+        self.assertEqual(started["status"], "starting")
+        self.assertEqual(self.store.start_private_room(host["player_id"])["status"], "starting")
+        self.assertEqual(self.store.current_match(guest["player_id"])["room_status"], "starting")
+        with self.assertRaisesRegex(ValueError, "no joined private room"):
+            self.store.start_private_room(guest["player_id"])
+
 if __name__ == "__main__":
     unittest.main()
