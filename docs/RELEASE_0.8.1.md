@@ -34,7 +34,8 @@
 
 ## Critérios mínimos antes da tag estável v0.8.1
 
-- [ ] CI Python verde, incluindo testes de matchmaking, salas e protocolo MR1/MR2.
+- [x] CI Python verde: 46 testes aprovados, incluindo matchmaking com expansão por polling, salas privadas e protocolo MR1/MR2.
+- [x] Build Windows x64 e smoke tests do reparo seletivo aprovados no CI.
 - [ ] Build Windows x64 e verificação do conteúdo publicado aprovados.
 - [ ] Teste do launcher em Windows limpo.
 - [ ] Teste de runtime Python e atualização com SHA-256, staging e rollback.
