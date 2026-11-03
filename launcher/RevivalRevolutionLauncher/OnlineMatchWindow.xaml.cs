@@ -431,6 +431,7 @@ public partial class OnlineMatchWindow : Window
         if (!_matchActive || _matchStatus != "ready" || StartRoomButton.IsEnabled == false) return;
         StartRoomButton.IsEnabled = false;
         _hostSessionActive = true;
+        var connectionCodePublished = false;
         try
         {
             await _api.PostAsync("/v1/rooms/start", new JsonObject());
@@ -438,6 +439,7 @@ public partial class OnlineMatchWindow : Window
             StatusText.Text = "O jogo será iniciado nos dois PCs. Se aparecer a janela de configuração do Metal Revolution, pressione Play.";
             var code = await _gameSession.StartHostAsync();
             await _api.PostAsync("/v1/rooms/connection-code", new JsonObject { ["code"] = code });
+            connectionCodePublished = true;
             MatchStateText.Text = "Sessão do anfitrião iniciada. Aguardando o convidado conectar pela Radmin.";
             StatusText.Text = "Código de conexão autenticado enviado ao convidado. Aguardando handshake UDP e sincronização.";
             StartRoomButton.Content = "AGUARDANDO CONVIDADO";
@@ -450,8 +452,17 @@ public partial class OnlineMatchWindow : Window
         {
             _hostSessionActive = false;
             _gameSession.Stop();
-            StartRoomButton.IsEnabled = true;
-            StatusText.Text = "Não foi possível iniciar a sala: " + ex.Message;
+            if (connectionCodePublished)
+            {
+                try { await _api.PostAsync("/v1/match/decline", new JsonObject()); }
+                catch { /* The peer may already have timed out; local cleanup still takes priority. */ }
+                ResetMatchState("A conexão P2P falhou. A sala foi encerrada; crie uma nova sala e tente novamente. " + ex.Message);
+            }
+            else
+            {
+                StartRoomButton.IsEnabled = true;
+                StatusText.Text = "Não foi possível preparar o anfitrião. Você pode tentar novamente: " + ex.Message;
+            }
         }
     }
 
