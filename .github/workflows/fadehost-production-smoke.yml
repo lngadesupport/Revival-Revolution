@@ -1,6 +1,11 @@
 name: FadeHost production smoke test
 
 on:
+  push:
+    branches: ["ops/fadehost-production-smoke"]
+    paths:
+      - "scripts/smoke_fadehost_ranked.py"
+      - ".github/workflows/fadehost-production-smoke.yml"
   workflow_dispatch:
     inputs:
       confirm_production_test:
@@ -21,8 +26,21 @@ permissions:
   contents: read
 
 jobs:
+  validate-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile production smoke script
+        run: python -m py_compile scripts/smoke_fadehost_ranked.py
+
   production-smoke:
-    if: inputs.confirm_production_test == 'yes'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_production_test == 'yes'
+    needs: validate-script
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
