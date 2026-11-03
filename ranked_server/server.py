@@ -104,6 +104,8 @@ def make_handler(store: RankedStore):
                 return self._json(200, store.queue_status(player_id))
             if path == "/v1/match":
                 return self._json(200, {"match": store.current_match(player_id)})
+            if path == "/v1/rooms/current":
+                return self._json(200, store.current_private_room(player_id))
             return self._json(404, {"error": "not_found"})
         def do_POST(self):
             path = urlparse(self.path).path
@@ -149,6 +151,14 @@ def make_handler(store: RankedStore):
                     return self._json(202, {"queued": True, "queue": store.queue_status(player_id)})
                 if path == "/v1/queue/leave":
                     return self._json(200, {"left": store.leave_queue(player_id)})
+                if path == "/v1/rooms/create":
+                    room = store.create_private_room(player_id, body.get("region", "sa-east"))
+                    return self._json(201, {"room": room})
+                if path == "/v1/rooms/join":
+                    match = store.join_private_room(player_id, body.get("code"))
+                    return self._json(200, {"match": match})
+                if path == "/v1/rooms/cancel":
+                    return self._json(200, {"cancelled": store.cancel_private_room(player_id)})
                 return self._json(404, {"error": "not_found"})
             except ValueError as exc:
                 return self._json(400, {"error": "invalid_request", "message": str(exc)})
