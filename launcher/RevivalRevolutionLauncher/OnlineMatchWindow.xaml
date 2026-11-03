@@ -93,6 +93,7 @@
                                 <TextBlock Text="SEU CÓDIGO" Foreground="#C5C4D2" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"/>
                                 <TextBox x:Name="RoomCodeDisplayBox" IsReadOnly="True" FontSize="22" FontWeight="Bold"
                                          HorizontalContentAlignment="Center" Text="------"/>
+                                <Button x:Name="CopyRoomCodeButton" Content="COPIAR CÓDIGO" Click="CopyRoomCode_Click" IsEnabled="False"/>
                                 <TextBlock x:Name="RoomStateText" Text="Nenhuma sala criada." Foreground="#C5C4D2"
                                            FontSize="11" TextWrapping="Wrap" Margin="0,5,0,6"/>
                                 <Button x:Name="CancelRoomButton" Content="CANCELAR SALA" Click="CancelRoom_Click" IsEnabled="False"/>
