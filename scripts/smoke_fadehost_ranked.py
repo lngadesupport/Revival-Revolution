@@ -11,7 +11,6 @@ import json
 import os
 import secrets
 import sys
-import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -106,7 +105,6 @@ def main():
                 f"second finish did not complete match: HTTP {status}")
         require(first_finish.get("rating_changed") is False and second_finish.get("rating_changed") is False,
                 "smoke test unexpectedly changed rating")
-        completed = True
         print("PASS bilateral accept/finish lifecycle; rating unchanged")
 
         status, room_result = request(base, "POST", "/v1/rooms/create",
@@ -129,6 +127,7 @@ def main():
         require(status == 200 and left.get("left") is True, f"queue leave failed: HTTP {status}")
         print("PASS queue join/leave")
 
+        completed = True
         print(f"PRODUCTION_SMOKE_OK match_id={match_id}")
         print("NOTE: two RR-SMOKE accounts and one completed smoke match remain in the database.")
     finally:
