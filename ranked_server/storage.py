@@ -85,6 +85,11 @@ class RankedStore:
                 );
                 CREATE INDEX IF NOT EXISTS queue_region_time ON queue(region, joined_at);
                 CREATE INDEX IF NOT EXISTS matches_players ON matches(player_one, player_two, created_at);
+                CREATE TABLE IF NOT EXISTS room_join_attempts (
+                    player_id TEXT PRIMARY KEY REFERENCES players(player_id) ON DELETE CASCADE,
+                    window_started REAL NOT NULL,
+                    attempts INTEGER NOT NULL
+                );
                 CREATE INDEX IF NOT EXISTS private_rooms_host_status ON private_rooms(host_player, status);
             """)
 
@@ -291,6 +296,23 @@ class RankedStore:
         code = self._normalize_room_code(code)
         now = self.clock()
         with self.transaction() as db:
+            attempts = db.execute(
+                "SELECT window_started,attempts FROM room_join_attempts WHERE player_id=?",
+                (player_id,),
+            ).fetchone()
+            if attempts and now - float(attempts["window_started"]) < 60:
+                if int(attempts["attempts"]) >= 20:
+                    raise ValueError("too many room code attempts; wait one minute")
+                db.execute(
+                    "UPDATE room_join_attempts SET attempts=attempts+1 WHERE player_id=?",
+                    (player_id,),
+                )
+            else:
+                db.execute(
+                    "INSERT INTO room_join_attempts(player_id,window_started,attempts) VALUES(?,?,1) "
+                    "ON CONFLICT(player_id) DO UPDATE SET window_started=excluded.window_started,attempts=1",
+                    (player_id, now),
+                )
             db.execute(
                 "UPDATE private_rooms SET status='expired' WHERE status='waiting' AND expires_at<=?",
                 (now,),
