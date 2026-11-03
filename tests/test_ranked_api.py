@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import urllib.error
 import urllib.request
+from peer_session import encode_code
 from http.server import ThreadingHTTPServer
 
 from ranked_server.server import make_handler
@@ -325,7 +326,7 @@ class RankedApiTests(unittest.TestCase):
         status, started = self.request("POST", "/v1/rooms/start", {}, host["token"])
         self.assertEqual(status, 200)
         self.assertEqual(started["room"]["status"], "starting")
-        code = "MR1-" + "A" * 42
+        code = encode_code("26.10.20.30", 8766, b"\\x22" * 16)
         status, published = self.request("POST", "/v1/rooms/connection-code", {"code": code}, host["token"])
         self.assertEqual(status, 200)
         self.assertTrue(published["connection_code_published"])
