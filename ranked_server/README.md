@@ -4,6 +4,10 @@ A API fornece identidade persistente, perfil social, presença, leaderboard,
 fila 1v1 e salas privadas por código. É Python padrão + SQLite; não requer
 dependências externas.
 
+## Inicialização automática no Windows
+
+A distribuição WPF inclui este pacote Python. No PC anfitrião, o launcher instala o runtime portátil, prepara as regras de firewall uma única vez e registra a tarefa oculta `Revival Revolution Ranked Host` no Agendador de Tarefas. A tarefa inicia no logon, aguarda o IPv4 Radmin configurado e mantém a API em segundo plano. O banco e os logs ficam em `%LOCALAPPDATA%\\RevivalRevolution\\RankedServer`. Não é necessário executar os scripts PowerShell manualmente a cada reinicialização.
+
 ## Executar localmente
 
 Na raiz do repositório:
