@@ -24,6 +24,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="../../ranked_server/**/*.py" Link="ranked_server/%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
     <Content Include="../../offline_launcher.py" Link="offline_launcher.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
