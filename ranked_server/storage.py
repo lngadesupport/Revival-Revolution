@@ -217,6 +217,10 @@ class RankedStore:
         own = row["player_one"] == player_id
         opponent_id = row["player_two"] if own else row["player_one"]
         opponent = db.execute("SELECT display_name,rating FROM players WHERE player_id=?", (opponent_id,)).fetchone()
+        room = db.execute(
+            "SELECT status,host_player,guest_player FROM private_rooms WHERE match_id=?",
+            (match_id,),
+        ).fetchone()
         return {
             "match_id": row["match_id"], "status": row["status"], "region": row["region"],
             "player_slot": 0 if own else 1, "opponent": dict(opponent),
@@ -224,12 +228,14 @@ class RankedStore:
             "expires_at": row["expires_at"],
             "accepted": bool(row["accepted_one"] if own else row["accepted_two"]),
             "opponent_accepted": bool(row["accepted_two"] if own else row["accepted_one"]),
+            "room_role": ("host" if room["host_player"] == player_id else "guest") if room else None,
+            "room_status": room["status"] if room else None,
         }
 
     @staticmethod
     def _expire_matches(db: sqlite3.Connection, now: float) -> None:
         db.execute("UPDATE matches SET status='expired' WHERE status IN ('assigned','ready') AND expires_at<=?", (now,))
-        db.execute("UPDATE private_rooms SET status='expired' WHERE status='matched' AND match_id IN (SELECT match_id FROM matches WHERE status='expired')")
+        db.execute("UPDATE private_rooms SET status='expired' WHERE status IN ('matched','starting') AND match_id IN (SELECT match_id FROM matches WHERE status='expired')")
 
     def accept_match(self, player_id: str) -> dict:
         now = self.clock()
@@ -476,9 +482,9 @@ class RankedStore:
             second = db.execute("SELECT rating FROM players WHERE player_id=?", (second_id,)).fetchone()
             match_id = str(uuid.uuid4())
             db.execute(
-                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at,expires_at,accepted_one,accepted_two) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                 (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]),
-                 room["region"], "assigned", now, now + 90),
+                 room["region"], "ready", now, now + 7200, 1, 1),
             )
             db.execute(
                 "UPDATE private_rooms SET guest_player=?,status='matched',match_id=? WHERE room_code=? AND status='waiting'",
@@ -494,7 +500,7 @@ class RankedStore:
                 (player_id, now),
             )
             room = db.execute(
-                "SELECT * FROM private_rooms WHERE host_player=? AND status IN ('waiting','matched') ORDER BY created_at DESC LIMIT 1",
+                "SELECT * FROM private_rooms WHERE host_player=? AND status IN ('waiting','matched','starting') ORDER BY created_at DESC LIMIT 1",
                 (player_id,),
             ).fetchone()
             if room is None:
@@ -506,6 +512,37 @@ class RankedStore:
             }
             match = self._match_payload(db, room["match_id"], player_id) if room["match_id"] else None
             return {"room": payload, "match": match}
+
+    def start_private_room(self, player_id: str) -> dict:
+        """Host-only, idempotent start signal for a fully joined private room."""
+        now = self.clock()
+        with self.transaction() as db:
+            db.execute(
+                "UPDATE private_rooms SET status='expired' WHERE status IN ('matched','starting') "
+                "AND expires_at<=?",
+                (now,),
+            )
+            room = db.execute(
+                "SELECT * FROM private_rooms WHERE host_player=? "
+                "AND status IN ('matched','starting') ORDER BY created_at DESC LIMIT 1",
+                (player_id,),
+            ).fetchone()
+            if room is None:
+                raise ValueError("no joined private room is available to start")
+            if not room["guest_player"] or not room["match_id"]:
+                raise ValueError("a guest must join before the host can start")
+            match = db.execute(
+                "SELECT status FROM matches WHERE match_id=?",
+                (room["match_id"],),
+            ).fetchone()
+            if match is None or match["status"] != "ready":
+                raise ValueError("private match is no longer ready")
+            if room["status"] == "matched":
+                db.execute(
+                    "UPDATE private_rooms SET status='starting' WHERE room_code=? AND status='matched'",
+                    (room["room_code"],),
+                )
+            return {"match_id": room["match_id"], "status": "starting"}
 
     def cancel_private_room(self, player_id: str) -> bool:
         with self.transaction() as db:
