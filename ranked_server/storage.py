@@ -92,6 +92,12 @@ class RankedStore:
                 );
                 CREATE INDEX IF NOT EXISTS private_rooms_host_status ON private_rooms(host_player, status);
             """)
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(matches)")}
+            migrations = {"accepted_one":"INTEGER NOT NULL DEFAULT 0","accepted_two":"INTEGER NOT NULL DEFAULT 0","completed_one":"INTEGER NOT NULL DEFAULT 0","completed_two":"INTEGER NOT NULL DEFAULT 0","expires_at":"REAL"}
+            for name, declaration in migrations.items():
+                if name not in columns:
+                    db.execute(f"ALTER TABLE matches ADD COLUMN {name} {declaration}")
+            db.execute("UPDATE matches SET expires_at=created_at+90 WHERE expires_at IS NULL")
 
     @staticmethod
     def _token_hash(token: str) -> str:
@@ -153,7 +159,7 @@ class RankedStore:
             if player is None:
                 raise ValueError("unknown player")
             active = db.execute(
-                "SELECT 1 FROM matches WHERE status='assigned' AND (player_one=? OR player_two=?)",
+                "SELECT 1 FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?)",
                 (player_id, player_id),
             ).fetchone()
             if active:
@@ -197,8 +203,8 @@ class RankedStore:
             second = db.execute("SELECT rating FROM players WHERE player_id=?", (second_id,)).fetchone()
             match_id = str(uuid.uuid4())
             db.execute(
-                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) VALUES(?,?,?,?,?,?,?,?)",
-                (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]), region, "assigned", now),
+                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]), region, "assigned", now, now + 90),
             )
             db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
             return self._match_payload(db, match_id, player_id)
@@ -215,7 +221,52 @@ class RankedStore:
             "match_id": row["match_id"], "status": row["status"], "region": row["region"],
             "player_slot": 0 if own else 1, "opponent": dict(opponent),
             "created_at": row["created_at"],
+            "expires_at": row["expires_at"],
+            "accepted": bool(row["accepted_one"] if own else row["accepted_two"]),
+            "opponent_accepted": bool(row["accepted_two"] if own else row["accepted_one"]),
         }
+
+    @staticmethod
+    def _expire_matches(db: sqlite3.Connection, now: float) -> None:
+        db.execute("UPDATE matches SET status='expired' WHERE status IN ('assigned','ready') AND expires_at<=?", (now,))
+
+    def accept_match(self, player_id: str) -> dict:
+        now = self.clock()
+        with self.transaction() as db:
+            self._expire_matches(db, now)
+            row = db.execute("SELECT * FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            if row is None: raise ValueError("no active match to accept")
+            own = row["player_one"] == player_id
+            column = "accepted_one" if own else "accepted_two"
+            db.execute(f"UPDATE matches SET {column}=1 WHERE match_id=?", (row["match_id"],))
+            updated = db.execute("SELECT * FROM matches WHERE match_id=?", (row["match_id"],)).fetchone()
+            if updated["accepted_one"] and updated["accepted_two"]:
+                db.execute("UPDATE matches SET status='ready',expires_at=? WHERE match_id=?", (now + 7200, row["match_id"]))
+            return self._match_payload(db, row["match_id"], player_id)
+
+    def decline_match(self, player_id: str) -> dict:
+        now = self.clock()
+        with self.transaction() as db:
+            self._expire_matches(db, now)
+            row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            if row is None: raise ValueError("no active match to decline")
+            db.execute("UPDATE matches SET status='declined' WHERE match_id=?", (row["match_id"],))
+            return {"match_id": row["match_id"], "status": "declined"}
+
+    def confirm_match_finished(self, player_id: str) -> dict:
+        now = self.clock()
+        with self.transaction() as db:
+            self._expire_matches(db, now)
+            row = db.execute("SELECT * FROM matches WHERE status='ready' AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            if row is None: raise ValueError("no ready match to finish")
+            own = row["player_one"] == player_id
+            column = "completed_one" if own else "completed_two"
+            opponent_column = "completed_two" if own else "completed_one"
+            db.execute(f"UPDATE matches SET {column}=1 WHERE match_id=?", (row["match_id"],))
+            updated = db.execute("SELECT * FROM matches WHERE match_id=?", (row["match_id"],)).fetchone()
+            finished = bool(updated["completed_one"] and updated["completed_two"])
+            if finished: db.execute("UPDATE matches SET status='completed' WHERE match_id=?", (row["match_id"],))
+            return {"match_id": row["match_id"], "status": "completed" if finished else "awaiting_opponent_confirmation", "opponent_confirmed": bool(updated[opponent_column]), "rating_changed": False}
 
     def _match_queued_in_region(
         self,
@@ -280,9 +331,11 @@ class RankedStore:
 
     def current_match(self, player_id: str) -> dict | None:
         with self.transaction() as db:
+            now = self.clock()
+            self._expire_matches(db, now)
             queued = db.execute("SELECT region FROM queue WHERE player_id=?", (player_id,)).fetchone()
             if queued:
-                self._match_queued_in_region(db, queued["region"], self.clock())
+                self._match_queued_in_region(db, queued["region"], now)
             row = db.execute("""
                 SELECT match_id FROM matches
                 WHERE status='assigned' AND (player_one=? OR player_two=?)
@@ -297,6 +350,7 @@ class RankedStore:
 
     def queue_status(self, player_id: str) -> dict:
         with self.transaction() as db:
+            self._expire_matches(db, self.clock())
             row = db.execute("SELECT region,joined_at FROM queue WHERE player_id=?", (player_id,)).fetchone()
             if not row:
                 return {"queued": False}
@@ -420,7 +474,7 @@ class RankedStore:
             db.execute(
                 "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) VALUES(?,?,?,?,?,?,?,?)",
                 (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]),
-                 room["region"], "assigned", now),
+                 room["region"], "assigned", now, now + 90),
             )
             db.execute(
                 "UPDATE private_rooms SET guest_player=?,status='matched',match_id=? WHERE room_code=? AND status='waiting'",
