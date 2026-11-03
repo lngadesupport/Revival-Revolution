@@ -6,6 +6,17 @@ The ONLINE window uses the fixed private API endpoint:
 
 Each player still creates or restores their own account. The endpoint is not editable in this test build.
 
+## Update the host's local Ranked API
+
+The computer hosting `26.226.57.19:8765` must run the server code from this feature branch, because the previous server build does not have the `/v1/rooms/start` and `/v1/rooms/connection-code` routes.
+
+1. Stop the currently running server with Ctrl+C in its PowerShell window.
+2. In the repository folder on the host PC, fetch and switch to `feature/0.8.1-radmin-room-start`.
+3. Start it again with `scripts/start-radmin-ranked-host.ps1`.
+4. Keep the same AppData SQLite database. The server migrates the new nullable connection-code column without deleting player accounts.
+
+Do not start a second server while the old process still owns TCP 8765.
+
 ## Private room lifecycle
 
 1. The host creates a six-character room code.
@@ -34,7 +45,7 @@ The current peer runtime requires:
 - the optional native synthetic preflight DLL is bypassed for this Radmin path; the authenticated direct UDP handshake is used as the transport preflight;
 - both clients to exchange a valid MR1 Radmin endpoint/key code and complete the authenticated UDP handshake.
 
-The branch packages the three non-empty bridge/overlay DLLs present in the repository. The repository's root `Assembly-CSharp.dll` is zero bytes and is intentionally excluded; the game uses its own managed assembly from its installed `ufo_Data/Managed` directory. The Radmin path skips the optional `MetalGekko.dll` synthetic preflight, but the live game bridge and two-PC UDP/game flow still require real validation.
+The Windows launcher publish includes the three non-empty bridge/overlay DLLs present in the repository, plus the Python bootstrap, injector, peer session, selection, and live-fighter modules. The repository's root `Assembly-CSharp.dll` is zero bytes and is intentionally excluded; the game uses its own managed assembly from its installed `ufo_Data/Managed` directory. The Radmin path skips the optional `MetalGekko.dll` synthetic preflight, but the live game bridge and two-PC UDP/game flow still require real validation.
 
 ## Validation
 
