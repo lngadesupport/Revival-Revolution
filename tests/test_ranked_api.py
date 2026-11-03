@@ -326,7 +326,7 @@ class RankedApiTests(unittest.TestCase):
         status, started = self.request("POST", "/v1/rooms/start", {}, host["token"])
         self.assertEqual(status, 200)
         self.assertEqual(started["room"]["status"], "starting")
-        code = encode_code("26.10.20.30", 8766, b"\\x22" * 16)
+        code = encode_code("26.10.20.30", 8766, b"\x22" * 16)
         status, published = self.request("POST", "/v1/rooms/connection-code", {"code": code}, host["token"])
         self.assertEqual(status, 200)
         self.assertTrue(published["connection_code_published"])
