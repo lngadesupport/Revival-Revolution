@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private readonly string _root = Path.GetFullPath(AppContext.BaseDirectory);
     private readonly LauncherConfigService _config = new();
     private readonly PythonRuntimeService _python = new();
+    private readonly RadminHostService _radminHost = new();
     private readonly GameLaunchService _gameLaunch = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly DistributionLocator _distributionLocator = new();
@@ -23,6 +24,10 @@ public partial class MainWindow : Window
     private string? _gameFolder;
     private bool _busy;
     private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _radminHostTimer = new() { Interval = TimeSpan.FromSeconds(10) };
+    private bool _radminHostStarting;
+    private bool _radminHostFirewallReady;
+    private bool _radminHostDisabled;
     private bool _gameRunning;
     private bool _launchPending;
     private DateTime _launchRequestedAt;
@@ -44,9 +49,53 @@ public partial class MainWindow : Window
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
+        _radminHostTimer.Tick += RadminHostTimer_Tick;
+        _radminHostTimer.Start();
         RefreshGameState();
         Log("Revival Revolution Launcher iniciado.");
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
+    }
+
+    private async void RadminHostTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_radminHostStarting || _radminHostDisabled) return;
+        var endpoint = RankedApiClient.LoadEndpoint();
+        if (string.IsNullOrWhiteSpace(endpoint)) endpoint = RadminHostService.DefaultEndpoint;
+        var hostAddress = RadminHostService.GetLocalRadminAddress(endpoint);
+        if (hostAddress is null) return;
+
+        _radminHostStarting = true;
+        try
+        {
+            var python = _python.FindRuntime(_root);
+            if (python is null)
+            {
+                FooterStatus.Text = "Preparando o servidor privado Radmin pela primeira vez...";
+                Log("Este computador é o anfitrião Radmin. Instalando o runtime necessário para iniciar a API automaticamente.");
+                python = await _python.InstallAsync(_root, CreateProgress(), CancellationToken.None);
+            }
+
+            if (!_radminHostFirewallReady)
+            {
+                FooterStatus.Text = "Configurando o firewall privado Radmin (autorização única)...";
+                await _radminHost.EnsureFirewallAsync(python, hostAddress, CancellationToken.None);
+                _radminHostFirewallReady = true;
+            }
+
+            await _radminHost.EnsureHostServerAsync(_root, python, hostAddress, CancellationToken.None);
+            FooterStatus.Text = $"Servidor privado ativo em http://{hostAddress}:8765";
+            Log($"API Ranked iniciada/verificada automaticamente em http://{hostAddress}:8765.");
+        }
+        catch (Exception ex)
+        {
+            _radminHostDisabled = true;
+            FooterStatus.Text = "Não foi possível iniciar o servidor Radmin automaticamente.";
+            Log("ERRO ao iniciar o servidor Radmin em segundo plano: " + ex.Message);
+        }
+        finally
+        {
+            _radminHostStarting = false;
+        }
     }
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
@@ -622,6 +671,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _gameStateTimer.Stop();
+        _radminHostTimer.Stop();
         base.OnClosed(e);
     }
 
@@ -653,6 +703,24 @@ public partial class MainWindow : Window
                     "Runtime necessário", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+        }
+        if (!RadminHostService.HasRadminAddress())
+        {
+            MessageBox.Show(this, "Ligue o Radmin VPN e confirme que este computador está conectado à rede privada antes de abrir o PRIVATE MATCH.",
+                "Radmin VPN desconectada", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        try
+        {
+            var endpoint = RankedApiClient.LoadEndpoint();
+            var hostAddress = string.IsNullOrWhiteSpace(endpoint) ? null : RadminHostService.GetLocalRadminAddress(endpoint);
+            await _radminHost.EnsureFirewallAsync(python, hostAddress, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Não foi possível preparar a comunicação P2P pela Radmin: " + ex.Message,
+                "Firewall Radmin", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
         }
         _config.SaveGameFolder(_root, _gameFolder, distributionRoot);
         var window = new OnlineMatchWindow(distributionRoot, _gameFolder, python) { Owner = this };
