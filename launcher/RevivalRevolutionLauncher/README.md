@@ -14,8 +14,9 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 - Diagnóstico de dependências essenciais offline e componentes opcionais
   multiplayer; a lista identifica a bridge correta `MetalNetplayBridgeV8.dll`
   e os scripts de sessão.
-- Atualização do launcher por manifesto HTTPS, hash SHA-256, staging,
-  backup e rollback durante a aplicação.
+- Atualização do launcher por manifesto HTTPS, hash SHA-256 do pacote e hashes
+  SHA-256 por arquivo, com reparo seletivo de arquivos ausentes/divergentes,
+  staging, backup e rollback durante a aplicação.
 - Central ONLINE com matchmaking aleatório e salas privadas por código,
   usando API Ranked e token no Gerenciador de Credenciais do Windows.
 - Instalação/reparo automático de pacotes do jogo permanece bloqueado até
