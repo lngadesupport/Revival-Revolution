@@ -2,6 +2,7 @@ services:
   - type: web
     name: revival-revolution-ranked
     runtime: python
+    region: virginia
     branch: release/0.8.1-stabilization
     plan: 0.5c-512mb
     autoDeployTrigger: checksPass
