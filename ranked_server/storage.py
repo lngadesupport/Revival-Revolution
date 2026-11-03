@@ -319,8 +319,8 @@ class RankedStore:
             second_rating = second["rating"] if second["player_id"] == second_id else first["rating"]
             match_id = str(uuid.uuid4())
             db.execute(
-                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) "
-                "VALUES(?,?,?,?,?,?,?,?)",
+                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at,expires_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?)",
                 (match_id, first_id, second_id, first_rating, second_rating, region, "assigned", now),
             )
             db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
