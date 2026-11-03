@@ -330,6 +330,8 @@ public partial class OnlineMatchWindow : Window
         }
         StartRoomButton.Visibility = roomRole == "host" ? Visibility.Visible : Visibility.Collapsed;
         StartRoomButton.IsEnabled = roomRole == "host" && roomStatus == "matched";
+        if (roomRole == "host" && roomStatus == "starting")
+            StartRoomButton.Content = "AGUARDANDO CONVIDADO";
         if (_matchStatus == "ready" && roomRole is "host" or "guest")
         {
             QueueStateText.Text = roomStatus == "starting" ? "INÍCIO AUTORIZADO" : "SALA COMPLETA";
@@ -342,7 +344,7 @@ public partial class OnlineMatchWindow : Window
             DeclineMatchButton.IsEnabled = true;
             DeclineMatchButton.Content = "SAIR DA SALA";
             StatusText.Text = roomStatus == "starting"
-                ? "Sinal de início recebido do servidor. A sessão P2P não foi iniciada automaticamente nesta etapa."
+                ? "Sinal de início recebido. Aguardando o código MR1 e preparando a sessão P2P."
                 : roomRole == "host"
                     ? "Sala privada pronta. O anfitrião não precisa aceitar a própria sala."
                     : "Entrada confirmada. Aguardando o anfitrião.";
@@ -513,6 +515,8 @@ public partial class OnlineMatchWindow : Window
         _matchActive = false;
         _activeMatchId = null;
         _matchStatus = null;
+        _guestSessionStarted = false;
+        StartRoomButton.Content = "INICIAR PARTIDA";
         MatchTitleText.Text = "Aguardando adversário";
         MatchDetailText.Text = "Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui.";
         MatchStateText.Text = message;
