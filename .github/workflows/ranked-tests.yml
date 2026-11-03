@@ -6,6 +6,12 @@ on:
     paths:
       - "ranked_server/**"
       - "tests/**"
+      - "peer_session.py"
+      - "autopunch_transport.py"
+      - "selection_sync.py"
+      - "live_fighter.py"
+      - "peer_native.py"
+      - "bridge_command.py"
       - ".github/workflows/ranked-tests.yml"
   pull_request:
     paths:
