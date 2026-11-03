@@ -98,7 +98,7 @@
                         <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="#AEB2C2"
                                    Margin="8,4,0,16"/>
                         <Button x:Name="OfflineNavButton" Content="OFFLINE" Click="Launch_Click" FontSize="22" Padding="13,13"/>
-                        <Button x:Name="PrivateMatchNavButton" Content="PRIVATE MATCH" Click="PrivateMatch_Click" FontSize="16" Padding="13,13"/>
+                        <Button x:Name="PrivateMatchNavButton" Content="ONLINE" Click="PrivateMatch_Click" FontSize="16" Padding="13,13"/>
                         <Button x:Name="ModListNavButton" Content="MOD LIST" Click="ModList_Click" FontSize="22" Padding="13,13"/>
                         <Separator Background="#55FFFFFF" Margin="4,20,4,14"/>
                         <Button x:Name="DiagnosticsNavButton" Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="11"/>

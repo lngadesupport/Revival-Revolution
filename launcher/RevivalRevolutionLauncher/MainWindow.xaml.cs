@@ -621,11 +621,11 @@ public partial class MainWindow : Window
     private void PrivateMatch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("private");
-        FooterStatus.Text = "PRIVATE MATCH — aguardando integração.";
-        MessageBox.Show(this,
-            "Partidas privadas ainda não estão conectadas à interface. Nenhuma sessão foi iniciada.",
-            "Private Match", MessageBoxButton.OK, MessageBoxImage.Information);
-        Log("Private Match selecionado; fluxo de sala privada ainda pendente.");
+        FooterStatus.Text = "ONLINE — abrindo matchmaking.";
+        Log("Central Online aberta.");
+        var window = new OnlineMatchWindow { Owner = this };
+        window.ShowDialog();
+        RefreshGameState();
     }
 
     private void ModList_Click(object sender, RoutedEventArgs e)
