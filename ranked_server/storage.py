@@ -5,12 +5,17 @@ at registration and must be stored by the launcher in its private config area.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import hmac
+import ipaddress
 import secrets
 import sqlite3
+import struct
 import time
 import uuid
+import zlib
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -557,6 +562,16 @@ class RankedStore:
             ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" for ch in code[4:]
         ):
             raise ValueError("invalid Radmin MR1 connection code")
+        try:
+            raw = base64.b32decode(code[4:] + "=" * ((-len(code[4:])) % 8))
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("invalid Radmin MR1 connection code") from exc
+        if len(raw) != 26 or zlib.crc32(raw[:-4]) != struct.unpack("!I", raw[-4:])[0]:
+            raise ValueError("Radmin MR1 connection code checksum failed")
+        address = ipaddress.IPv4Address(raw[:4])
+        port = struct.unpack("!H", raw[4:6])[0]
+        if address.packed[0] != 26 or port != 8766:
+            raise ValueError("connection code must point to the host Radmin address on UDP 8766")
         with self.transaction() as db:
             room = db.execute(
                 "SELECT * FROM private_rooms WHERE host_player=? AND status='starting' "
