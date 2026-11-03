@@ -42,6 +42,10 @@ este servidor HTTP de desenvolvimento diretamente à internet.
 - `GET /v1/queue` — posição/estado da fila.
 - `POST /v1/queue/leave` — sai da fila.
 - `GET /v1/match` — partida atualmente atribuída.
+- `POST /v1/rooms/create` — cria uma sala privada com código aleatório de 6 caracteres; expira em 15 minutos.
+- `POST /v1/rooms/join` — JSON `{"code":"ABC234"}`; valida o código e atribui a mesma partida aos dois jogadores.
+- `GET /v1/rooms/current` — estado da sala criada pelo jogador anfitrião e partida quando o convidado entra.
+- `POST /v1/rooms/cancel` — cancela uma sala ainda aguardando convidado.
 
 As respostas sociais mostram presença online/offline aproximada, não o horário exato da última atividade.\n\nUse `Authorization: Bearer TOKEN`. O banco guarda somente o SHA-256 do token.
 O cliente integrado ao jogo deverá guardar o token em armazenamento privado
@@ -52,7 +56,7 @@ sociais.
 
 - Cadastro aberto; ainda não há recuperação de conta nem proteção contra
   criação abusiva de identidades.
-- Não há aceitação de partida, lease de reconexão, rate limit ou administração.
+- Salas por código e fila aleatória atribuem partidas, mas ainda não há aceitação de partida, lease de reconexão, rate limit ou administração.
 - Não há ticket para autorizar a sessão UDP atual.
 - O serviço não recebe vencedor e não altera ELO: checksum reportado pelos dois
   clientes detecta divergência, mas não impede cliente modificado.
