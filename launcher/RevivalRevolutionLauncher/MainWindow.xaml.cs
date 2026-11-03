@@ -685,7 +685,19 @@ public partial class MainWindow : Window
         SetActiveNavigation("private");
         FooterStatus.Text = "PRIVATE MATCH — abrindo salas por código.";
         Log("Central Private Match aberta.");
-        while (_radminHostStarting) await Task.Delay(200);
+        var configuredEndpoint = RankedApiClient.LoadEndpoint();
+        if (string.IsNullOrWhiteSpace(configuredEndpoint)) configuredEndpoint = RadminHostService.DefaultEndpoint;
+        var isConfiguredHost = RadminHostService.GetLocalRadminAddress(configuredEndpoint) is not null;
+        if (isConfiguredHost)
+        {
+            while (!_radminHostTaskReady && !_radminHostDisabled) await Task.Delay(200);
+            if (_radminHostDisabled)
+            {
+                MessageBox.Show(this, "O servidor privado não foi inicializado. Confira o log do launcher e autorize a configuração única do firewall do Windows.",
+                    "Servidor Radmin indisponível", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+        }
         var distributionRoot = _distributionRoot ?? _distributionLocator.Find(_root, _gameFolder);
         var python = _python.FindRuntime(_root);
         if (string.IsNullOrWhiteSpace(_gameFolder) || distributionRoot is null)
