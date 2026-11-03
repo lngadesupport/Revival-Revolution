@@ -487,8 +487,8 @@ class RankedStore:
                  room["region"], "ready", now, now + 7200, 1, 1),
             )
             db.execute(
-                "UPDATE private_rooms SET guest_player=?,status='matched',match_id=? WHERE room_code=? AND status='waiting'",
-                (player_id, match_id, code),
+                "UPDATE private_rooms SET guest_player=?,status='matched',match_id=?,expires_at=? WHERE room_code=? AND status='waiting'",
+                (player_id, match_id, now + 7200, code),
             )
             return self._match_payload(db, match_id, player_id)
 
