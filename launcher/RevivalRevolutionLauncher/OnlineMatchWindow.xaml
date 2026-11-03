@@ -139,7 +139,7 @@
                                 <TextBlock x:Name="MyVersusAvatarInitials" Text="RR" FontSize="48" FontWeight="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
                             <TextBlock x:Name="MyVersusNicknameText" Text="Você" FontSize="24" FontWeight="Black" HorizontalAlignment="Center" Margin="0,16,0,0"/>
-                            <TextBlock Text="ANFITRIÃO" Foreground="{StaticResource Accent}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                            <TextBlock x:Name="MyVersusRoleText" Text="ANFITRIÃO" Foreground="{StaticResource Accent}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="26,0">
                             <TextBlock Text="VS" FontSize="52" FontWeight="Black" Foreground="{StaticResource Accent}" HorizontalAlignment="Center"/>
