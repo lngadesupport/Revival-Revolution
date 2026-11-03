@@ -217,6 +217,67 @@ class RankedStore:
             "created_at": row["created_at"],
         }
 
+    def _match_queued_in_region(
+        self,
+        db: sqlite3.Connection,
+        region: str,
+        now: float,
+        *,
+        base_window: int = 100,
+        step: int = 50,
+        widen_seconds: int = 10,
+    ) -> None:
+        """Pair eligible queued players during polling, not only on new arrivals."""
+        rows = db.execute(
+            "SELECT q.player_id,q.joined_at,p.rating FROM queue q "
+            "JOIN players p USING(player_id) WHERE q.region=? "
+            "ORDER BY q.joined_at,q.player_id",
+            (region,),
+        ).fetchall()
+        waiting = [
+            {"player_id": row["player_id"], "joined_at": float(row["joined_at"]), "rating": int(row["rating"])}
+            for row in rows
+        ]
+
+        while len(waiting) >= 2:
+            best = None
+            for index, first in enumerate(waiting):
+                for second in waiting[index + 1:]:
+                    waited = max(0.0, now - min(first["joined_at"], second["joined_at"]))
+                    window = base_window + int(waited // widen_seconds) * step
+                    difference = abs(first["rating"] - second["rating"])
+                    if difference > window:
+                        continue
+                    ids = sorted((first["player_id"], second["player_id"]))
+                    score = (
+                        difference,
+                        max(first["joined_at"], second["joined_at"]),
+                        min(first["joined_at"], second["joined_at"]),
+                        ids[0],
+                        ids[1],
+                    )
+                    if best is None or score < best[0]:
+                        best = (score, first, second)
+
+            if best is None:
+                break
+
+            first, second = best[1], best[2]
+            first_id, second_id = sorted((first["player_id"], second["player_id"]))
+            first_rating = first["rating"] if first["player_id"] == first_id else second["rating"]
+            second_rating = second["rating"] if second["player_id"] == second_id else first["rating"]
+            match_id = str(uuid.uuid4())
+            db.execute(
+                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (match_id, first_id, second_id, first_rating, second_rating, region, "assigned", now),
+            )
+            db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
+            waiting = [
+                entry for entry in waiting
+                if entry["player_id"] not in (first_id, second_id)
+            ]
+
     def current_match(self, player_id: str) -> dict | None:
         with self.transaction() as db:
             queued = db.execute("SELECT region FROM queue WHERE player_id=?", (player_id,)).fetchone()
