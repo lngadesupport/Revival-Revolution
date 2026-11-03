@@ -11,7 +11,8 @@ public sealed record LauncherUpdateInfo(
     string PackageUrl,
     string Sha256,
     string ReleaseNotes,
-    IReadOnlyList<string> Files);
+    IReadOnlyList<string> Files,
+    bool IsRepair);
 
 public sealed record UpdateOperationProgress(string Stage, string Detail);
 
@@ -60,7 +61,7 @@ public sealed class LauncherUpdateService
             throw new InvalidDataException("A versão remota do launcher não é válida.");
 
         var localVersion = typeof(LauncherUpdateService).Assembly.GetName().Version ?? new Version(0, 0);
-        if (remoteVersion <= localVersion) return null;
+        if (remoteVersion < localVersion) return null;
 
         var fileElement = data.GetProperty("files");
         if (fileElement.ValueKind != JsonValueKind.Array)
@@ -80,12 +81,49 @@ public sealed class LauncherUpdateService
         if (files.Length == 0 || files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Length)
             throw new InvalidDataException("A lista de arquivos da atualização está vazia ou contém duplicatas.");
 
+        var hashesElement = data.GetProperty("fileHashes");
+        if (hashesElement.ValueKind != JsonValueKind.Object)
+            throw new InvalidDataException("O manifesto não contém hashes SHA-256 individuais dos arquivos.");
+        var fileHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in hashesElement.EnumerateObject())
+        {
+            ValidateRelativePath(property.Name);
+            if (!files.Contains(property.Name, StringComparer.OrdinalIgnoreCase))
+                throw new InvalidDataException($"O manifesto contém hash para arquivo não autorizado: {property.Name}");
+            var hash = property.Value.GetString() ?? "";
+            if (hash.Length != 64 || !hash.All(Uri.IsHexDigit) || !fileHashes.TryAdd(property.Name, hash))
+                throw new InvalidDataException($"Hash SHA-256 individual inválido ou duplicado: {property.Name}");
+        }
+        if (fileHashes.Count != files.Length || files.Any(path => !fileHashes.ContainsKey(path)))
+            throw new InvalidDataException("Todo arquivo autorizado precisa ter exatamente um hash SHA-256.");
+
+        var changedFiles = new List<string>();
+        foreach (var relative in files)
+        {
+            token.ThrowIfCancellationRequested();
+            EnsureSafeDestination(root, relative);
+            var localPath = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(localPath))
+            {
+                changedFiles.Add(relative);
+                continue;
+            }
+
+            await using var localStream = File.OpenRead(localPath);
+            var localHash = Convert.ToHexString(await SHA256.HashDataAsync(localStream, token));
+            if (!localHash.Equals(fileHashes[relative], StringComparison.OrdinalIgnoreCase))
+                changedFiles.Add(relative);
+        }
+
+        if (changedFiles.Count == 0) return null;
+        var isRepair = remoteVersion == localVersion;
         return new LauncherUpdateInfo(
             versionText,
             data.GetProperty("packageUrl").GetString() ?? "",
             data.GetProperty("sha256").GetString() ?? "",
             data.TryGetProperty("releaseNotes", out var notes) ? notes.GetString() ?? "" : "",
-            files);
+            changedFiles,
+            isRepair);
     }
 
     public async Task<string> DownloadAndStageAsync(
