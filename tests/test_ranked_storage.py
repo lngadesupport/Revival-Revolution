@@ -132,5 +132,22 @@ class RankedStoreTests(unittest.TestCase):
         self.assertEqual(before, after)
 
 
+    def test_ready_player_cannot_create_private_room(self):
+        self._create_assigned_match()
+        self.store.accept_match(self.one["player_id"])
+        self.store.accept_match(self.two["player_id"])
+        with self.assertRaisesRegex(ValueError, "already has an assigned match"):
+            self.store.create_private_room(self.one["player_id"], "sa-east")
+
+    def test_ready_player_cannot_join_private_room(self):
+        host = self.store.register("PC-ROOM-HOST")
+        room = self.store.create_private_room(host["player_id"], "sa-east")
+        self._create_assigned_match()
+        self.store.accept_match(self.one["player_id"])
+        self.store.accept_match(self.two["player_id"])
+        with self.assertRaisesRegex(ValueError, "already has an assigned match"):
+            self.store.join_private_room(self.one["player_id"], room["room_code"])
+
+
 if __name__ == "__main__":
     unittest.main()
