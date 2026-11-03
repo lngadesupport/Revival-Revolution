@@ -23,6 +23,11 @@ somente para localhost em desenvolvimento; endpoints remotos exigem HTTPS.
 - `POST /v1/register` e `GET /v1/me` — identidade e restauração de sessão.
 - `POST /v1/queue/join`, `GET /v1/queue`, `GET /v1/match`,
   `POST /v1/queue/leave` — matchmaking aleatório.
+- `POST /v1/match/accept`, `POST /v1/match/decline` e
+  `POST /v1/match/finish` — ciclo de aceite bilateral, recusa e confirmação
+  bilateral de encerramento. O aceite expira em 90 segundos; após ambos
+  aceitarem, a partida fica pronta por até duas horas. O encerramento não
+  altera rating e não autentica o resultado.
 - `POST /v1/rooms/create`, `GET /v1/rooms/current`,
   `POST /v1/rooms/join`, `POST /v1/rooms/cancel` — salas privadas.
 
@@ -32,10 +37,12 @@ mutuamente exclusivas para cada jogador.
 
 ## Estado honesto da partida
 
-A API atualmente **atribui** uma partida e entrega os dados do adversário. Isso
-não significa que a conexão UDP foi estabelecida, que a bridge aceitou a
-sessão, que a seleção sincronizou ou que a luta começou. A janela deixa essa
-limitação explícita.
+A API **atribui** uma partida e entrega os dados do adversário. O backend
+agora também persiste aceite bilateral, recusa, expiração e confirmação
+bilateral de encerramento. O cliente WPF ainda não está integrado a essas novas
+rotas. Nada disso significa que a conexão UDP foi estabelecida, que a bridge
+aceitou a sessão, que a seleção sincronizou ou que a luta começou. A janela
+deve continuar deixando essa limitação explícita.
 
 O fluxo multiplayer já existente inclui `peer_session.py`,
 `autopunch_transport.py`, `selection_sync.py`, `live_fighter.py`,
@@ -47,8 +54,8 @@ diagnóstica correspondente não estará disponível.
 
 ## Próximas integrações obrigatórias
 
-1. Implementar ciclo de vida da atribuição: aceite bilateral, timeout,
-   cancelamento seguro e reconexão.
+1. Integrar a janela WPF às rotas de aceite/recusa/encerramento; implementar
+   cancelamento e recuperação de sessão/reconexão no cliente.
 2. Emitir ticket efêmero, de uso único, vinculado a match, jogadores, slots,
    protocolo/build e expiração.
 3. Adaptar `peer_session.py` para receber a autorização do ticket sem expor
