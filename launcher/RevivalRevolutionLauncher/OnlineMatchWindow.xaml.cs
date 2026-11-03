@@ -174,7 +174,8 @@ public partial class OnlineMatchWindow : Window
             var code = room["room_code"]?.GetValue<string>()
                 ?? throw new InvalidOperationException("O servidor não devolveu o código da sala.");
             RoomCodeDisplayBox.Text = code;
-            RoomStateText.Text = "Sala aberta. Compartilhe este código com seu adversário. Ela expira em 15 minutos.";
+            CopyRoomCodeButton.IsEnabled = true;
+            RoomStateText.Text = "Sala aberta. Copie e compartilhe este código com seu adversário. Ela expira em 15 minutos.";
             _roomWaiting = true;
             CancelRoomButton.IsEnabled = true;
             StatusText.Text = "Sala privada criada. Aguardando o outro jogador inserir o código.";
@@ -226,6 +227,21 @@ public partial class OnlineMatchWindow : Window
                 StatusText.Text = "Falha ao consultar a sala: " + ex.Message;
                 SetModeButtons(!string.IsNullOrWhiteSpace(_token));
             });
+        }
+    }
+
+    private void CopyRoomCode_Click(object sender, RoutedEventArgs e)
+    {
+        var code = RoomCodeDisplayBox.Text.Trim();
+        if (code.Length != 6 || code == "------") return;
+        try
+        {
+            Clipboard.SetText(code);
+            RoomStateText.Text = "Código copiado. Envie-o ao outro jogador.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Não foi possível copiar o código: " + ex.Message;
         }
     }
 
@@ -300,6 +316,7 @@ public partial class OnlineMatchWindow : Window
             var result = await _api.PostAsync("/v1/rooms/cancel", new JsonObject());
             _roomWaiting = false;
             RoomCodeDisplayBox.Text = "------";
+            CopyRoomCodeButton.IsEnabled = false;
             RoomStateText.Text = result["cancelled"]?.GetValue<bool>() == true
                 ? "Sala cancelada. O código não pode mais ser utilizado."
                 : "A sala já não estava aguardando jogadores.";
