@@ -14,6 +14,9 @@ public partial class OnlineMatchWindow : Window
     private string? _playerId;
     private bool _queued;
     private bool _roomWaiting;
+    private bool _matchActive;
+    private string? _activeMatchId;
+    private string? _matchStatus;
 
     public OnlineMatchWindow() => InitializeComponent();
 
@@ -96,9 +99,9 @@ public partial class OnlineMatchWindow : Window
 
     private void SetModeButtons(bool enabled)
     {
-        SearchButton.IsEnabled = enabled && !_queued && !_roomWaiting;
-        CreateRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
-        JoinRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
+        SearchButton.IsEnabled = enabled && !_queued && !_roomWaiting && !_matchActive;
+        CreateRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting && !_matchActive;
+        JoinRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting && !_matchActive;
     }
 
     private async void Search_Click(object sender, RoutedEventArgs e)
@@ -278,17 +281,145 @@ public partial class OnlineMatchWindow : Window
         CancelButton.IsEnabled = false;
         CancelRoomButton.IsEnabled = false;
         CopyRoomCodeButton.IsEnabled = false;
-        SetModeButtons(false);
-        QueueStateText.Text = "PARTIDA ENCONTRADA";
-        RoomStateText.Text = "Partida privada atribuída.";
+        _matchActive = true;
+        _activeMatchId = match["match_id"]?.GetValue<string>();
+        UpdateMatch(match);
+        if (_matchStatus == "assigned") StartMatchLifecyclePolling();
+    }
+
+    private void UpdateMatch(JsonObject match)
+    {
+        var matchId = match["match_id"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(_activeMatchId) &&
+            !string.Equals(_activeMatchId, matchId, StringComparison.Ordinal)) return;
+        _activeMatchId = matchId;
+        _matchStatus = match["status"]?.GetValue<string>() ?? "assigned";
+        _matchActive = _matchStatus is "assigned" or "ready";
+
         var opponent = match["opponent"]?["display_name"]?.GetValue<string>() ?? "Adversário";
         var rating = match["opponent"]?["rating"]?.ToString() ?? "—";
-        var matchId = match["match_id"]?.GetValue<string>() ?? "—";
         var slot = match["player_slot"]?.ToString() ?? "—";
+        var accepted = match["accepted"]?.GetValue<bool>() == true;
+        var opponentAccepted = match["opponent_accepted"]?.GetValue<bool>() == true;
         MatchTitleText.Text = opponent;
-        MatchDetailText.Text = $"Adversário: {opponent}\nRating: {rating}\nSua posição: Player {(slot == "0" ? "1" : slot == "1" ? "2" : slot)}\nPartida: {matchId}";
+        MatchDetailText.Text = $"Adversário: {opponent}\nRating: {rating}\nSua posição: Player {(slot == "0" ? "1" : slot == "1" ? "2" : slot)}\nPartida: {matchId ?? "—"}";
+
+        if (_matchStatus == "ready")
+        {
+            QueueStateText.Text = "PARTIDA PRONTA";
+            MatchStateText.Text = "Os dois jogadores aceitaram. A partida está pronta para a próxima etapa.";
+            AcceptMatchButton.IsEnabled = false;
+            DeclineMatchButton.IsEnabled = true;
+            DeclineMatchButton.Content = "CANCELAR PARTIDA";
+            StatusText.Text = "Aceite bilateral concluído. A sessão P2P ainda não foi iniciada: falta emitir e validar o ticket de conexão.";
+        }
+        else
+        {
+            QueueStateText.Text = "PARTIDA ENCONTRADA";
+            MatchStateText.Text = accepted
+                ? "Você aceitou. Aguardando a confirmação do adversário..."
+                : opponentAccepted
+                    ? "Seu adversário aceitou. Confirme para deixar a partida pronta."
+                    : "A partida expira em 90 segundos se os dois jogadores não aceitarem.";
+            AcceptMatchButton.IsEnabled = !accepted;
+            DeclineMatchButton.IsEnabled = true;
+            DeclineMatchButton.Content = "RECUSAR PARTIDA";
+            StatusText.Text = accepted
+                ? "Aceite enviado. Aguardando o outro jogador."
+                : "Adversário encontrado. Aceite ou recuse a partida.";
+        }
+
+        RoomStateText.Text = "Partida privada atribuída.";
         QueueDetailText.Text = "O servidor atribuiu seu adversário.";
-        StatusText.Text = "Matchmaking concluído. A sessão P2P ainda não foi iniciada: falta emitir e validar o ticket de conexão.";
+        SetModeButtons(false);
+    }
+
+    private void StartMatchLifecyclePolling()
+    {
+        _polling?.Cancel();
+        _polling?.Dispose();
+        _polling = new CancellationTokenSource();
+        _ = PollMatchLifecycleAsync(_activeMatchId, _polling.Token);
+    }
+
+    private async Task PollMatchLifecycleAsync(string? matchId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && _matchActive &&
+                   string.Equals(matchId, _activeMatchId, StringComparison.Ordinal))
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                var result = await _api.GetAsync("/v1/match", cancellationToken);
+                if (result["match"] is not JsonObject current)
+                {
+                    await Dispatcher.InvokeAsync(() => ResetMatchState(
+                        "A partida expirou, foi recusada ou deixou de estar ativa."));
+                    return;
+                }
+                await Dispatcher.InvokeAsync(() => UpdateMatch(current));
+                if (_matchStatus != "assigned") return;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() =>
+                StatusText.Text = "Não foi possível atualizar o aceite da partida: " + ex.Message);
+        }
+    }
+
+    private async void AcceptMatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_matchActive || _matchStatus != "assigned") return;
+        AcceptMatchButton.IsEnabled = false;
+        try
+        {
+            var result = await _api.PostAsync("/v1/match/accept", new JsonObject());
+            if (result["match"] is JsonObject match)
+            {
+                UpdateMatch(match);
+                if (_matchStatus == "assigned") StartMatchLifecyclePolling();
+            }
+        }
+        catch (Exception ex)
+        {
+            AcceptMatchButton.IsEnabled = true;
+            StatusText.Text = "Não foi possível aceitar a partida: " + ex.Message;
+        }
+    }
+
+    private async void DeclineMatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_matchActive) return;
+        DeclineMatchButton.IsEnabled = false;
+        try
+        {
+            await _api.PostAsync("/v1/match/decline", new JsonObject());
+            ResetMatchState("Partida recusada/cancelada. Você já pode procurar outro adversário.");
+        }
+        catch (Exception ex)
+        {
+            DeclineMatchButton.IsEnabled = true;
+            StatusText.Text = "Não foi possível recusar/cancelar a partida: " + ex.Message;
+        }
+    }
+
+    private void ResetMatchState(string message)
+    {
+        _polling?.Cancel();
+        _matchActive = false;
+        _activeMatchId = null;
+        _matchStatus = null;
+        MatchTitleText.Text = "Aguardando adversário";
+        MatchDetailText.Text = "Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui.";
+        MatchStateText.Text = message;
+        AcceptMatchButton.IsEnabled = false;
+        DeclineMatchButton.IsEnabled = false;
+        DeclineMatchButton.Content = "RECUSAR PARTIDA";
+        QueueStateText.Text = "PRONTO PARA BUSCAR";
+        StatusText.Text = message;
+        SetModeButtons(!string.IsNullOrWhiteSpace(_token));
     }
 
     private async void Cancel_Click(object sender, RoutedEventArgs e)
@@ -337,6 +468,11 @@ public partial class OnlineMatchWindow : Window
         _polling?.Cancel();
         if (!string.IsNullOrWhiteSpace(_token))
         {
+            if (_matchActive)
+            {
+                try { await _api.PostAsync("/v1/match/decline", new JsonObject()); }
+                catch { /* Do not block window closing on network errors. */ }
+            }
             if (_queued)
             {
                 try { await _api.PostAsync("/v1/queue/leave", new JsonObject()); }
