@@ -46,6 +46,7 @@ class RankedApiTests(unittest.TestCase):
         status, body = self.request("GET", "/health")
         self.assertEqual(status, 200)
         self.assertTrue(body["ok"])
+        self.assertEqual(body["version"], "0.8.1")
 
     def test_profile_requires_token(self):
         player = self.register("PC-ONE")
