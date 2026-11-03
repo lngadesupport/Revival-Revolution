@@ -187,7 +187,7 @@ def main():
     database_path = Path(args.database).expanduser().resolve()
     database_path.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
-        filename=str(database_path.with_suffix(".log")),
+        filename=str(Path(str(database_path) + ".log")),
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
         encoding="utf-8",
