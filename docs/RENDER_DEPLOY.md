@@ -26,6 +26,14 @@ concorrentes usando o mesmo arquivo SQLite.
 5. Aguarde o deploy e verifique
    `https://SEU-SERVICO.onrender.com/health`.
 6. Confirme `"ok": true` e versão `"0.8.1"` antes de configurar o launcher.
+7. Execute o verificador automatizado:
+
+   ```bash
+   python scripts/check_render_api.py https://SEU-SERVICO.onrender.com
+   ```
+
+   O script exige HTTPS e valida serviço, estado e versão; ele não cria contas
+   nem altera dados do banco.
 
 Não coloque tokens de jogadores em variáveis públicas ou arquivos do
 repositório. O token individual continua no Gerenciador de Credenciais do
