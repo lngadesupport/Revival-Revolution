@@ -2,7 +2,7 @@ name: Build Windows launcher
 
 on:
   push:
-    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, release/0.8.1-stabilization ]
+    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, release/0.8.1-stabilization, ops/windows-local-ranked-host ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - "tests/LauncherIntegritySmoke/**"
@@ -35,7 +35,7 @@ jobs:
       - name: Verify published files
         shell: pwsh
         run: |
-          $publish = ".\\artifacts\\RevivalRevolution-win-x64"
+          $publish = ".\artifacts\RevivalRevolution-win-x64"
           $exePath = Join-Path $publish "RevivalRevolution.exe"
           if (!(Test-Path $exePath)) { throw "Launcher executable missing from publish output." }
           $fileVersion = (Get-Item $exePath).VersionInfo.FileVersion
