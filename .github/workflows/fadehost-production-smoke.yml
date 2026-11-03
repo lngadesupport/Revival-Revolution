@@ -39,7 +39,7 @@ jobs:
         run: python -m py_compile scripts/smoke_fadehost_ranked.py
 
   production-smoke:
-    if: github.event_name == 'workflow_dispatch' && inputs.confirm_production_test == 'yes'
+    if: (github.event_name == 'workflow_dispatch' && inputs.confirm_production_test == 'yes') || (github.event_name == 'push' && contains(github.event.head_commit.message, '[run-prod-smoke]'))
     needs: validate-script
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -52,5 +52,5 @@ jobs:
           python-version: "3.12"
       - name: Run explicit production smoke test
         env:
-          RANKED_API_URL: ${{ inputs.api_base_url }}
+          RANKED_API_URL: ${{ inputs.api_base_url || 'https://revival-revolution-ranked.fadehost.app' }}
         run: python scripts/smoke_fadehost_ranked.py
