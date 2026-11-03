@@ -135,6 +135,7 @@ public sealed class RadminHostService
                 <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
                 <StartWhenAvailable>true</StartWhenAvailable>
                 <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+                <RestartOnFailure><Interval>PT1M</Interval><Count>999</Count></RestartOnFailure>
                 <Enabled>true</Enabled>
                 <Hidden>true</Hidden>
               </Settings>
@@ -145,12 +146,15 @@ public sealed class RadminHostService
         await File.WriteAllTextAsync(taskFile, taskXml, Encoding.Unicode, token);
 
         var query = await RunTaskSchedulerAsync(new[] { "/Query", "/TN", "Revival Revolution Ranked Host" }, token);
-        if (query.ExitCode != 0)
+        var taskCreated = query.ExitCode != 0;
+        if (taskCreated)
         {
             var create = await RunTaskSchedulerAsync(new[] { "/Create", "/TN", "Revival Revolution Ranked Host", "/XML", taskFile, "/F" }, token);
             if (create.ExitCode != 0)
                 throw new InvalidOperationException("O Windows não conseguiu registrar a inicialização automática do servidor: " + create.Output.Trim());
         }
+
+        if (!taskCreated && await IsHealthyAsync(hostAddress, token)) return;
 
         var run = await RunTaskSchedulerAsync(new[] { "/Run", "/TN", "Revival Revolution Ranked Host" }, token);
         if (run.ExitCode != 0)
