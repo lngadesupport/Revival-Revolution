@@ -63,21 +63,46 @@
             <Border Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1"
                     CornerRadius="12" Padding="20" Margin="0,0,10,0">
                 <StackPanel>
-                    <TextBlock Text="BUSCA DE PARTIDA" FontSize="12" FontWeight="Bold" Foreground="#FFE04A58"/>
-                    <TextBlock Text="Fila regional" FontSize="25" FontWeight="Black" Margin="0,8,0,2"/>
-                    <TextBlock Text="Região: South America (sa-east)" Foreground="#C5C4D2" FontSize="12"/>
-                    <Border Background="#66161A2A" CornerRadius="8" Padding="14" Margin="0,22,0,12">
-                        <StackPanel>
-                            <TextBlock x:Name="QueueStateText" Text="Pronto para buscar" FontSize="19" FontWeight="Bold"/>
-                            <TextBlock x:Name="QueueDetailText" Text="Conecte sua conta para habilitar a fila."
-                                       Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
-                        </StackPanel>
-                    </Border>
-                    <Button x:Name="SearchButton" Content="BUSCAR PARTIDA" Click="Search_Click" IsEnabled="False"
-                            Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="18,16" FontSize="17"
-                            HorizontalContentAlignment="Center"/>
-                    <Button x:Name="CancelButton" Content="CANCELAR BUSCA" Click="Cancel_Click" IsEnabled="False"
-                            HorizontalContentAlignment="Center"/>
+                    <TextBlock Text="MODALIDADES ONLINE" FontSize="12" FontWeight="Bold" Foreground="#FFE04A58"/>
+                    <TabControl Margin="0,12,0,0" Background="#14000000" Foreground="White">
+                        <TabItem Header="ALEATÓRIO">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Fila regional" FontSize="23" FontWeight="Black" Margin="0,8,0,2"/>
+                                <TextBlock Text="Região: South America (sa-east)" Foreground="#C5C4D2" FontSize="12"/>
+                                <Border Background="#66161A2A" CornerRadius="8" Padding="14" Margin="0,18,0,12">
+                                    <StackPanel>
+                                        <TextBlock x:Name="QueueStateText" Text="Pronto para buscar" FontSize="18" FontWeight="Bold"/>
+                                        <TextBlock x:Name="QueueDetailText" Text="Conecte sua conta para habilitar a fila."
+                                                   Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Button x:Name="SearchButton" Content="BUSCAR ADVERSÁRIO" Click="Search_Click" IsEnabled="False"
+                                        Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="16,14" FontSize="16"
+                                        HorizontalContentAlignment="Center"/>
+                                <Button x:Name="CancelButton" Content="CANCELAR BUSCA" Click="Cancel_Click" IsEnabled="False"
+                                        HorizontalContentAlignment="Center"/>
+                            </StackPanel>
+                        </TabItem>
+                        <TabItem Header="POR CÓDIGO">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Partida privada" FontSize="23" FontWeight="Black" Margin="0,8,0,2"/>
+                                <TextBlock Text="Crie uma sala e compartilhe o código de 6 caracteres, ou entre usando o código de outro jogador."
+                                           Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                                <Button x:Name="CreateRoomButton" Content="CRIAR SALA E GERAR CÓDIGO" Click="CreateRoom_Click"
+                                        IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
+                                <TextBlock Text="SEU CÓDIGO" Foreground="#C5C4D2" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"/>
+                                <TextBox x:Name="RoomCodeDisplayBox" IsReadOnly="True" FontSize="22" FontWeight="Bold"
+                                         HorizontalContentAlignment="Center" Text="------"/>
+                                <TextBlock x:Name="RoomStateText" Text="Nenhuma sala criada." Foreground="#C5C4D2"
+                                           FontSize="11" TextWrapping="Wrap" Margin="0,5,0,6"/>
+                                <Button x:Name="CancelRoomButton" Content="CANCELAR SALA" Click="CancelRoom_Click" IsEnabled="False"/>
+                                <TextBlock Text="ENTRAR EM UMA SALA" Foreground="#C5C4D2" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"/>
+                                <TextBox x:Name="RoomCodeBox" MaxLength="8" CharacterCasing="Upper" HorizontalContentAlignment="Center"
+                                         FontSize="18" TextAlignment="Center"/>
+                                <Button x:Name="JoinRoomButton" Content="ENTRAR COM CÓDIGO" Click="JoinRoom_Click" IsEnabled="False"/>
+                            </StackPanel>
+                        </TabItem>
+                    </TabControl>
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1"
