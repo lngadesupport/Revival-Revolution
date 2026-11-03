@@ -11,7 +11,10 @@ namespace RevivalRevolution;
 
 public partial class OnlineMatchWindow : Window
 {
-    private const string RankedEndpoint = "http://26.226.57.19:8765";
+    private static readonly string RankedEndpoint =
+        string.IsNullOrWhiteSpace(RankedApiClient.LoadEndpoint())
+            ? RadminHostService.DefaultEndpoint
+            : RankedApiClient.LoadEndpoint()!;
     private readonly RankedApiClient _api = new();
     private readonly RankedCredentialStore _credentials = new();
     private readonly OnlineGameSessionService _gameSession;
