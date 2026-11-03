@@ -37,11 +37,11 @@ The endpoint is idempotent for the host. A guest cannot start another player's r
 
 Run `scripts/enable-radmin-peer-firewall.ps1` as Administrator on **both** PCs. It opens inbound UDP 8766 only from the Radmin 26.0.0.0/8 range. Keep both PCs connected to the same private Radmin network.
 
-The Private Match bootstrap invokes `offline_launcher.py` to start/attach the game bridge. It launches `ufo.exe` with Unity's `-screen-fullscreen 1` startup argument so the interactive Metal Revolution Configuration selector is skipped and the game can start directly. The target PC must still be checked to confirm that this Unity build honors the argument.
+The Private Match bootstrap invokes `offline_launcher.py` to start/attach the game bridge. It launches `ufo.exe` directly (without invoking a separate configuration launcher), with Unity's `-screen-fullscreen 1` argument. That argument controls fullscreen mode; it does not by itself prove that a screen-selector dialog embedded in this particular game build is disabled. If the game itself still displays that selector, it must be disabled in the game's Unity Player settings or verified against the exact build.
 
 ## Important implementation boundary
 
-The branch implements the invitation-first Private Match UI, profile-photo upload/display, the host-only VS start control, MR1 key-code exchange, game bootstrap on both clients, direct Radmin UDP peer startup, authenticated handshake, and coordinated local VS readiness. This has passed code/build checks only; no real two-PC game session has been run in this environment, so live gameplay, the Unity configuration bypass, and bridge compatibility are not yet certified.
+The branch implements the invitation-first Private Match UI, profile-photo upload/display, the host-only VS start control, MR1 key-code exchange, game bootstrap on both clients, direct Radmin UDP peer startup, authenticated handshake, and coordinated local VS readiness. The peer handshake opens the game's VS selection stage; players still select characters/outfits/stage and both confirm Ready. The Windows build and backend tests pass, but no real two-PC game session has been run in this environment. P2P transport, bridge compatibility, and the absence of any game-embedded screen selector still require validation on the target PCs.
 
 The current peer runtime requires:
 - a running `ufo.exe` with the netplay bridge attached and `netplay-pid.txt` available;
