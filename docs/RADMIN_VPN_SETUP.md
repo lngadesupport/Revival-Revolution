@@ -26,11 +26,7 @@ No primeiro uso de PRIVATE MATCH em cada computador, o launcher configura a regr
 
 ## 3. Conectar os launchers dos jogadores
 
-Em cada launcher, na janela ONLINE, informe:
-
-    http://IP-RADMIN-DO-ANFITRIAO:8765
-
-Exemplo ilustrativo: http://26.XX.XX.XX:8765. O launcher aceita HTTP remoto apenas quando o host é um IPv4 26.x.x.x; HTTP para IP público ou outras redes continua bloqueado. O tráfego passa pelo túnel criptografado da Radmin VPN.
+O endpoint do anfitrião já está configurado no launcher como `http://26.226.57.19:8765`. Não é necessário digitar IP em cada inicialização. Os computadores convidados precisam estar na mesma rede Radmin do anfitrião. O launcher aceita HTTP remoto somente para IPv4 26.x.x.x; HTTP público ou outras redes continua bloqueado.
 
 O primeiro jogador cria sua conta no servidor. O banco fica no PC anfitrião; faça backup periódico do arquivo ranked.sqlite3 com a API parada.
 
@@ -45,27 +41,15 @@ A resposta esperada é JSON com "ok": true e "version": "0.8.1". Depois conecte 
 Se não responder:
 - confirme que ambos estão conectados à mesma rede Radmin;
 - confira se o IP informado é o do anfitrião;
-- confira se a janela do servidor continua aberta;
-- confirme a regra de firewall "Revival Ranked - Radmin VPN only";
-- teste Test-NetConnection IP-RADMIN-DO-ANFITRIAO -Port 8765 no cliente.
+- confirme se o agente "Revival Revolution Ranked Host" aparece no Agendador de Tarefas do Windows;
+- confira os logs `%LOCALAPPDATA%\\RevivalRevolution\\RankedServer\\ranked.sqlite3.log` e `ranked.sqlite3.agent.log`;
+- teste `Test-NetConnection 26.226.57.19 -Port 8765` no cliente.
 
 ## 5. Transporte do jogo pela Radmin
 
-A API Ranked e o transporte UDP do jogo são componentes diferentes. Para o transporte, use o modo direto existente em peer_session.py, sem --autopunch:
+O fluxo de PRIVATE MATCH inicia o transporte UDP diretamente entre os dois jogadores pela interface Radmin. O código de conexão é trocado pelo backend Ranked; não é necessário executar `peer_session.py` manualmente nem copiar `peer-code.txt`. O launcher instala a regra de firewall UDP restrita a origem 26.0.0.0/8 na primeira utilização de cada computador.
 
-PC anfitrião (com o jogo aberto e bridge anexada):
-
-    python peer_session.py --mode host --bind IP-RADMIN-LOCAL --advertise IP-RADMIN-LOCAL
-
-O código de conexão será gravado em peer-code.txt na pasta raiz do projeto. Envie-o ao segundo jogador por um canal privado.
-
-PC convidado:
-
-    python peer_session.py --mode join --code CODIGO_RECEBIDO
-
-Os dois PCs precisam usar o mesmo build/protocolo e ter o jogo aberto com a bridge compatível. O firewall do Windows também precisa permitir o tráfego UDP de entrada/saída do processo Python na interface Radmin; a porta UDP escolhida pelo processo é dinâmica (porta local 0), portanto o Windows pode solicitar autorização. Não abra portas no roteador.
-
-O fluxo atual de peer_session coordena a preparação, sincronização e bridge experimental; a integração automática com a janela ONLINE/ticket Ranked ainda não existe. A fila não inicia o jogo sozinha. Não use --autopunch: esse modo depende de STUN e relay externo, contrariando o objetivo de operar somente pela Radmin.
+Não use `--autopunch`: esse modo depende de STUN/relay externo e não faz parte do caminho Radmin direto. Ambos os computadores precisam usar a mesma versão do launcher e ter o jogo instalado com as DLLs de bridge compatíveis.
 
 ## Limitações e segurança
 
@@ -75,4 +59,5 @@ O fluxo atual de peer_session coordena a preparação, sincronização e bridge 
 - O servidor é uma única instância SQLite; não suporta alta disponibilidade nem múltiplos hosts.
 - Isso permite teste privado controlado, não equivale a serviço público competitivo.
 - A confirmação de fim de partida ainda não é prova autoritativa do resultado; não aplicar ELO automaticamente.
-- Nenhum teste real entre dois computadores/jogo foi executado por esta alteração.
+- A inicialização automática do servidor e a persistência da tarefa precisam ser confirmadas em uma reinicialização real do Windows; a compilação não substitui esse teste.
+- Nenhum teste real de combate entre dois computadores foi certificado por esta alteração.
