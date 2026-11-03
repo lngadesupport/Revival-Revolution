@@ -1,0 +1,38 @@
+name: FadeHost production smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production_test:
+        description: "Confirma criar duas contas RR-SMOKE e um registro de partida permanente?"
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
+      api_base_url:
+        description: "URL HTTPS da API FadeHost"
+        required: true
+        type: string
+        default: "https://revival-revolution-ranked.fadehost.app"
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    if: inputs.confirm_production_test == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run explicit production smoke test
+        env:
+          RANKED_API_URL: ${{ inputs.api_base_url }}
+        run: python scripts/smoke_fadehost_ranked.py
