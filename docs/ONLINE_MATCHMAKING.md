@@ -24,3 +24,14 @@ resultado. A interface mostra a partida atribuída, mas não inicia a conexão n
 abre a luta automaticamente. Isso será ligado após o endpoint de ticket e o
 protocolo de autorização da bridge serem implementados e testados em duas
 máquinas.
+
+## Segunda entrega — modalidades de matchmaking
+
+A central ONLINE apresenta duas modalidades:
+
+- **Aleatório:** mantém o fluxo de fila regional `/v1/queue/join`, com consulta periódica de `/v1/match` e `/v1/queue`.
+- **Por código:** o anfitrião chama `POST /v1/rooms/create`, compartilha o código de seis caracteres e acompanha `GET /v1/rooms/current`. O convidado informa o código em `POST /v1/rooms/join`. O código expira em 15 minutos, não pode ser reutilizado e a sala pode ser cancelada pelo anfitrião.
+
+O backend impede que o mesmo jogador permaneça na fila aleatória e crie/entre em sala privada simultaneamente. As salas e atribuições são persistidas no SQLite.
+
+A atribuição de partida não equivale à conexão de jogo: emissão/validação de ticket, integração do ticket com a bridge e teste P2P entre duas máquinas continuam pendentes. O launcher não declara a luta iniciada.
