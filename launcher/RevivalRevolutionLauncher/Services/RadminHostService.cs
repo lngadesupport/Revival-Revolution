@@ -108,9 +108,9 @@ public sealed class RadminHostService
         CancellationToken token)
     {
         if (await IsHealthyAsync(hostAddress, token)) return;
-        var module = Path.Combine(root, "ranked_server", "__main__.py");
+        var module = Path.Combine(root, "ranked_server", "host_agent.py");
         if (!File.Exists(module))
-            throw new FileNotFoundException("O pacote ranked_server não foi incluído na distribuição do launcher.", module);
+            throw new FileNotFoundException("O agente automático do servidor não foi incluído na distribuição.", module);
 
         var dataRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -119,31 +119,68 @@ public sealed class RadminHostService
         var database = Path.Combine(dataRoot, "ranked.sqlite3");
         var pythonw = Path.Combine(Path.GetDirectoryName(pythonExe)!, "pythonw.exe");
         var executable = File.Exists(pythonw) ? pythonw : pythonExe;
-        var start = new ProcessStartInfo(executable)
-        {
-            WorkingDirectory = root,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden
-        };
-        start.ArgumentList.Add("-m");
-        start.ArgumentList.Add("ranked_server");
-        start.ArgumentList.Add("--host");
-        start.ArgumentList.Add(hostAddress);
-        start.ArgumentList.Add("--port");
-        start.ArgumentList.Add(ServerPort.ToString());
-        start.ArgumentList.Add("--database");
-        start.ArgumentList.Add(database);
+        var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value
+            ?? throw new InvalidOperationException("Não foi possível identificar o usuário Windows para instalar a inicialização automática.");
+        var arguments = $"-m ranked_server.host_agent --host {hostAddress} --port {ServerPort} --database \"{database}\" --root \"{root}\"";
+        static string Xml(string value) => System.Security.SecurityElement.Escape(value) ?? string.Empty;
+        var taskXml = $"""
+            <?xml version="1.0" encoding="UTF-16"?>
+            <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+              <RegistrationInfo><Description>Inicia e monitora automaticamente a API privada do Revival Revolution quando a interface Radmin VPN estiver disponível.</Description></RegistrationInfo>
+              <Triggers><LogonTrigger><Enabled>true</Enabled></LogonTrigger></Triggers>
+              <Principals><Principal id="Author"><UserId>{Xml(sid)}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
+              <Settings>
+                <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+                <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+                <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+                <StartWhenAvailable>true</StartWhenAvailable>
+                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+                <Enabled>true</Enabled>
+                <Hidden>true</Hidden>
+              </Settings>
+              <Actions Context="Author"><Exec><Command>{Xml(executable)}</Command><Arguments>{Xml(arguments)}</Arguments><WorkingDirectory>{Xml(root)}</WorkingDirectory></Exec></Actions>
+            </Task>
+            """;
+        var taskFile = Path.Combine(dataRoot, "host-agent-task.xml");
+        await File.WriteAllTextAsync(taskFile, taskXml, Encoding.Unicode, token);
 
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Não foi possível iniciar a API Ranked em segundo plano.");
-        process.Dispose(); // O servidor permanece ativo independentemente da janela do launcher.
-        for (var attempt = 0; attempt < 30; attempt++)
+        var query = await RunTaskSchedulerAsync(new[] { "/Query", "/TN", "Revival Revolution Ranked Host" }, token);
+        if (query.ExitCode != 0)
+        {
+            var create = await RunTaskSchedulerAsync(new[] { "/Create", "/TN", "Revival Revolution Ranked Host", "/XML", taskFile, "/F" }, token);
+            if (create.ExitCode != 0)
+                throw new InvalidOperationException("O Windows não conseguiu registrar a inicialização automática do servidor: " + create.Output.Trim());
+        }
+
+        var run = await RunTaskSchedulerAsync(new[] { "/Run", "/TN", "Revival Revolution Ranked Host" }, token);
+        if (run.ExitCode != 0)
+            throw new InvalidOperationException("O Windows não conseguiu iniciar o agente automático Radmin: " + run.Output.Trim());
+
+        for (var attempt = 0; attempt < 35; attempt++)
         {
             token.ThrowIfCancellationRequested();
             if (await IsHealthyAsync(hostAddress, token)) return;
             await Task.Delay(TimeSpan.FromSeconds(1), token);
         }
-        throw new InvalidOperationException("A API Ranked não respondeu em 30 segundos. Consulte o log em " + Path.ChangeExtension(database, ".log"));
+        throw new InvalidOperationException("A API Ranked não respondeu em 35 segundos. Consulte os logs em " + dataRoot);
+    }
+
+    private static async Task<(int ExitCode, string Output)> RunTaskSchedulerAsync(
+        IEnumerable<string> arguments, CancellationToken token)
+    {
+        var start = new ProcessStartInfo("schtasks.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Não foi possível acessar o Agendador de Tarefas do Windows.");
+        var outputTask = process.StandardOutput.ReadToEndAsync(token);
+        var errorTask = process.StandardError.ReadToEndAsync(token);
+        await process.WaitForExitAsync(token);
+        return (process.ExitCode, (await outputTask) + (await errorTask));
     }
 
     private static async Task<bool> IsHealthyAsync(string hostAddress, CancellationToken token)
