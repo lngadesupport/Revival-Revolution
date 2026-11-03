@@ -10,6 +10,8 @@ public partial class OnlineMatchWindow : Window
     private const string RankedEndpoint = "http://26.226.57.19:8765";
     private readonly RankedApiClient _api = new();
     private readonly RankedCredentialStore _credentials = new();
+    private readonly OnlineGameSessionService _gameSession;
+    private bool _guestSessionStarted;
     private CancellationTokenSource? _polling;
     private string? _token;
     private string? _playerId;
@@ -19,7 +21,11 @@ public partial class OnlineMatchWindow : Window
     private string? _activeMatchId;
     private string? _matchStatus;
 
-    public OnlineMatchWindow() => InitializeComponent();
+    public OnlineMatchWindow(string distributionRoot, string gameFolder, string pythonExe)
+    {
+        InitializeComponent();
+        _gameSession = new OnlineGameSessionService(distributionRoot, gameFolder, pythonExe);
+    }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
@@ -315,6 +321,13 @@ public partial class OnlineMatchWindow : Window
 
         var roomRole = match["room_role"]?.GetValue<string>();
         var roomStatus = match["room_status"]?.GetValue<string>();
+        var connectionCode = match["connection_code"]?.GetValue<string>();
+        if (roomRole == "guest" && roomStatus == "starting" &&
+            !string.IsNullOrWhiteSpace(connectionCode) && !_guestSessionStarted)
+        {
+            _guestSessionStarted = true;
+            _ = StartGuestSessionAsync(connectionCode);
+        }
         StartRoomButton.Visibility = roomRole == "host" ? Visibility.Visible : Visibility.Collapsed;
         StartRoomButton.IsEnabled = roomRole == "host" && roomStatus == "matched";
         if (_matchStatus == "ready" && roomRole is "host" or "guest")
@@ -415,20 +428,46 @@ public partial class OnlineMatchWindow : Window
         StartRoomButton.IsEnabled = false;
         try
         {
-            var result = await _api.PostAsync("/v1/rooms/start", new JsonObject());
-            if (result["room"] is JsonObject room)
-            {
-                MatchStateText.Text = "Início autorizado pelo servidor. A conexão P2P ainda precisa ser preparada.";
-                StatusText.Text = "O servidor registrou o início da sala. A inicialização do jogo e a sessão UDP ainda não estão integradas nesta build.";
-                if (room["status"]?.GetValue<string>() == "starting")
-                    StartRoomButton.Content = "INÍCIO AUTORIZADO";
-            }
+            await _api.PostAsync("/v1/rooms/start", new JsonObject());
+            MatchStateText.Text = "Abrindo o jogo e preparando a sessão UDP pela Radmin...";
+            StatusText.Text = "O jogo será iniciado nos dois PCs. Se aparecer a janela de configuração do Metal Revolution, pressione Play.";
+            var code = await _gameSession.StartHostAsync();
+            await _api.PostAsync("/v1/rooms/connection-code", new JsonObject { ["code"] = code });
+            MatchStateText.Text = "Sessão do anfitrião iniciada. Aguardando o convidado conectar pela Radmin.";
+            StatusText.Text = "Código de conexão autenticado enviado ao convidado. Aguardando handshake UDP e sincronização.";
+            StartRoomButton.Content = "AGUARDANDO CONVIDADO";
             StartMatchLifecyclePolling();
         }
         catch (Exception ex)
         {
             StartRoomButton.IsEnabled = true;
             StatusText.Text = "Não foi possível iniciar a sala: " + ex.Message;
+        }
+    }
+
+    private async Task StartGuestSessionAsync(string connectionCode)
+    {
+        try
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                MatchStateText.Text = "O anfitrião iniciou. Abrindo o jogo e preparando a conexão UDP...";
+                StatusText.Text = "Se aparecer a janela de configuração do Metal Revolution, pressione Play.";
+            });
+            await _gameSession.StartGuestAsync(connectionCode);
+            await Dispatcher.InvokeAsync(() =>
+            {
+                MatchStateText.Text = "Cliente P2P iniciado. Aguardando handshake e sincronização da seleção.";
+                StatusText.Text = "A sessão UDP foi iniciada. Acompanhe peer-status.json e peer-summary.txt na pasta da distribuição.";
+            });
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                MatchStateText.Text = "Não foi possível iniciar o cliente P2P.";
+                StatusText.Text = "Falha ao preparar o jogo/conexão: " + ex.Message;
+            });
         }
     }
 
@@ -550,5 +589,6 @@ public partial class OnlineMatchWindow : Window
             }
         }
         _polling?.Dispose();
+        _gameSession.Dispose();
     }
 }
