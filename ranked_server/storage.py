@@ -240,8 +240,8 @@ class RankedStore:
             column = "accepted_one" if own else "accepted_two"
             db.execute(f"UPDATE matches SET {column}=1 WHERE match_id=?", (row["match_id"],))
             updated = db.execute("SELECT * FROM matches WHERE match_id=?", (row["match_id"],)).fetchone()
-            if updated["accepted_one"] and updated["accepted_two"]:
-                db.execute("UPDATE matches SET status='ready',expires_at=? WHERE match_id=?", (now + 7200, row["match_id"]))
+            if updated["accepted_one"] and updated["accepted_two"] and row["status"] == "assigned":
+                db.execute("UPDATE matches SET status='ready',expires_at=? WHERE match_id=? AND status='assigned'", (now + 7200, row["match_id"]))
             return self._match_payload(db, row["match_id"], player_id)
 
     def decline_match(self, player_id: str) -> dict:
@@ -321,7 +321,7 @@ class RankedStore:
             db.execute(
                 "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at,expires_at) "
                 "VALUES(?,?,?,?,?,?,?,?,?)",
-                (match_id, first_id, second_id, first_rating, second_rating, region, "assigned", now),
+                (match_id, first_id, second_id, first_rating, second_rating, region, "assigned", now, now + 90),
             )
             db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
             waiting = [
