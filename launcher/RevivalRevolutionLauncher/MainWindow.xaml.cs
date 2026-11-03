@@ -682,6 +682,7 @@ public partial class MainWindow : Window
         SetActiveNavigation("private");
         FooterStatus.Text = "PRIVATE MATCH — abrindo salas por código.";
         Log("Central Private Match aberta.");
+        while (_radminHostStarting) await Task.Delay(200);
         var distributionRoot = _distributionRoot ?? _distributionLocator.Find(_root, _gameFolder);
         var python = _python.FindRuntime(_root);
         if (string.IsNullOrWhiteSpace(_gameFolder) || distributionRoot is null)
