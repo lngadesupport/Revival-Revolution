@@ -175,6 +175,7 @@ public partial class OnlineMatchWindow : Window
                 ?? throw new InvalidOperationException("O servidor não devolveu o código da sala.");
 
             _roomWaiting = true;
+            RoomCodeBox.IsEnabled = false;
             RoomCodeDisplayBox.Text = code;
             CopyRoomCodeButton.IsEnabled = true;
             CancelRoomButton.Visibility = Visibility.Visible;
@@ -484,11 +485,9 @@ public partial class OnlineMatchWindow : Window
         {
             _gameSession.Stop();
             if (_closing) return;
+            try { await _api.PostAsync("/v1/match/decline", new JsonObject()); } catch { }
             await Dispatcher.InvokeAsync(() =>
-            {
-                VersusStateText.Text = "Não foi possível abrir a partida.";
-                StatusText.Text = "Falha ao preparar o jogo/conexão: " + ex.Message;
-            });
+                ResetToInvite("A conexão do convidado falhou. A sala foi encerrada. " + ex.Message));
         }
     }
 
@@ -527,6 +526,7 @@ public partial class OnlineMatchWindow : Window
 
     private void ResetToInvite(string message)
     {
+        _gameSession.Stop();
         _polling?.Cancel();
         _roomWaiting = false;
         _matchActive = false;
@@ -557,7 +557,7 @@ public partial class OnlineMatchWindow : Window
         var dialog = new OpenFileDialog
         {
             Title = "Escolha sua foto de perfil",
-            Filter = "Imagens|*.png;*.jpg;*.jpeg;*.webp",
+            Filter = "Imagens PNG/JPEG|*.png;*.jpg;*.jpeg",
             Multiselect = false
         };
         if (dialog.ShowDialog(this) != true) return;
@@ -572,8 +572,7 @@ public partial class OnlineMatchWindow : Window
             {
                 ".png" => "image/png",
                 ".jpg" or ".jpeg" => "image/jpeg",
-                ".webp" => "image/webp",
-                _ => throw new InvalidOperationException("Formato de imagem não suportado.")
+                _ => throw new InvalidOperationException("Formato de imagem não suportado. Use PNG ou JPEG.")
             };
             var data = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
             var updated = await _api.PostAsync("/v1/profile", new JsonObject { ["avatar_data"] = data });
