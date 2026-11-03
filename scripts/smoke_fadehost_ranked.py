@@ -51,7 +51,7 @@ def main():
         raise SystemExit("Refusing non-FadeHost host; set ALLOW_NON_FADEHOST=1 only for an intentional alternate target")
 
     status, health = request(base, "GET", "/health")
-    require(status == 200, f"health returned HTTP {status}")
+    require(status == 200, f"health returned HTTP {status}; response={str(health)[:1200]}")
     require(health == {"ok": True, "service": "revival-ranked", "version": "0.8.1"},
             f"unexpected health payload: {health}")
     print("PASS health/version 0.8.1")
