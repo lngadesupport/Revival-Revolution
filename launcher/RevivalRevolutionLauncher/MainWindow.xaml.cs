@@ -630,13 +630,13 @@ public partial class MainWindow : Window
     private async void PrivateMatch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("private");
-        FooterStatus.Text = "ONLINE — abrindo matchmaking.";
-        Log("Central Online aberta.");
+        FooterStatus.Text = "PRIVATE MATCH — abrindo salas por código.";
+        Log("Central Private Match aberta.");
         var distributionRoot = _distributionRoot ?? _distributionLocator.Find(_root, _gameFolder);
         var python = _python.FindRuntime(_root);
         if (string.IsNullOrWhiteSpace(_gameFolder) || distributionRoot is null)
         {
-            MessageBox.Show(this, "Configure a pasta do jogo e mantenha os scripts/DLLs da distribuição junto ao launcher antes de abrir o ONLINE.",
+            MessageBox.Show(this, "Configure a pasta do jogo e mantenha os scripts/DLLs da distribuição junto ao launcher antes de abrir o PRIVATE MATCH.",
                 "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -644,7 +644,7 @@ public partial class MainWindow : Window
         {
             try
             {
-                FooterStatus.Text = "Preparando runtime Python para o ONLINE...";
+                FooterStatus.Text = "Preparando runtime Python para o PRIVATE MATCH...";
                 python = await _python.InstallAsync(_root, CreateProgress(), CancellationToken.None);
             }
             catch (Exception ex)
