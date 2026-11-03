@@ -102,6 +102,14 @@ public sealed class OnlineGameSessionService : IDisposable
             !Directory.Exists(Path.Combine(_gameFolder, "ufo_Data", "Managed")))
             throw new InvalidOperationException("A pasta do jogo não contém ufo.exe e ufo_Data\\Managed.");
 
+        var managed = Path.Combine(_gameFolder, "ufo_Data", "Managed");
+        foreach (var assembly in new[] { "Assembly-CSharp.dll", "UnityEngine.CoreModule.dll" })
+        {
+            var assemblyPath = Path.Combine(managed, assembly);
+            if (!File.Exists(assemblyPath) || new FileInfo(assemblyPath).Length == 0)
+                throw new FileNotFoundException($"A instalação do jogo está incompleta: {assembly} ausente ou vazio em ufo_Data\\Managed.", assemblyPath);
+        }
+
         var required = new[]
         {
             "offline_launcher.py", "inject_offline.py", "inject_overlay.py",
