@@ -274,5 +274,15 @@ class RankedApiTests(unittest.TestCase):
         status, _ = self.request("POST", "/v1/rooms/join", {"code": "123"}, guest["token"])
         self.assertEqual(status, 400)
 
+
+    def test_private_room_code_attempts_are_rate_limited_per_account(self):
+        player = self.register("ROOM-RATE-LIMIT")
+        for _ in range(20):
+            status, _ = self.request("POST", "/v1/rooms/join", {"code": "ZZZZZZ"}, player["token"])
+            self.assertEqual(status, 400)
+        status, body = self.request("POST", "/v1/rooms/join", {"code": "ZZZZZZ"}, player["token"])
+        self.assertEqual(status, 400)
+        self.assertIn("too many", body["message"])
+
 if __name__ == "__main__":
     unittest.main()
