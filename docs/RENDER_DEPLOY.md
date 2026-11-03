@@ -6,6 +6,7 @@ O repositório contém um Blueprint em `render.yaml` para criar o serviço web
 ## O que o Blueprint configura
 
 - Runtime Python 3.12, sem dependências externas.
+- Região Virginia como ponto inicial para reduzir a distância aos testadores no Brasil; pode ser alterada se o grupo de teste estiver em outra região.
 - Health check em `/health`.
 - Bind em `0.0.0.0` usando a porta `PORT` fornecida pelo Render.
 - SQLite em `/var/data/ranked.sqlite3`.
