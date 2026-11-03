@@ -9,126 +9,86 @@
         <SolidColorBrush x:Key="Panel" Color="#B00A0B18"/>
         <SolidColorBrush x:Key="Muted" Color="#C5C4D2"/>
         <Style TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#76202A40"/>
-            <Setter Property="BorderBrush" Value="#66FFFFFF"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="16,12"/>
-            <Setter Property="Margin" Value="0,5"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="#76202A40"/>
+            <Setter Property="BorderBrush" Value="#66FFFFFF"/><Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,12"/><Setter Property="Margin" Value="0,5"/>
+            <Setter Property="FontWeight" Value="Bold"/><Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#7F080A13"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="11,9"/>
-            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="Background" Value="#7F080A13"/><Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#55FFFFFF"/><Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="11,9"/><Setter Property="CaretBrush" Value="White"/>
             <Setter Property="FontSize" Value="13"/>
         </Style>
     </Window.Resources>
     <Grid Margin="28">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel>
             <TextBlock Text="REVIVAL REVOLUTION / ONLINE" Foreground="#FFE04A58" FontSize="11" FontWeight="Bold"/>
             <TextBlock Text="MATCHMAKING 1v1" FontSize="36" FontWeight="Black" Margin="0,5,0,3"/>
-            <TextBlock Text="Entre na fila, encontre um adversário e acompanhe a atribuição da partida."
-                       Foreground="{StaticResource Muted}" FontSize="13"/>
+            <TextBlock Text="Entre na fila, encontre um adversário e acompanhe a atribuição da partida." Foreground="{StaticResource Muted}" FontSize="13"/>
         </StackPanel>
-        <Border Grid.Row="1" Background="{StaticResource Panel}" BorderBrush="#44FFFFFF"
-                BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,20,0,16">
-            <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
+        <Border Grid.Row="1" Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,20,0,16">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,18,0">
-                    <TextBlock Text="ENDEREÇO DA API RANKED (HTTPS)" FontSize="10" FontWeight="Bold" Foreground="#C5C4D2"/>
+                    <TextBlock Text="SERVIDOR RANKED • IP DA RADMIN VPN (26.x.x.x)" FontSize="10" FontWeight="Bold" Foreground="#C5C4D2"/>
                     <TextBox x:Name="ApiUrlBox" Margin="0,6,0,10" Text=""/>
+                    <TextBlock Text="Exemplo: http://26.XX.XX.XX:8765" FontSize="10" Foreground="#C5C4D2" Margin="0,0,0,8"/>
                     <TextBlock Text="NICKNAME" FontSize="10" FontWeight="Bold" Foreground="#C5C4D2"/>
                     <TextBox x:Name="NicknameBox" Margin="0,6,0,0" MaxLength="32"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <Button x:Name="ConnectButton" Content="CONECTAR / CRIAR CONTA" Click="Connect_Click"/>
-                    <TextBlock x:Name="ProfileText" Text="Conta não conectada" Foreground="#C5C4D2"
-                               TextWrapping="Wrap" FontSize="11" Margin="2,7,2,0"/>
+                    <TextBlock x:Name="ProfileText" Text="Conta não conectada" Foreground="#C5C4D2" TextWrapping="Wrap" FontSize="11" Margin="2,7,2,0"/>
                 </StackPanel>
             </Grid>
         </Border>
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="0.9*"/></Grid.ColumnDefinitions>
-            <Border Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1"
-                    CornerRadius="12" Padding="20" Margin="0,0,10,0">
+            <Border Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,10,0">
                 <StackPanel>
                     <TextBlock Text="MODALIDADES ONLINE" FontSize="12" FontWeight="Bold" Foreground="#FFE04A58"/>
                     <TabControl Margin="0,12,0,0" Background="#14000000" Foreground="White">
-                        <TabItem Header="ALEATÓRIO">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="Fila regional" FontSize="23" FontWeight="Black" Margin="0,8,0,2"/>
-                                <TextBlock Text="Região: South America (sa-east)" Foreground="#C5C4D2" FontSize="12"/>
-                                <Border Background="#66161A2A" CornerRadius="8" Padding="14" Margin="0,18,0,12">
-                                    <StackPanel>
-                                        <TextBlock x:Name="QueueStateText" Text="Pronto para buscar" FontSize="18" FontWeight="Bold"/>
-                                        <TextBlock x:Name="QueueDetailText" Text="Conecte sua conta para habilitar a fila."
-                                                   Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
-                                    </StackPanel>
-                                </Border>
-                                <Button x:Name="SearchButton" Content="BUSCAR ADVERSÁRIO" Click="Search_Click" IsEnabled="False"
-                                        Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="16,14" FontSize="16"
-                                        HorizontalContentAlignment="Center"/>
-                                <Button x:Name="CancelButton" Content="CANCELAR BUSCA" Click="Cancel_Click" IsEnabled="False"
-                                        HorizontalContentAlignment="Center"/>
-                            </StackPanel>
-                        </TabItem>
-                        <TabItem Header="POR CÓDIGO">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="Partida privada" FontSize="23" FontWeight="Black" Margin="0,8,0,2"/>
-                                <TextBlock Text="Crie uma sala e compartilhe o código de 6 caracteres, ou entre usando o código de outro jogador."
-                                           Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                <Button x:Name="CreateRoomButton" Content="CRIAR SALA E GERAR CÓDIGO" Click="CreateRoom_Click"
-                                        IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
-                                <TextBlock Text="SEU CÓDIGO" Foreground="#C5C4D2" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"/>
-                                <TextBox x:Name="RoomCodeDisplayBox" IsReadOnly="True" FontSize="22" FontWeight="Bold"
-                                         HorizontalContentAlignment="Center" Text="------"/>
-                                <Button x:Name="CopyRoomCodeButton" Content="COPIAR CÓDIGO" Click="CopyRoomCode_Click" IsEnabled="False"/>
-                                <TextBlock x:Name="RoomStateText" Text="Nenhuma sala criada." Foreground="#C5C4D2"
-                                           FontSize="11" TextWrapping="Wrap" Margin="0,5,0,6"/>
-                                <Button x:Name="CancelRoomButton" Content="CANCELAR SALA" Click="CancelRoom_Click" IsEnabled="False"/>
-                                <TextBlock Text="ENTRAR EM UMA SALA" Foreground="#C5C4D2" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"/>
-                                <TextBox x:Name="RoomCodeBox" MaxLength="8" CharacterCasing="Upper" HorizontalContentAlignment="Center"
-                                         FontSize="18" TextAlignment="Center"/>
-                                <Button x:Name="JoinRoomButton" Content="ENTRAR COM CÓDIGO" Click="JoinRoom_Click" IsEnabled="False"/>
-                            </StackPanel>
-                        </TabItem>
+                        <TabItem Header="ALEATÓRIO"><StackPanel Margin="10">
+                            <TextBlock Text="Fila regional" FontSize="23" FontWeight="Black" Margin="0,8,0,2"/>
+                            <TextBlock Text="Região: Radmin VPN / South America" Foreground="#C5C4D2" FontSize="12"/>
+                            <Border Background="#66161A2A" CornerRadius="8" Padding="14" Margin="0,18,0,12"><StackPanel>
+                                <TextBlock x:Name="QueueStateText" Text="Pronto para buscar" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock x:Name="QueueDetailText" Text="Conecte sua conta para habilitar a fila." Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                            </StackPanel></Border>
+                            <Button x:Name="SearchButton" Content="BUSCAR ADVERSÁRIO" Click="Search_Click" IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="16,14" FontSize="16" HorizontalContentAlignment="Center"/>
+                            <Button x:Name="CancelButton" Content="CANCELAR BUSCA" Click="Cancel_Click" IsEnabled="False" HorizontalContentAlignment="Center"/>
+                        </StackPanel></TabItem>
+                        <TabItem Header="POR CÓDIGO"><StackPanel Margin="10">
+                            <TextBlock Text="Partida privada" FontSize="23" FontWeight="Black" Margin="0,8,0,2"/>
+                            <TextBlock Text="Crie uma sala e compartilhe o código de 6 caracteres, ou entre usando o código de outro jogador." Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                            <Button x:Name="CreateRoomButton" Content="CRIAR SALA E GERAR CÓDIGO" Click="CreateRoom_Click" IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
+                            <TextBlock Text="SEU CÓDIGO" Foreground="#C5C4D2" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"/>
+                            <TextBox x:Name="RoomCodeDisplayBox" IsReadOnly="True" FontSize="22" FontWeight="Bold" HorizontalContentAlignment="Center" Text="------"/>
+                            <Button x:Name="CopyRoomCodeButton" Content="COPIAR CÓDIGO" Click="CopyRoomCode_Click" IsEnabled="False"/>
+                            <TextBlock x:Name="RoomStateText" Text="Nenhuma sala criada." Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,6"/>
+                            <Button x:Name="CancelRoomButton" Content="CANCELAR SALA" Click="CancelRoom_Click" IsEnabled="False"/>
+                            <TextBlock Text="ENTRAR EM UMA SALA" Foreground="#C5C4D2" FontSize="10" FontWeight="Bold" Margin="0,12,0,4"/>
+                            <TextBox x:Name="RoomCodeBox" MaxLength="8" CharacterCasing="Upper" HorizontalContentAlignment="Center" FontSize="18" TextAlignment="Center"/>
+                            <Button x:Name="JoinRoomButton" Content="ENTRAR COM CÓDIGO" Click="JoinRoom_Click" IsEnabled="False"/>
+                        </StackPanel></TabItem>
                     </TabControl>
                 </StackPanel>
             </Border>
-            <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1"
-                    CornerRadius="12" Padding="20" Margin="10,0,0,0">
+            <Border Grid.Column="1" Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="12" Padding="20" Margin="10,0,0,0">
                 <StackPanel>
                     <TextBlock Text="PARTIDA ATRIBUÍDA" FontSize="12" FontWeight="Bold" Foreground="#FFE04A58"/>
-                    <TextBlock x:Name="MatchTitleText" Text="Aguardando adversário" FontSize="22"
-                               FontWeight="Black" Margin="0,8,0,12" TextWrapping="Wrap"/>
-                    <TextBlock x:Name="MatchDetailText"
-                               Text="Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui."
-                               Foreground="#C5C4D2" FontSize="12" TextWrapping="Wrap"/>
-                    <TextBlock x:Name="MatchStateText" Text="Nenhuma partida atribuída."
-                               Foreground="#E2DCE5" FontSize="11" TextWrapping="Wrap" Margin="0,14,0,6"/>
-                    <Button x:Name="AcceptMatchButton" Content="ACEITAR PARTIDA" Click="AcceptMatch_Click"
-                            IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
-                    <Button x:Name="DeclineMatchButton" Content="RECUSAR PARTIDA" Click="DeclineMatch_Click"
-                            IsEnabled="False"/>
+                    <TextBlock x:Name="MatchTitleText" Text="Aguardando adversário" FontSize="22" FontWeight="Black" Margin="0,8,0,12" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="MatchDetailText" Text="Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui." Foreground="#C5C4D2" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="MatchStateText" Text="Nenhuma partida atribuída." Foreground="#E2DCE5" FontSize="11" TextWrapping="Wrap" Margin="0,14,0,6"/>
+                    <Button x:Name="AcceptMatchButton" Content="ACEITAR PARTIDA" Click="AcceptMatch_Click" IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
+                    <Button x:Name="DeclineMatchButton" Content="RECUSAR PARTIDA" Click="DeclineMatch_Click" IsEnabled="False"/>
                     <Border Background="#55202A40" CornerRadius="8" Padding="12" Margin="0,18,0,0">
-                        <TextBlock Text="A atribuição da fila já está integrada. A abertura automática da luta aguarda ticket de sessão e integração segura com a bridge; esta versão não inicia uma partida P2P por conta própria."
-                                   Foreground="#E2DCE5" FontSize="11" TextWrapping="Wrap"/>
+                        <TextBlock Text="A fila e as salas usam a API pela rede privada Radmin. Após aceitar, a conexão do jogo ainda exige iniciar a sessão P2P direta com os IPs Radmin dos dois PCs." Foreground="#E2DCE5" FontSize="11" TextWrapping="Wrap"/>
                     </Border>
                 </StackPanel>
             </Border>
         </Grid>
-        <TextBlock x:Name="StatusText" Grid.Row="3" Text="Configure o endereço HTTPS do servidor Ranked para começar."
-                   Foreground="#D0CED8" FontSize="11" Margin="2,16,2,0" TextWrapping="Wrap"/>
+        <TextBlock x:Name="StatusText" Grid.Row="3" Text="Conecte-se à API no IP Radmin do computador anfitrião." Foreground="#D0CED8" FontSize="11" Margin="2,16,2,0" TextWrapping="Wrap"/>
     </Grid>
 </Window>
