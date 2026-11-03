@@ -117,7 +117,11 @@ public sealed class OnlineGameSessionService : IDisposable
             "live_fighter.py", "autopunch_transport.py",
             "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll"
         };
-        var missing = required.Where(name => !File.Exists(Path.Combine(_distributionRoot, name))).ToArray();
+        var missing = required.Where(name =>
+        {
+            var path = Path.Combine(_distributionRoot, name);
+            return !File.Exists(path) || (name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && new FileInfo(path).Length == 0);
+        }).ToArray();
         if (missing.Length > 0)
             throw new FileNotFoundException("Distribuição ONLINE incompleta: " + string.Join(", ", missing));
 
