@@ -36,7 +36,8 @@ public partial class OnlineMatchWindow : Window
             if (string.IsNullOrWhiteSpace(_token)) return;
             _api.Configure(endpoint, _token);
             ApplyProfile(await _api.GetAsync("/v1/me"));
-            StatusText.Text = "Conta autenticada. Escolha uma modalidade de matchmaking.";
+            if (!await RestoreActiveMatchAsync())
+                StatusText.Text = "Conta autenticada. Escolha uma modalidade de matchmaking.";
         }
         catch (Exception ex)
         {
@@ -74,7 +75,8 @@ public partial class OnlineMatchWindow : Window
             else
             {
                 ApplyProfile(await _api.GetAsync("/v1/me"));
-                StatusText.Text = "Sessão restaurada com segurança.";
+                if (!await RestoreActiveMatchAsync())
+                    StatusText.Text = "Sessão restaurada com segurança.";
             }
         }
         catch (Exception ex)
@@ -84,6 +86,14 @@ public partial class OnlineMatchWindow : Window
             SetModeButtons(false);
         }
         finally { ConnectButton.IsEnabled = true; }
+    }
+
+    private async Task<bool> RestoreActiveMatchAsync()
+    {
+        var result = await _api.GetAsync("/v1/match");
+        if (result["match"] is not JsonObject match) return false;
+        ShowMatch(match);
+        return true;
     }
 
     private void ApplyProfile(JsonNode? profile)
