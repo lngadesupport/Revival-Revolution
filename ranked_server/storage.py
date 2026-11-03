@@ -231,7 +231,8 @@ class RankedStore:
         ).fetchone()
         return {
             "match_id": row["match_id"], "status": row["status"], "region": row["region"],
-            "player_slot": 0 if own else 1, "opponent": dict(opponent),
+            "player_slot": 0 if own else 1,
+            "opponent": {"player_id": opponent_id, **dict(opponent)},
             "created_at": row["created_at"],
             "expires_at": row["expires_at"],
             "accepted": bool(row["accepted_one"] if own else row["accepted_two"]),
