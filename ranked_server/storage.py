@@ -229,6 +229,7 @@ class RankedStore:
     @staticmethod
     def _expire_matches(db: sqlite3.Connection, now: float) -> None:
         db.execute("UPDATE matches SET status='expired' WHERE status IN ('assigned','ready') AND expires_at<=?", (now,))
+        db.execute("UPDATE private_rooms SET status='expired' WHERE status='matched' AND match_id IN (SELECT match_id FROM matches WHERE status='expired')")
 
     def accept_match(self, player_id: str) -> dict:
         now = self.clock()
@@ -251,6 +252,7 @@ class RankedStore:
             row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
             if row is None: raise ValueError("no active match to decline")
             db.execute("UPDATE matches SET status='declined' WHERE match_id=?", (row["match_id"],))
+            db.execute("UPDATE private_rooms SET status='declined' WHERE match_id=?", (row["match_id"],))
             return {"match_id": row["match_id"], "status": "declined"}
 
     def confirm_match_finished(self, player_id: str) -> dict:
@@ -265,7 +267,9 @@ class RankedStore:
             db.execute(f"UPDATE matches SET {column}=1 WHERE match_id=?", (row["match_id"],))
             updated = db.execute("SELECT * FROM matches WHERE match_id=?", (row["match_id"],)).fetchone()
             finished = bool(updated["completed_one"] and updated["completed_two"])
-            if finished: db.execute("UPDATE matches SET status='completed' WHERE match_id=?", (row["match_id"],))
+            if finished:
+                db.execute("UPDATE matches SET status='completed' WHERE match_id=?", (row["match_id"],))
+                db.execute("UPDATE private_rooms SET status='completed' WHERE match_id=?", (row["match_id"],))
             return {"match_id": row["match_id"], "status": "completed" if finished else "awaiting_opponent_confirmation", "opponent_confirmed": bool(updated[opponent_column]), "rating_changed": False}
 
     def _match_queued_in_region(
