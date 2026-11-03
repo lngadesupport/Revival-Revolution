@@ -18,7 +18,7 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
   SHA-256 por arquivo, com reparo seletivo de arquivos ausentes/divergentes,
   staging, backup e rollback durante a aplicação.
 - Central ONLINE com matchmaking aleatório e salas privadas por código,
-  usando API Ranked e token no Gerenciador de Credenciais do Windows.
+  usando a API Ranked e token no Gerenciador de Credenciais do Windows.
 - Instalação/reparo automático de pacotes do jogo permanece bloqueado até
   autenticação dos ZIPs por hashes confiáveis publicados em canal independente.
 
@@ -37,6 +37,20 @@ Publicação self-contained:
 dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
 ```
 
+## Hospedagem Ranked pela Radmin VPN
+
+A API Ranked pode ser executada no PC anfitrião usando
+`scripts/start-radmin-ranked-host.ps1`. O processo vincula o servidor apenas
+ao IPv4 Radmin local, mantém o SQLite em
+`%LOCALAPPDATA%\RevivalRevolution\RankedServer\ranked.sqlite3` e cria uma
+regra de firewall TCP 8765 limitada a origens Radmin (26.0.0.0/8). Os outros
+launchers usam `http://IP-RADMIN-DO-ANFITRIAO:8765`. O cliente permite HTTP
+remoto apenas para IPv4 26.x.x.x; HTTP público continua bloqueado.
+
+Consulte [docs/RADMIN_VPN_SETUP.md](../../docs/RADMIN_VPN_SETUP.md) para
+instalação, teste de conectividade e execução do peer UDP direto. O anfitrião
+precisa permanecer ligado e conectado. Não abra portas no roteador.
+
 ## Segurança e distribuição
 
 - O manifesto de atualização aponta para GitHub Releases e o pacote ZIP é
@@ -54,11 +68,10 @@ dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.cs
 
 A central ONLINE atribui partidas no servidor e integra aceite/recusa bilateral,
 acompanha a confirmação do adversário e restaura uma atribuição ativa ao
-reconectar a conta. Ainda não inicia P2P nem abre a luta automaticamente. O
-transporte experimental existente depende de bridge, scripts, AutoPunch/STUN e
-validação em duas máquinas. A API Render hospeda HTTP/HTTPS; o relay UDP precisa
-de infraestrutura compatível separada. Não anunciar Ranked público nem
-aplicação de ELO nesta versão.
+reconectar a conta. A configuração Radmin permite API local e transporte UDP
+direto pela VPN sem AutoPunch/STUN/relay externo. A janela ONLINE ainda não
+inicia o processo P2P automaticamente nem abre a luta sozinha. Não anunciar
+Ranked público nem aplicação de ELO nesta versão.
 
 A interface ONLINE é uma janela WPF dedicada aberta pelo item de navegação;
 ainda não é uma aba embutida na janela principal. Recursos sociais de perfil,
