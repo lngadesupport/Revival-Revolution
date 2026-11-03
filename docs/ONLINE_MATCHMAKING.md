@@ -7,16 +7,18 @@ A navegação **ONLINE** abre uma janela WPF dedicada do launcher. Ela ainda nã
 
 A janela oferece duas modalidades:
 
-1. **Aleatório:** entra na fila regional `sa-east`, acompanha a posição e a
-   atribuição, e permite cancelar a busca.
+1. **Aleatório:** entra na fila regional, acompanha a posição e a atribuição,
+   e permite cancelar a busca.
 2. **Por código:** cria uma sala com código de seis caracteres, permite
    compartilhar o código, consultar a entrada do convidado e cancelar uma sala
    ainda aberta.
 
 O token bearer fica no Gerenciador de Credenciais do Windows, associado ao
 host da API. O endereço da API fica em
-`%LOCALAPPDATA%/RevivalRevolution/ranked-endpoint.txt`. HTTP é permitido
-somente para localhost em desenvolvimento; endpoints remotos exigem HTTPS.
+`%LOCALAPPDATA%/RevivalRevolution/ranked-endpoint.txt`. HTTPS é aceito; HTTP
+remoto só é aceito para IPv4 Radmin VPN 26.x.x.x. HTTP localhost continua
+permitido para desenvolvimento. Consulte [RADMIN_VPN_SETUP.md](RADMIN_VPN_SETUP.md)
+para iniciar a API local no PC anfitrião.
 
 ## API usada
 
@@ -38,37 +40,36 @@ mutuamente exclusivas para cada jogador.
 ## Estado honesto da partida
 
 A API **atribui** uma partida e entrega os dados do adversário. A janela WPF
-agora integra aceite e recusa: cada jogador confirma individualmente, acompanha
-o aceite do adversário, pode cancelar a atribuição pronta e recupera uma partida
-ativa ao restaurar a conta. A atribuição expira em 90 segundos sem aceite dos
-dois jogadores; após ambos aceitarem, fica pronta por até duas horas.
+integra aceite e recusa: cada jogador confirma individualmente, acompanha
+o aceite do adversário, pode cancelar a atribuição pronta e recupera uma
+partida ativa ao restaurar a conta.
 
 Isso ainda não significa que a conexão UDP foi estabelecida, que a bridge
-aceitou a sessão, que a seleção sincronizou ou que a luta começou. O cliente
-não envia confirmação de encerramento nem aplica resultado/rating. A janela
-deve continuar deixando essa limitação explícita.
+aceitou a sessão, que a seleção sincronizou ou que a luta começou. A fila não
+inicia a luta automaticamente e ainda não aplica resultado/rating.
 
-O fluxo multiplayer já existente inclui `peer_session.py`,
+## Transporte direto pela Radmin VPN
+
+O transporte experimental existente inclui `peer_session.py`,
 `autopunch_transport.py`, `selection_sync.py`, `live_fighter.py`,
-`peer_native.py` e `MetalNetplayBridgeV8.dll`. A base 0.8.1 mantém esses
-componentes e adiciona testes automatizados para o formato de connection code.
-O antigo `fighter_input_test.py` não está versionado neste repositório; sua
-ausência não deve impedir a importação do módulo principal, mas a função
-diagnóstica correspondente não estará disponível.
+`peer_native.py` e `MetalNetplayBridgeV8.dll`. Para operar somente pela
+Radmin, use `peer_session.py` em modo direto com o IPv4 Radmin local no
+parâmetro `--bind` e `--advertise`, e não use `--autopunch`. O modo
+AutoPunch usa STUN e relay externo e não faz parte desta configuração.
+
+A criação do connection code e a entrada do convidado ainda são etapas
+manuais; a janela ONLINE não inicia o processo peer nem emite ticket de
+sessão. A bridge precisa estar disponível e o jogo aberto nos dois PCs.
 
 ## Próximas integrações obrigatórias
 
-1. Integrar confirmação de encerramento após a bridge sinalizar fim real da
-   luta; implementar lease de sessão e reconexão segura no cliente.
-2. Emitir ticket efêmero, de uso único, vinculado a match, jogadores, slots,
-   protocolo/build e expiração.
-3. Adaptar `peer_session.py` para receber a autorização do ticket sem expor
-   connection code reutilizável.
-4. Definir o serviço de rendezvous/relay UDP. O Render hospeda a API HTTP; ele
-   não substitui automaticamente um serviço UDP de transporte.
-5. Conectar o launcher ao processo técnico enquanto `ufo.exe` já está aberto,
-   acompanhar estados da bridge e só anunciar início quando a bridge confirmar.
-6. Testar duas máquinas em redes distintas, incluindo timeout, desconexão,
-   reentrada e encerramento.
+1. Integrar a janela ONLINE ao processo técnico de peer session e à bridge,
+   usando os IPs Radmin recebidos e sem depender de STUN/relay.
+2. Emitir autorização/ticket efêmero de uso único, vinculado a match,
+   jogadores, slots, protocolo/build e expiração.
+3. Integrar confirmação de encerramento após a bridge sinalizar fim real da
+   luta; implementar lease de sessão e reconexão segura.
+4. Testar duas máquinas conectadas pela mesma rede Radmin, incluindo timeout,
+   desconexão, reentrada e encerramento.
 
 Não aplicar rating competitivo até existir adjudicação confiável do resultado.
