@@ -98,6 +98,9 @@ class RankedStore:
                 if name not in columns:
                     db.execute(f"ALTER TABLE matches ADD COLUMN {name} {declaration}")
             db.execute("UPDATE matches SET expires_at=created_at+90 WHERE expires_at IS NULL")
+            room_columns = {row["name"] for row in db.execute("PRAGMA table_info(private_rooms)")}
+            if "connection_code" not in room_columns:
+                db.execute("ALTER TABLE private_rooms ADD COLUMN connection_code TEXT")
 
     @staticmethod
     def _token_hash(token: str) -> str:
@@ -230,6 +233,7 @@ class RankedStore:
             "opponent_accepted": bool(row["accepted_two"] if own else row["accepted_one"]),
             "room_role": ("host" if room["host_player"] == player_id else "guest") if room else None,
             "room_status": room["status"] if room else None,
+            "connection_code": room["connection_code"] if room else None,
         }
 
     @staticmethod
@@ -543,6 +547,31 @@ class RankedStore:
                     (room["room_code"],),
                 )
             return {"match_id": room["match_id"], "status": "starting"}
+
+    def publish_private_room_code(self, player_id: str, code: str) -> dict:
+        """Store the host's authenticated MR1 endpoint code for this private match."""
+        if not isinstance(code, str):
+            raise ValueError("connection code must be text")
+        code = code.strip().upper()
+        if len(code) != 47 or not code.startswith("MR1-") or any(
+            ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" for ch in code[4:]
+        ):
+            raise ValueError("invalid Radmin MR1 connection code")
+        with self.transaction() as db:
+            room = db.execute(
+                "SELECT * FROM private_rooms WHERE host_player=? AND status='starting' "
+                "ORDER BY created_at DESC LIMIT 1",
+                (player_id,),
+            ).fetchone()
+            if room is None or not room["guest_player"] or not room["match_id"]:
+                raise ValueError("no started private room is available")
+            if room["connection_code"] and room["connection_code"] != code:
+                raise ValueError("a connection code has already been published for this room")
+            db.execute(
+                "UPDATE private_rooms SET connection_code=? WHERE room_code=? AND status='starting'",
+                (code, room["room_code"]),
+            )
+            return {"match_id": room["match_id"], "status": "starting", "connection_code_published": True}
 
     def cancel_private_room(self, player_id: str) -> bool:
         with self.transaction() as db:
