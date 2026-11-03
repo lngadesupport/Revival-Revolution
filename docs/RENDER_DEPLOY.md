@@ -33,8 +33,15 @@ Windows.
 
 ## Limite de função do Render
 
-O Render deste Blueprint hospeda a API HTTP/HTTPS e o banco SQLite. Isso não
-cria um relay UDP nem garante conectividade P2P. O código AutoPunch atual
+O Render Web Service deste Blueprint recebe tráfego público pela porta HTTP
+configurada em `PORT`, com TLS terminado na borda. Um Private Service pode
+usar outros protocolos, mas só recebe conexões pela rede privada Render; não
+serve como relay UDP público para os jogadores. Consulte a documentação oficial:
+[Web Services](https://render.com/docs/web-services) e
+[Private Services](https://render.com/docs/private-services).
+
+Portanto, o Blueprint hospeda a API HTTP/HTTPS e o SQLite, mas não cria um
+relay UDP público nem garante conectividade P2P. O código AutoPunch atual
 consulta STUN e usa por padrão um relay externo configurável. Para controlar
 a infraestrutura multiplayer, precisaremos hospedar/operar um serviço UDP
 compatível em separado (por exemplo, numa VPS), ou escolher outra arquitetura
