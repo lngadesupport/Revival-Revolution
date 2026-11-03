@@ -31,7 +31,7 @@ class PeerConnectionCodeTests(unittest.TestCase):
         code = peer_session.encode_code("203.0.113.10", 27015, self.key)
         replacement = "A" if code[4] != "A" else "B"
         tampered = code[:4] + replacement + code[5:]
-        with self.assertRaises((ValueError, Exception)):
+        with self.assertRaises(ValueError):
             peer_session.decode_connection_code(tampered)
 
     def test_module_import_does_not_require_legacy_diagnostic_file(self):
