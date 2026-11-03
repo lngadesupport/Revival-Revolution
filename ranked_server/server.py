@@ -151,6 +151,12 @@ def make_handler(store: RankedStore):
                     return self._json(202, {"queued": True, "queue": store.queue_status(player_id)})
                 if path == "/v1/queue/leave":
                     return self._json(200, {"left": store.leave_queue(player_id)})
+                if path == "/v1/match/accept":
+                    return self._json(200, {"match": store.accept_match(player_id)})
+                if path == "/v1/match/decline":
+                    return self._json(200, store.decline_match(player_id))
+                if path == "/v1/match/finish":
+                    return self._json(200, store.confirm_match_finished(player_id))
                 if path == "/v1/rooms/create":
                     room = store.create_private_room(player_id, body.get("region", "sa-east"))
                     return self._json(201, {"room": room})
