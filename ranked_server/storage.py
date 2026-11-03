@@ -338,7 +338,7 @@ class RankedStore:
                 self._match_queued_in_region(db, queued["region"], now)
             row = db.execute("""
                 SELECT match_id FROM matches
-                WHERE status='assigned' AND (player_one=? OR player_two=?)
+                WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?)
                 ORDER BY created_at DESC LIMIT 1
             """, (player_id, player_id)).fetchone()
             return self._match_payload(db, row["match_id"], player_id) if row else None
@@ -472,7 +472,7 @@ class RankedStore:
             second = db.execute("SELECT rating FROM players WHERE player_id=?", (second_id,)).fetchone()
             match_id = str(uuid.uuid4())
             db.execute(
-                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
                 (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]),
                  room["region"], "assigned", now, now + 90),
             )
