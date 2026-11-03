@@ -95,7 +95,7 @@ class Session:
         self.root=pathlib.Path(root);self.root.mkdir(parents=True,exist_ok=True);self.slot=0 if mode=='host' else 1
         self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((bind,port));self.sock.setblocking(False)
         self.logical_port=self.sock.getsockname()[1];self.autopunch=False
-        self.selection=None;self.enable_selection=selection_sync;self.remote_selection=None
+        self.selection=None;self.enable_selection=selection_sync;self.remote_selection=None;self.skip_native_preflight=bool(skip_native_preflight)
         self.fighter_test=None;self.remote_fighter=None;self.live=None;self.remote_live=None
         self.remote_closed=False;self.setup_timeout=max(30,min(int(setup_timeout),900))
         self.peer=None;self.remote_nonce=None;self.nonce=secrets.token_hex(8);self.seq=0;self.seen=set();self.high=-1;self.last_received=None
