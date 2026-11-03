@@ -37,11 +37,15 @@ mutuamente exclusivas para cada jogador.
 
 ## Estado honesto da partida
 
-A API **atribui** uma partida e entrega os dados do adversário. O backend
-agora também persiste aceite bilateral, recusa, expiração e confirmação
-bilateral de encerramento. O cliente WPF ainda não está integrado a essas novas
-rotas. Nada disso significa que a conexão UDP foi estabelecida, que a bridge
-aceitou a sessão, que a seleção sincronizou ou que a luta começou. A janela
+A API **atribui** uma partida e entrega os dados do adversário. A janela WPF
+agora integra aceite e recusa: cada jogador confirma individualmente, acompanha
+o aceite do adversário, pode cancelar a atribuição pronta e recupera uma partida
+ativa ao restaurar a conta. A atribuição expira em 90 segundos sem aceite dos
+dois jogadores; após ambos aceitarem, fica pronta por até duas horas.
+
+Isso ainda não significa que a conexão UDP foi estabelecida, que a bridge
+aceitou a sessão, que a seleção sincronizou ou que a luta começou. O cliente
+não envia confirmação de encerramento nem aplica resultado/rating. A janela
 deve continuar deixando essa limitação explícita.
 
 O fluxo multiplayer já existente inclui `peer_session.py`,
@@ -54,8 +58,8 @@ diagnóstica correspondente não estará disponível.
 
 ## Próximas integrações obrigatórias
 
-1. Integrar a janela WPF às rotas de aceite/recusa/encerramento; implementar
-   cancelamento e recuperação de sessão/reconexão no cliente.
+1. Integrar confirmação de encerramento após a bridge sinalizar fim real da
+   luta; implementar lease de sessão e reconexão segura no cliente.
 2. Emitir ticket efêmero, de uso único, vinculado a match, jogadores, slots,
    protocolo/build e expiração.
 3. Adaptar `peer_session.py` para receber a autorização do ticket sem expor
