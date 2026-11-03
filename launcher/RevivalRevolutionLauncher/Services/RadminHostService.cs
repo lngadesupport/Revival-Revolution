@@ -134,9 +134,9 @@ public sealed class RadminHostService
                 <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
                 <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
                 <StartWhenAvailable>true</StartWhenAvailable>
-                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
                 <Enabled>true</Enabled>
                 <Hidden>true</Hidden>
+                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
               </Settings>
               <Actions Context="Author"><Exec><Command>{Xml(executable)}</Command><Arguments>{Xml(arguments)}</Arguments><WorkingDirectory>{Xml(root)}</WorkingDirectory></Exec></Actions>
             </Task>
