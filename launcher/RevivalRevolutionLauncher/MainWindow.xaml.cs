@@ -627,7 +627,7 @@ public partial class MainWindow : Window
 
     private void Home_Click(object sender, RoutedEventArgs e) => FooterStatus.Text = "Página inicial.";
 
-    private void PrivateMatch_Click(object sender, RoutedEventArgs e)
+    private async void PrivateMatch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("private");
         FooterStatus.Text = "ONLINE — abrindo matchmaking.";
@@ -642,9 +642,17 @@ public partial class MainWindow : Window
         }
         if (python is null)
         {
-            MessageBox.Show(this, "O runtime Python portátil ainda não está instalado. Inicie o modo offline uma vez para instalar o runtime e depois tente novamente.",
-                "Runtime necessário", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
+            try
+            {
+                FooterStatus.Text = "Preparando runtime Python para o ONLINE...";
+                python = await _python.InstallAsync(_root, CreateProgress(), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Não foi possível preparar o runtime Python: " + ex.Message,
+                    "Runtime necessário", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
         }
         _config.SaveGameFolder(_root, _gameFolder, distributionRoot);
         var window = new OnlineMatchWindow(distributionRoot, _gameFolder, python) { Owner = this };
