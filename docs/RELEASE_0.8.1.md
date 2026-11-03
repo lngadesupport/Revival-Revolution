@@ -32,9 +32,16 @@
 - Reparação de arquivos proprietários do jogo: continua bloqueada até que
   existam hashes confiáveis dos pacotes por canal independente.
 
+## Ajustes de preparação para Render
+
+- O Blueprint continua configurado para uma única instância web com disco persistente SQLite.
+- Foi adicionado `scripts/check_render_api.py` para validar a URL HTTPS atribuída pelo Render, o payload de saúde e a versão 0.8.1 sem criar contas ou alterar dados.
+- Corrigida a exclusividade de partidas: jogadores com partida `ready` também ficam impedidos de criar ou entrar em salas privadas.
+- Foram adicionados testes HTTP de integração para saúde, cadastro, autenticação e acesso sem token.
+
 ## Critérios mínimos antes da tag estável v0.8.1
 
-- [x] CI Python verde: 46 testes aprovados, incluindo matchmaking com expansão por polling, salas privadas e protocolo MR1/MR2.
+- [ ] CI Python atualizado: testes adicionais cobrem exclusividade entre partidas prontas e salas privadas, health check HTTP, cadastro/autenticação e rejeição de chamadas sem token. A execução desta revisão ainda precisa ficar verde.
 - [x] Build Windows x64, verificação do artefato publicado e smoke tests do reparo seletivo aprovados no CI.
 - [ ] Teste do launcher em Windows limpo.
 - [ ] Teste de runtime Python e atualização com SHA-256, staging e rollback.
@@ -42,7 +49,7 @@
 - [ ] Sessão P2P validada em dois PCs e redes distintas.
 - [ ] API implantada e monitorada; persistência e backup restauráveis.
 - [ ] Ticket de transporte e reconexão definidos e integrados.
-- [ ] Novos testes do ciclo de vida aprovados no CI; cliente Online integrado às rotas de aceite/recusa/encerramento.
+- [ ] Testes adicionais do ciclo de vida e da API HTTP aprovados no CI; cliente Online integrado às rotas de aceite/recusa/encerramento.
 - [ ] Nenhuma promoção para `main` ou publicação de tag sem aprovação explícita.
 
 ## Branch e segurança
