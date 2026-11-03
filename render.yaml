@@ -5,7 +5,7 @@ services:
     region: virginia
     branch: release/0.8.1-stabilization
     plan: 0.5c-512mb
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: commit
     buildCommand: python -m compileall -q ranked_server scripts && python -m unittest discover -s tests
     startCommand: python -m ranked_server --host 0.0.0.0 --port $PORT --database /var/data/ranked.sqlite3
     healthCheckPath: /health
