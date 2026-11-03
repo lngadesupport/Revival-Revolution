@@ -1,37 +1,63 @@
-# Integração Online do launcher
+# Online Matchmaking — versão 0.8.1
 
-## Primeira entrega
+## Interface atual
 
-A navegação ONLINE abre uma central WPF para o matchmaking 1v1. Ela usa a API
-Ranked existente:
+A navegação **ONLINE** abre uma janela WPF dedicada do launcher. Ela ainda não
+é uma página embutida na janela principal nem uma interface dentro do jogo.
 
-- POST /v1/register para criar a identidade na primeira conexão;
-- GET /v1/me para restaurar a conta;
-- POST /v1/queue/join para entrar na fila sa-east;
-- GET /v1/match e GET /v1/queue para acompanhar a atribuição;
-- POST /v1/queue/leave para cancelar.
+A janela oferece duas modalidades:
 
-O token bearer é armazenado no Gerenciador de Credenciais do Windows, associado
-ao host da API. O endereço da API fica em %LOCALAPPDATA%/RevivalRevolution.
-HTTP é aceito somente para localhost durante desenvolvimento; servidores
-remotos precisam de HTTPS.
+1. **Aleatório:** entra na fila regional `sa-east`, acompanha a posição e a
+   atribuição, e permite cancelar a busca.
+2. **Por código:** cria uma sala com código de seis caracteres, permite
+   compartilhar o código, consultar a entrada do convidado e cancelar uma sala
+   ainda aberta.
 
-## Limites explícitos desta etapa
+O token bearer fica no Gerenciador de Credenciais do Windows, associado ao
+host da API. O endereço da API fica em
+`%LOCALAPPDATA%/RevivalRevolution/ranked-endpoint.txt`. HTTP é permitido
+somente para localhost em desenvolvimento; endpoints remotos exigem HTTPS.
 
-O servidor atual é uma API de desenvolvimento e escuta em loopback por padrão.
-Ele ainda não tem aceitação de partida, ticket P2P ou validação autoritativa de
-resultado. A interface mostra a partida atribuída, mas não inicia a conexão nem
-abre a luta automaticamente. Isso será ligado após o endpoint de ticket e o
-protocolo de autorização da bridge serem implementados e testados em duas
-máquinas.
+## API usada
 
-## Segunda entrega — modalidades de matchmaking
+- `POST /v1/register` e `GET /v1/me` — identidade e restauração de sessão.
+- `POST /v1/queue/join`, `GET /v1/queue`, `GET /v1/match`,
+  `POST /v1/queue/leave` — matchmaking aleatório.
+- `POST /v1/rooms/create`, `GET /v1/rooms/current`,
+  `POST /v1/rooms/join`, `POST /v1/rooms/cancel` — salas privadas.
 
-A central ONLINE apresenta duas modalidades:
+Os códigos expiram em 15 minutos, são de uso único e têm limite de 20
+tentativas de entrada por minuto por conta. Fila aleatória e sala privada são
+mutuamente exclusivas para cada jogador.
 
-- **Aleatório:** mantém o fluxo de fila regional `/v1/queue/join`, com consulta periódica de `/v1/match` e `/v1/queue`.
-- **Por código:** o anfitrião chama `POST /v1/rooms/create`, compartilha o código de seis caracteres e acompanha `GET /v1/rooms/current`. O convidado informa o código em `POST /v1/rooms/join`. O código expira em 15 minutos, não pode ser reutilizado e a sala pode ser cancelada pelo anfitrião.
+## Estado honesto da partida
 
-O backend impede que o mesmo jogador permaneça na fila aleatória e crie/entre em sala privada simultaneamente. As salas e atribuições são persistidas no SQLite.
+A API atualmente **atribui** uma partida e entrega os dados do adversário. Isso
+não significa que a conexão UDP foi estabelecida, que a bridge aceitou a
+sessão, que a seleção sincronizou ou que a luta começou. A janela deixa essa
+limitação explícita.
 
-A atribuição de partida não equivale à conexão de jogo: emissão/validação de ticket, integração do ticket com a bridge e teste P2P entre duas máquinas continuam pendentes. O launcher não declara a luta iniciada.
+O fluxo multiplayer já existente inclui `peer_session.py`,
+`autopunch_transport.py`, `selection_sync.py`, `live_fighter.py`,
+`peer_native.py` e `MetalNetplayBridgeV8.dll`. A base 0.8.1 mantém esses
+componentes e adiciona testes automatizados para o formato de connection code.
+O antigo `fighter_input_test.py` não está versionado neste repositório; sua
+ausência não deve impedir a importação do módulo principal, mas a função
+diagnóstica correspondente não estará disponível.
+
+## Próximas integrações obrigatórias
+
+1. Implementar ciclo de vida da atribuição: aceite bilateral, timeout,
+   cancelamento seguro e reconexão.
+2. Emitir ticket efêmero, de uso único, vinculado a match, jogadores, slots,
+   protocolo/build e expiração.
+3. Adaptar `peer_session.py` para receber a autorização do ticket sem expor
+   connection code reutilizável.
+4. Definir o serviço de rendezvous/relay UDP. O Render hospeda a API HTTP; ele
+   não substitui automaticamente um serviço UDP de transporte.
+5. Conectar o launcher ao processo técnico enquanto `ufo.exe` já está aberto,
+   acompanhar estados da bridge e só anunciar início quando a bridge confirmar.
+6. Testar duas máquinas em redes distintas, incluindo timeout, desconexão,
+   reentrada e encerramento.
+
+Não aplicar rating competitivo até existir adjudicação confiável do resultado.
