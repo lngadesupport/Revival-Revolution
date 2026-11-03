@@ -74,7 +74,8 @@ jobs:
             "Assets/metal-revolution-background.jpg", "Assets/metal-revolution-logo.png",
             "offline_launcher.py", "inject_offline.py", "inject_overlay.py",
             "peer_session.py", "peer_native.py", "selection_sync.py", "live_fighter.py", "autopunch_transport.py",
-            "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll"
+            "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll",
+            "scripts/enable-radmin-peer-firewall.ps1"
           )) {
             $assetPath = Join-Path $publish $asset
             if (!(Test-Path $assetPath)) { throw "Required ONLINE runtime file missing from publish output: $asset" }
