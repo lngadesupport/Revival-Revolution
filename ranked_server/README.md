@@ -31,6 +31,8 @@ desenvolvimento diretamente à internet sem uma camada de produção apropriada.
 - `GET /v1/leaderboard?limit=100` — classificação pelo rating atual.
 - `POST /v1/queue/join`, `GET /v1/queue`, `POST /v1/queue/leave` — fila aleatória.
 - `GET /v1/match` — atribuição ativa do jogador; também reavalia a fila regional durante o polling para que a janela de rating avance sem depender da chegada de um terceiro jogador.
+- `POST /v1/match/accept|decline` — aceite bilateral ou recusa da atribuição. O aceite inicial expira em 90 segundos; após ambos aceitarem, a partida fica pronta por até duas horas.
+- `POST /v1/match/finish` — confirmação bilateral de encerramento, sem alterar rating. É apenas uma transição administrativa de estado, não uma prova de resultado nem de integridade do jogo.
 - `POST /v1/rooms/create` — cria código privado de seis caracteres, com validade de 15 minutos.
 - `POST /v1/rooms/join` — valida código, limita tentativas a 20 por minuto por conta e atribui a mesma partida aos dois jogadores.
 - `GET /v1/rooms/current` — estado da sala do anfitrião.
@@ -46,10 +48,8 @@ apresentada como interface social do launcher; a integração visual pretendida
 
 - O matchmaking aleatório e por código cria atribuições no banco; ainda não
   inicia uma sessão P2P.
-- Não há aceite bilateral, ticket de transporte, lease de reconexão nem
-  encerramento confiável da atribuição. Partidas permanecem em estado
-  `assigned`, portanto o jogador não deve receber a promessa de que poderá
-  jogar partidas consecutivas até o ciclo de partida ser concluído.
+- O aceite/recusa e o encerramento bilateral já possuem estados persistidos e expiração; ainda não há ticket de transporte, lease de reconexão ou recuperação após queda. O cliente ainda precisa integrar essas rotas antes de usar o fluxo completo.
+- A confirmação bilateral de encerramento é declaratória: não prova que a luta ocorreu nem qual foi o vencedor. Ela não altera rating.
 - O cliente atual de P2P usa connection code manual. A API Ranked ainda não
   negocia esse segredo nem autoriza o transporte.
 - `peer_session.py` agora pode ser importado e os códigos MR1/MR2 podem ser
