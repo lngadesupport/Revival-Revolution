@@ -12,6 +12,7 @@ public partial class OnlineMatchWindow : Window
     private readonly RankedCredentialStore _credentials = new();
     private readonly OnlineGameSessionService _gameSession;
     private bool _guestSessionStarted;
+    private bool _hostSessionActive;
     private CancellationTokenSource? _polling;
     private string? _token;
     private string? _playerId;
@@ -329,9 +330,10 @@ public partial class OnlineMatchWindow : Window
             _ = StartGuestSessionAsync(connectionCode);
         }
         StartRoomButton.Visibility = roomRole == "host" ? Visibility.Visible : Visibility.Collapsed;
-        StartRoomButton.IsEnabled = roomRole == "host" && roomStatus == "matched";
+        StartRoomButton.IsEnabled = roomRole == "host" &&
+            (roomStatus == "matched" || (roomStatus == "starting" && !_hostSessionActive && string.IsNullOrWhiteSpace(connectionCode)));
         if (roomRole == "host" && roomStatus == "starting")
-            StartRoomButton.Content = "AGUARDANDO CONVIDADO";
+            StartRoomButton.Content = string.IsNullOrWhiteSpace(connectionCode) ? "TENTAR NOVAMENTE" : "AGUARDANDO CONVIDADO";
         if (_matchStatus == "ready" && roomRole is "host" or "guest")
         {
             QueueStateText.Text = roomStatus == "starting" ? "INÍCIO AUTORIZADO" : "SALA COMPLETA";
@@ -428,6 +430,7 @@ public partial class OnlineMatchWindow : Window
     {
         if (!_matchActive || _matchStatus != "ready" || StartRoomButton.IsEnabled == false) return;
         StartRoomButton.IsEnabled = false;
+        _hostSessionActive = true;
         try
         {
             await _api.PostAsync("/v1/rooms/start", new JsonObject());
@@ -439,9 +442,14 @@ public partial class OnlineMatchWindow : Window
             StatusText.Text = "Código de conexão autenticado enviado ao convidado. Aguardando handshake UDP e sincronização.";
             StartRoomButton.Content = "AGUARDANDO CONVIDADO";
             StartMatchLifecyclePolling();
+            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9));
+            MatchStateText.Text = "Conexão Radmin estabelecida. A seleção sincronizada está abrindo nos dois PCs.";
+            StatusText.Text = "Handshake UDP autenticado e entrada VS confirmados. Escolham os personagens e confirmem Ready no jogo.";
         }
         catch (Exception ex)
         {
+            _hostSessionActive = false;
+            _gameSession.Stop();
             StartRoomButton.IsEnabled = true;
             StatusText.Text = "Não foi possível iniciar a sala: " + ex.Message;
         }
@@ -457,10 +465,11 @@ public partial class OnlineMatchWindow : Window
                 StatusText.Text = "Se aparecer a janela de configuração do Metal Revolution, pressione Play.";
             });
             await _gameSession.StartGuestAsync(connectionCode);
+            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9));
             await Dispatcher.InvokeAsync(() =>
             {
-                MatchStateText.Text = "Cliente P2P iniciado. Aguardando handshake e sincronização da seleção.";
-                StatusText.Text = "A sessão UDP foi iniciada. Acompanhe peer-status.json e peer-summary.txt na pasta da distribuição.";
+                MatchStateText.Text = "Conexão Radmin estabelecida. A seleção sincronizada está abrindo nos dois PCs.";
+                StatusText.Text = "Handshake UDP autenticado e entrada VS confirmados. Escolham os personagens e confirmem Ready no jogo.";
             });
         }
         catch (Exception ex)
@@ -516,6 +525,7 @@ public partial class OnlineMatchWindow : Window
         _activeMatchId = null;
         _matchStatus = null;
         _guestSessionStarted = false;
+        _hostSessionActive = false;
         StartRoomButton.Content = "INICIAR PARTIDA";
         MatchTitleText.Text = "Aguardando adversário";
         MatchDetailText.Text = "Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui.";
