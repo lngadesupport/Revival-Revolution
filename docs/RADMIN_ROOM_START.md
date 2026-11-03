@@ -38,12 +38,12 @@ The ONLINE bootstrap invokes `offline_launcher.py` to start/attach the game brid
 
 ## Important implementation boundary
 
-This change implements the server-side room transition and launcher UI signal only. It does **not** claim that a game session starts or that the two players are connected.
+The branch now wires the full launch sequence in code: the host start transition, MR1 key-code exchange, game bootstrap on both clients, direct Radmin UDP peer startup, authenticated handshake, and coordinated local VS readiness. This has passed code/build checks only; no real two-PC game session has been run in this environment, so live gameplay and bridge compatibility are not yet certified.
 
 The current peer runtime requires:
 - a running `ufo.exe` with the netplay bridge attached and `netplay-pid.txt` available;
 - the optional native synthetic preflight DLL is bypassed for this Radmin path; the authenticated direct UDP handshake is used as the transport preflight;
-- both clients to exchange a valid MR1 Radmin endpoint/key code and complete the authenticated UDP handshake.
+- both clients to exchange a valid MR1 Radmin endpoint/key code, complete the authenticated UDP handshake, and have the game bridge report VS readiness.
 
 The Windows launcher publish includes the three non-empty bridge/overlay DLLs present in the repository, plus the Python bootstrap, injector, peer session, selection, and live-fighter modules. The repository's root `Assembly-CSharp.dll` is zero bytes and is intentionally excluded; the game uses its own managed assembly from its installed `ufo_Data/Managed` directory. The Radmin path skips the optional `MetalGekko.dll` synthetic preflight, but the live game bridge and two-PC UDP/game flow still require real validation.
 
