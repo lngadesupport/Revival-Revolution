@@ -31,9 +31,9 @@
         <Border Grid.Row="1" Background="{StaticResource Panel}" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,20,0,16">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,18,0">
-                    <TextBlock Text="SERVIDOR RANKED • IP DA RADMIN VPN (26.x.x.x)" FontSize="10" FontWeight="Bold" Foreground="#C5C4D2"/>
-                    <TextBox x:Name="ApiUrlBox" Margin="0,6,0,10" Text=""/>
-                    <TextBlock Text="Exemplo: http://26.XX.XX.XX:8765" FontSize="10" Foreground="#C5C4D2" Margin="0,0,0,8"/>
+                    <TextBlock Text="SERVIDOR RANKED • RADMIN VPN" FontSize="10" FontWeight="Bold" Foreground="#C5C4D2"/>
+                    <TextBlock Text="http://26.226.57.19:8765" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,7,0,18"/>
+                    <TextBlock Text="Servidor fixo da rede privada. Não é necessário configurar endereço." FontSize="10" Foreground="#C5C4D2" TextWrapping="Wrap" Margin="0,0,0,8"/>
                     <TextBlock Text="NICKNAME" FontSize="10" FontWeight="Bold" Foreground="#C5C4D2"/>
                     <TextBox x:Name="NicknameBox" Margin="0,6,0,0" MaxLength="32"/>
                 </StackPanel>
@@ -81,6 +81,7 @@
                     <TextBlock x:Name="MatchTitleText" Text="Aguardando adversário" FontSize="22" FontWeight="Black" Margin="0,8,0,12" TextWrapping="Wrap"/>
                     <TextBlock x:Name="MatchDetailText" Text="Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui." Foreground="#C5C4D2" FontSize="12" TextWrapping="Wrap"/>
                     <TextBlock x:Name="MatchStateText" Text="Nenhuma partida atribuída." Foreground="#E2DCE5" FontSize="11" TextWrapping="Wrap" Margin="0,14,0,6"/>
+                    <Button x:Name="StartRoomButton" Content="INICIAR PARTIDA" Click="StartRoom_Click" IsEnabled="False" Visibility="Collapsed" Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="16,14" FontSize="16" HorizontalContentAlignment="Center"/>
                     <Button x:Name="AcceptMatchButton" Content="ACEITAR PARTIDA" Click="AcceptMatch_Click" IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
                     <Button x:Name="DeclineMatchButton" Content="RECUSAR PARTIDA" Click="DeclineMatch_Click" IsEnabled="False"/>
                     <Border Background="#55202A40" CornerRadius="8" Padding="12" Margin="0,18,0,0">
