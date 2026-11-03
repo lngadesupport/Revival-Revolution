@@ -5,6 +5,7 @@ on:
     branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, release/0.8.1-stabilization ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
+      - "tests/LauncherIntegritySmoke/**"
       - ".github/workflows/build-launcher.yml"
       - ".github/workflows/publish-launcher-release.yml"
   pull_request:
@@ -27,6 +28,8 @@ jobs:
         run: dotnet restore .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj
       - name: Build
         run: dotnet build .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --no-restore
+      - name: Run launcher integrity smoke tests
+        run: dotnet run --project .\tests\LauncherIntegritySmoke\LauncherIntegritySmoke.csproj --configuration Release
       - name: Publish self-contained Windows x64
         run: dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\RevivalRevolution-win-x64
       - name: Verify published files
