@@ -362,11 +362,6 @@ public partial class OnlineMatchWindow : Window
         }
     }
 
-    private async Task StartMatchLifecyclePollingAsync(CancellationToken cancellationToken)
-    {
-        await Task.CompletedTask;
-    }
-
     private void StartMatchLifecyclePolling()
     {
         _polling?.Cancel();
@@ -383,7 +378,18 @@ public partial class OnlineMatchWindow : Window
                    string.Equals(matchId, _activeMatchId, StringComparison.Ordinal))
             {
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                var result = await _api.GetAsync("/v1/match", cancellationToken);
+                JsonObject result;
+                try
+                {
+                    result = await _api.GetAsync("/v1/match", cancellationToken);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    await Dispatcher.InvokeAsync(() => StatusText.Text = "Conexão instável. Tentando atualizar a sala: " + ex.Message);
+                    await Task.Delay(TimeSpan.FromSeconds(4), cancellationToken);
+                    continue;
+                }
                 if (result["match"] is not JsonObject current)
                 {
                     await Dispatcher.InvokeAsync(() => ResetToInvite("A partida foi encerrada ou expirou."));
@@ -605,7 +611,7 @@ public partial class OnlineMatchWindow : Window
             circle.Fill = new ImageBrush(bitmap) { Stretch = Stretch.UniformToFill };
             initials.Visibility = Visibility.Collapsed;
         }
-        catch (Exception ex) when (ex is FormatException or IOException or NotSupportedException or System.Windows.Media.Imaging.BitmapDecoderException)
+        catch
         {
             circle.Fill = new SolidColorBrush(Color.FromRgb(52, 57, 77));
         }
@@ -618,8 +624,6 @@ public partial class OnlineMatchWindow : Window
         if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant();
         return (parts[0][0].ToString() + parts[^1][0]).ToUpperInvariant();
     }
-
-    private static void ResetPeerVisuals() { }
 
     private async void Window_Closing(object? sender, CancelEventArgs e)
     {
