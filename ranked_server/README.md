@@ -30,7 +30,7 @@ desenvolvimento diretamente à internet sem uma camada de produção apropriada.
 - `POST /v1/presence/heartbeat` — atividade autenticada.
 - `GET /v1/leaderboard?limit=100` — classificação pelo rating atual.
 - `POST /v1/queue/join`, `GET /v1/queue`, `POST /v1/queue/leave` — fila aleatória.
-- `GET /v1/match` — atribuição ativa do jogador.
+- `GET /v1/match` — atribuição ativa do jogador; também reavalia a fila regional durante o polling para que a janela de rating avance sem depender da chegada de um terceiro jogador.
 - `POST /v1/rooms/create` — cria código privado de seis caracteres, com validade de 15 minutos.
 - `POST /v1/rooms/join` — valida código, limita tentativas a 20 por minuto por conta e atribui a mesma partida aos dois jogadores.
 - `GET /v1/rooms/current` — estado da sala do anfitrião.
