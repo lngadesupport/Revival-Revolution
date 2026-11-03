@@ -295,6 +295,7 @@ public partial class OnlineMatchWindow : Window
         MyVersusNicknameText.Text = MyNicknameText.Text;
         OpponentNicknameText.Text = opponentName;
         OpponentRoleText.Text = "CONVIDADO";
+        MyVersusRoleText.Text = "ANFITRIÃO";
         if (!string.Equals(_opponentId, opponentId, StringComparison.Ordinal))
         {
             _opponentId = opponentId;
@@ -306,7 +307,11 @@ public partial class OnlineMatchWindow : Window
         var role = match["room_role"]?.GetValue<string>();
         var roomStatus = match["room_status"]?.GetValue<string>();
         var connectionCode = match["connection_code"]?.GetValue<string>();
-        if (role == "guest") OpponentRoleText.Text = "ANFITRIÃO";
+        if (role == "guest")
+        {
+            OpponentRoleText.Text = "ANFITRIÃO";
+            MyVersusRoleText.Text = "CONVIDADO";
+        }
 
         if (role == "guest" && roomStatus == "starting" &&
             !string.IsNullOrWhiteSpace(connectionCode) && !_guestSessionStarted)
