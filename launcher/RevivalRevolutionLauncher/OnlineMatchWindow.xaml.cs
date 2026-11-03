@@ -487,6 +487,7 @@ public partial class OnlineMatchWindow : Window
         }
         catch (Exception ex)
         {
+            _gameSession.Stop();
             if (!IsVisible) return;
             await Dispatcher.InvokeAsync(() =>
             {
