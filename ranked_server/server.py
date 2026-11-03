@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -182,9 +184,17 @@ def main():
     parser.add_argument("--port", type=int, default=int(os.environ.get("RANKED_PORT", "8765")))
     parser.add_argument("--database", default=os.environ.get("RANKED_DATABASE", "ranked.sqlite3"))
     args = parser.parse_args()
-    store = RankedStore(args.database)
+    database_path = Path(args.database).expanduser().resolve()
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        filename=str(database_path.with_suffix(".log")),
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        encoding="utf-8",
+    )
+    store = RankedStore(str(database_path))
     server = ThreadingHTTPServer((args.host, args.port), make_handler(store))
-    print(f"Revival Ranked API listening on {args.host}:{args.port}")
+    logging.info("Revival Ranked API listening on %s:%s", args.host, args.port)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
