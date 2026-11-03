@@ -16,6 +16,7 @@ public partial class OnlineMatchWindow : Window
     private readonly RankedCredentialStore _credentials = new();
     private readonly OnlineGameSessionService _gameSession;
     private readonly CancellationTokenSource _sessionCancellation = new();
+    private CancellationTokenSource? _roomSessionCancellation;
     private CancellationTokenSource? _polling;
     private string? _token;
     private string? _playerId;
@@ -26,6 +27,7 @@ public partial class OnlineMatchWindow : Window
     private bool _matchActive;
     private bool _guestSessionStarted;
     private bool _hostSessionActive;
+    private bool _peerReady;
     private bool _closing;
 
     public OnlineMatchWindow(string distributionRoot, string gameFolder, string pythonExe)
@@ -325,9 +327,15 @@ public partial class OnlineMatchWindow : Window
         StartRoomButton.IsEnabled = role == "host" && !_hostSessionActive &&
             (roomStatus == "matched" || (roomStatus == "starting" && string.IsNullOrWhiteSpace(connectionCode)));
         if (role == "host" && roomStatus == "starting")
-            StartRoomButton.Content = "TENTAR NOVAMENTE";
+        {
+            StartRoomButton.Content = _peerReady ? "JOGO ABERTO"
+                : _hostSessionActive ? "CONECTANDO..."
+                : string.IsNullOrWhiteSpace(connectionCode) ? "TENTAR NOVAMENTE" : "SESSÃO EM ANDAMENTO";
+        }
         else
+        {
             StartRoomButton.Content = "INICIAR PARTIDA";
+        }
 
         if (_matchStatus == "ready" && role is "host" or "guest")
         {
@@ -413,24 +421,46 @@ public partial class OnlineMatchWindow : Window
         }
     }
 
+    private CancellationTokenSource BeginRoomSession()
+    {
+        StopRoomSession();
+        _roomSessionCancellation = CancellationTokenSource.CreateLinkedTokenSource(_sessionCancellation.Token);
+        return _roomSessionCancellation;
+    }
+
+    private void StopRoomSession()
+    {
+        var cancellation = _roomSessionCancellation;
+        _roomSessionCancellation = null;
+        if (cancellation is not null)
+        {
+            try { cancellation.Cancel(); }
+            finally { cancellation.Dispose(); }
+        }
+        _gameSession.Stop();
+    }
+
     private async void StartRoom_Click(object sender, RoutedEventArgs e)
     {
         if (!_matchActive || _matchStatus != "ready" || !StartRoomButton.IsEnabled) return;
         StartRoomButton.IsEnabled = false;
         _hostSessionActive = true;
+        _peerReady = false;
+        var roomSession = BeginRoomSession();
+        var sessionToken = roomSession.Token;
         var codePublished = false;
         try
         {
-            await _api.PostAsync("/v1/rooms/start", new JsonObject());
+            await _api.PostAsync("/v1/rooms/start", new JsonObject(), cancellationToken: sessionToken);
             await Dispatcher.InvokeAsync(() =>
             {
                 StartRoomButton.Content = "CONECTANDO...";
                 VersusStateText.Text = "Abrindo o jogo diretamente e preparando a conexão com o adversário...";
-                StatusText.Text = "O jogo será iniciado sem a janela Metal Revolution Configuration.";
+                StatusText.Text = "Abrindo ufo.exe diretamente, sem chamar o configurador externo.";
             });
 
-            var connectionCode = await _gameSession.StartHostAsync(_sessionCancellation.Token);
-            await _api.PostAsync("/v1/rooms/connection-code", new JsonObject { ["code"] = connectionCode });
+            var connectionCode = await _gameSession.StartHostAsync(sessionToken);
+            await _api.PostAsync("/v1/rooms/connection-code", new JsonObject { ["code"] = connectionCode }, cancellationToken: sessionToken);
             codePublished = true;
             await Dispatcher.InvokeAsync(() =>
             {
@@ -438,11 +468,12 @@ public partial class OnlineMatchWindow : Window
                 VersusStateText.Text = "Jogo aberto. Aguardando a conexão do convidado...";
             });
             StartMatchLifecyclePolling();
-            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9), _sessionCancellation.Token);
+            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9), sessionToken);
+            _peerReady = true;
             await Dispatcher.InvokeAsync(() =>
             {
-                VersusStateText.Text = "Conexão estabelecida! Os dois jogadores estão prontos para o combate.";
-                StartRoomButton.Content = "PARTIDA INICIADA";
+                VersusStateText.Text = "Conexão P2P estabelecida. A tela VS está aberta nos dois PCs; escolham personagens, roupas e cenário e confirmem Ready.";
+                StartRoomButton.Content = "JOGO ABERTO";
             });
         }
         catch (Exception ex)
@@ -462,10 +493,20 @@ public partial class OnlineMatchWindow : Window
                 StatusText.Text = "Não foi possível iniciar o jogo: " + ex.Message;
             }
         }
+        finally
+        {
+            if (ReferenceEquals(_roomSessionCancellation, roomSession))
+            {
+                _roomSessionCancellation = null;
+                roomSession.Dispose();
+            }
+        }
     }
 
     private async Task StartGuestSessionAsync(string connectionCode)
     {
+        var roomSession = BeginRoomSession();
+        var sessionToken = roomSession.Token;
         try
         {
             await Dispatcher.InvokeAsync(() =>
@@ -473,12 +514,13 @@ public partial class OnlineMatchWindow : Window
                 VersusStateText.Text = "O anfitrião iniciou. Abrindo o jogo diretamente...";
                 StatusText.Text = "Preparando o jogo e a conexão P2P pela Radmin.";
             });
-            await _gameSession.StartGuestAsync(connectionCode, _sessionCancellation.Token);
-            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9), _sessionCancellation.Token);
+            await _gameSession.StartGuestAsync(connectionCode, sessionToken);
+            await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9), sessionToken);
+            _peerReady = true;
             await Dispatcher.InvokeAsync(() =>
             {
-                VersusStateText.Text = "Conexão estabelecida! Os dois jogadores estão prontos para o combate.";
-                StartRoomButton.Content = "PARTIDA INICIADA";
+                VersusStateText.Text = "Conexão P2P estabelecida. A tela VS está aberta nos dois PCs; escolham personagens, roupas e cenário e confirmem Ready.";
+                StartRoomButton.Content = "JOGO ABERTO";
             });
         }
         catch (Exception ex)
@@ -489,6 +531,14 @@ public partial class OnlineMatchWindow : Window
             await Dispatcher.InvokeAsync(() =>
                 ResetToInvite("A conexão do convidado falhou. A sala foi encerrada. " + ex.Message));
         }
+        finally
+        {
+            if (ReferenceEquals(_roomSessionCancellation, roomSession))
+            {
+                _roomSessionCancellation = null;
+                roomSession.Dispose();
+            }
+        }
     }
 
     private async void DeclineMatch_Click(object sender, RoutedEventArgs e)
@@ -498,7 +548,6 @@ public partial class OnlineMatchWindow : Window
         try
         {
             await _api.PostAsync("/v1/match/decline", new JsonObject());
-            _gameSession.Stop();
             ResetToInvite("Você saiu da sala. Já pode criar ou entrar em outro convite.");
         }
         catch (Exception ex)
@@ -526,7 +575,7 @@ public partial class OnlineMatchWindow : Window
 
     private void ResetToInvite(string message)
     {
-        _gameSession.Stop();
+        StopRoomSession();
         _polling?.Cancel();
         _roomWaiting = false;
         _matchActive = false;
@@ -535,6 +584,7 @@ public partial class OnlineMatchWindow : Window
         _opponentId = null;
         _guestSessionStarted = false;
         _hostSessionActive = false;
+        _peerReady = false;
         InvitePanel.Visibility = Visibility.Visible;
         VersusPanel.Visibility = Visibility.Collapsed;
         RoomCodeDisplayBox.Text = "------";
@@ -633,6 +683,7 @@ public partial class OnlineMatchWindow : Window
     {
         _closing = true;
         _sessionCancellation.Cancel();
+        StopRoomSession();
         _polling?.Cancel();
         if (!string.IsNullOrWhiteSpace(_token))
         {
