@@ -295,6 +295,8 @@ class RankedStore:
     def join_private_room(self, player_id: str, code: str) -> dict:
         code = self._normalize_room_code(code)
         now = self.clock()
+        # Commit the attempt counter independently: an invalid code must not
+        # roll back the rate limit when the room lookup raises below.
         with self.transaction() as db:
             attempts = db.execute(
                 "SELECT window_started,attempts FROM room_join_attempts WHERE player_id=?",
@@ -313,6 +315,7 @@ class RankedStore:
                     "ON CONFLICT(player_id) DO UPDATE SET window_started=excluded.window_started,attempts=1",
                     (player_id, now),
                 )
+        with self.transaction() as db:
             db.execute(
                 "UPDATE private_rooms SET status='expired' WHERE status='waiting' AND expires_at<=?",
                 (now,),
