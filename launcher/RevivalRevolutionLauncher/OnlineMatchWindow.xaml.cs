@@ -13,6 +13,7 @@ public partial class OnlineMatchWindow : Window
     private string? _token;
     private string? _playerId;
     private bool _queued;
+    private bool _roomWaiting;
 
     public OnlineMatchWindow() => InitializeComponent();
 
@@ -32,7 +33,7 @@ public partial class OnlineMatchWindow : Window
             if (string.IsNullOrWhiteSpace(_token)) return;
             _api.Configure(endpoint, _token);
             ApplyProfile(await _api.GetAsync("/v1/me"));
-            StatusText.Text = "Conta autenticada. Você já pode entrar na fila.";
+            StatusText.Text = "Conta autenticada. Escolha uma modalidade de matchmaking.";
         }
         catch (Exception ex)
         {
@@ -72,13 +73,12 @@ public partial class OnlineMatchWindow : Window
                 ApplyProfile(await _api.GetAsync("/v1/me"));
                 StatusText.Text = "Sessão restaurada com segurança.";
             }
-            SearchButton.IsEnabled = true;
         }
         catch (Exception ex)
         {
             StatusText.Text = "Falha ao conectar: " + ex.Message;
             ProfileText.Text = "Conta não conectada.";
-            SearchButton.IsEnabled = false;
+            SetModeButtons(false);
         }
         finally { ConnectButton.IsEnabled = true; }
     }
@@ -91,13 +91,22 @@ public partial class OnlineMatchWindow : Window
         var rating = profile["rating"]?.ToString() ?? "—";
         NicknameBox.Text = name;
         ProfileText.Text = $"{name}  •  Rating {rating}\nID: {_playerId ?? "—"}";
-        SearchButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
+        SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+    }
+
+    private void SetModeButtons(bool enabled)
+    {
+        SearchButton.IsEnabled = enabled && !_queued && !_roomWaiting;
+        CreateRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
+        JoinRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
     }
 
     private async void Search_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_token)) return;
+        if (string.IsNullOrWhiteSpace(_token) || _roomWaiting) return;
         SearchButton.IsEnabled = false;
+        CreateRoomButton.IsEnabled = false;
+        JoinRoomButton.IsEnabled = false;
         try
         {
             var response = await _api.PostAsync("/v1/queue/join", new JsonObject { ["region"] = "sa-east" });
@@ -111,7 +120,7 @@ public partial class OnlineMatchWindow : Window
         }
         catch (Exception ex)
         {
-            SearchButton.IsEnabled = true;
+            SetModeButtons(!string.IsNullOrWhiteSpace(_token));
             StatusText.Text = "Não foi possível entrar na fila: " + ex.Message;
         }
     }
@@ -144,20 +153,116 @@ public partial class OnlineMatchWindow : Window
         {
             await Dispatcher.InvokeAsync(() =>
             {
+                _queued = false;
                 StatusText.Text = "A consulta da fila falhou: " + ex.Message;
-                SearchButton.IsEnabled = true;
                 CancelButton.IsEnabled = false;
+                SetModeButtons(!string.IsNullOrWhiteSpace(_token));
             });
+        }
+    }
+
+    private async void CreateRoom_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_token) || _queued || _roomWaiting) return;
+        CreateRoomButton.IsEnabled = false;
+        JoinRoomButton.IsEnabled = false;
+        try
+        {
+            var result = await _api.PostAsync("/v1/rooms/create", new JsonObject { ["region"] = "sa-east" });
+            var room = result["room"] as JsonObject
+                ?? throw new InvalidOperationException("O servidor não devolveu os dados da sala.");
+            var code = room["room_code"]?.GetValue<string>()
+                ?? throw new InvalidOperationException("O servidor não devolveu o código da sala.");
+            RoomCodeDisplayBox.Text = code;
+            RoomStateText.Text = "Sala aberta. Compartilhe este código com seu adversário. Ela expira em 15 minutos.";
+            _roomWaiting = true;
+            CancelRoomButton.IsEnabled = true;
+            StatusText.Text = "Sala privada criada. Aguardando o outro jogador inserir o código.";
+            _polling = new CancellationTokenSource();
+            _ = PollRoomAsync(_polling.Token);
+        }
+        catch (Exception ex)
+        {
+            SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+            StatusText.Text = "Não foi possível criar a sala: " + ex.Message;
+        }
+    }
+
+    private async Task PollRoomAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && _roomWaiting)
+            {
+                var result = await _api.GetAsync("/v1/rooms/current", cancellationToken);
+                if (result["match"] is JsonObject match)
+                {
+                    await Dispatcher.InvokeAsync(() => ShowMatch(match));
+                    return;
+                }
+                if (result["room"] is not JsonObject room ||
+                    room["status"]?.GetValue<string>() != "waiting")
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        _roomWaiting = false;
+                        CancelRoomButton.IsEnabled = false;
+                        RoomStateText.Text = "A sala expirou ou foi encerrada.";
+                        SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+                    });
+                    return;
+                }
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                _roomWaiting = false;
+                CancelRoomButton.IsEnabled = false;
+                RoomStateText.Text = "Não foi possível consultar a sala.";
+                StatusText.Text = "Falha ao consultar a sala: " + ex.Message;
+                SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+            });
+        }
+    }
+
+    private async void JoinRoom_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_token) || _queued || _roomWaiting) return;
+        var code = RoomCodeBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            StatusText.Text = "Digite o código de 6 caracteres recebido do anfitrião.";
+            return;
+        }
+        JoinRoomButton.IsEnabled = false;
+        try
+        {
+            var result = await _api.PostAsync("/v1/rooms/join", new JsonObject { ["code"] = code });
+            var match = result["match"] as JsonObject
+                ?? throw new InvalidOperationException("A sala não devolveu a partida.");
+            ShowMatch(match);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Não foi possível entrar na sala: " + ex.Message;
+            JoinRoomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
         }
     }
 
     private void ShowMatch(JsonObject match)
     {
         _queued = false;
+        _roomWaiting = false;
         _polling?.Cancel();
         CancelButton.IsEnabled = false;
-        SearchButton.IsEnabled = false;
+        CancelRoomButton.IsEnabled = false;
+        SetModeButtons(false);
         QueueStateText.Text = "PARTIDA ENCONTRADA";
+        RoomStateText.Text = "Partida privada atribuída.";
         var opponent = match["opponent"]?["display_name"]?.GetValue<string>() ?? "Adversário";
         var rating = match["opponent"]?["rating"]?.ToString() ?? "—";
         var matchId = match["match_id"]?.GetValue<string>() ?? "—";
@@ -183,17 +288,46 @@ public partial class OnlineMatchWindow : Window
         finally
         {
             CancelButton.IsEnabled = false;
-            SearchButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
+            SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+        }
+    }
+
+    private async void CancelRoom_Click(object sender, RoutedEventArgs e)
+    {
+        _polling?.Cancel();
+        try
+        {
+            var result = await _api.PostAsync("/v1/rooms/cancel", new JsonObject());
+            _roomWaiting = false;
+            RoomCodeDisplayBox.Text = "------";
+            RoomStateText.Text = result["cancelled"]?.GetValue<bool>() == true
+                ? "Sala cancelada. O código não pode mais ser utilizado."
+                : "A sala já não estava aguardando jogadores.";
+            StatusText.Text = "Sala privada encerrada.";
+        }
+        catch (Exception ex) { StatusText.Text = "Falha ao cancelar a sala: " + ex.Message; }
+        finally
+        {
+            CancelRoomButton.IsEnabled = false;
+            SetModeButtons(!string.IsNullOrWhiteSpace(_token));
         }
     }
 
     private async void Window_Closing(object? sender, CancelEventArgs e)
     {
         _polling?.Cancel();
-        if (_queued && !string.IsNullOrWhiteSpace(_token))
+        if (!string.IsNullOrWhiteSpace(_token))
         {
-            try { await _api.PostAsync("/v1/queue/leave", new JsonObject()); }
-            catch { /* Do not block window closing on network errors. */ }
+            if (_queued)
+            {
+                try { await _api.PostAsync("/v1/queue/leave", new JsonObject()); }
+                catch { /* Do not block window closing on network errors. */ }
+            }
+            if (_roomWaiting)
+            {
+                try { await _api.PostAsync("/v1/rooms/cancel", new JsonObject()); }
+                catch { /* Do not block window closing on network errors. */ }
+            }
         }
         _polling?.Dispose();
     }
