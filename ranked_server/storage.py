@@ -553,7 +553,7 @@ class RankedStore:
         if not isinstance(code, str):
             raise ValueError("connection code must be text")
         code = code.strip().upper()
-        if len(code) != 47 or not code.startswith("MR1-") or any(
+        if len(code) != 46 or not code.startswith("MR1-") or any(
             ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" for ch in code[4:]
         ):
             raise ValueError("invalid Radmin MR1 connection code")
