@@ -81,7 +81,7 @@ class GameBridge:
         pid=int((self.root/'netplay-pid.txt').read_text().strip())
         self.command=dict(id=uuid.uuid4().hex,action=action,session_id=self.session,target_pid=pid,protocol=1,slot=self.slot,frames=8)
         self.command.update(extra)
-        atomic_json(self.root/'game-command.json',self.command);self.deadline=time.monotonic()+(120 if action=='live_local_test' else 65 if action=='fighter_test_load' else 60 if action=='open_local_vs' else 18)
+        atomic_json(self.root/'game-command.json',self.command);self.deadline=time.monotonic()+(120 if action in ('live_local_test','peer_prepare') else 65 if action=='fighter_test_load' else 60 if action=='open_local_vs' else 18)
     def poll(self):
         if time.monotonic()>self.deadline:raise RuntimeError('Game bridge timed out; return to the main menu and attach the launcher')
         try:r=json.loads((self.root/'game-response.json').read_text())
