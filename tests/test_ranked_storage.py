@@ -186,5 +186,14 @@ class RankedStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no started private room"):
             self.store.publish_private_room_code(guest["player_id"], code)
 
+        self.store.decline_match(host["player_id"])
+        with self.store.transaction() as db:
+            stored = db.execute(
+                "SELECT status,connection_code FROM private_rooms WHERE match_id=?",
+                (result["match_id"],),
+            ).fetchone()
+        self.assertEqual(stored["status"], "declined")
+        self.assertIsNone(stored["connection_code"])
+
 if __name__ == "__main__":
     unittest.main()
