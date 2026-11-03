@@ -395,7 +395,7 @@ class RankedStore:
             if db.execute("SELECT 1 FROM queue WHERE player_id=?", (player_id,)).fetchone():
                 raise ValueError("leave the random queue before creating a private room")
             if db.execute(
-                "SELECT 1 FROM matches WHERE status='assigned' AND (player_one=? OR player_two=?)",
+                "SELECT 1 FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?)",
                 (player_id, player_id),
             ).fetchone():
                 raise ValueError("player already has an assigned match")
@@ -457,7 +457,7 @@ class RankedStore:
             if db.execute("SELECT 1 FROM queue WHERE player_id=?", (player_id,)).fetchone():
                 raise ValueError("leave the random queue before joining a private room")
             if db.execute(
-                "SELECT 1 FROM matches WHERE status='assigned' AND (player_one=? OR player_two=?)",
+                "SELECT 1 FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?)",
                 (player_id, player_id),
             ).fetchone():
                 raise ValueError("player already has an assigned match")
