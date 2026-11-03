@@ -231,10 +231,16 @@ class Session:
 def main():
     p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=0);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true');p.add_argument('--preflight-only',action='store_true');args=p.parse_args()
     root=args.root.resolve();root.mkdir(parents=True,exist_ok=True)
+    # This runtime is Windows-only; keeping the module importable elsewhere
+    # allows CI to validate its connection-code protocol without game DLLs.
+    if msvcrt is None:
+        raise SystemExit('peer_session requires Windows')
     # Windows byte-range lock is released on process exit, including crashes.
     lock=open(root/'peer-session.lock','a+b');lock.seek(0);lock.write(b'0');lock.flush();lock.seek(0)
     try:msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
-    except OSError:raise SystemExit('A peer session is already running in this launcher folder')
+    except OSError:
+        lock.close()
+        raise SystemExit('A peer session is already running in this launcher folder')
     requested_address=None
     if args.request:
         request=json.loads(args.request.read_text());args.mode=request.get('mode');args.code=request.get('code','')
