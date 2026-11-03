@@ -67,3 +67,21 @@ Os scripts, bridges e DLLs existentes da distribuição não devem ser substitu�
 ## Estado de validação
 
 O código WPF foi compilado com sucesso pelo workflow Windows do GitHub Actions no commit registrado na PR. A compilação não substitui testes em Windows limpo, com os pacotes reais e a instalação-alvo. Não declare uma versão como pronta para distribuição até que esses testes sejam concluídos.
+
+
+## Estado da versão 0.8.1
+
+A linha de estabilização da versão 0.8.1 está em
+`release/0.8.1-stabilization`. Ela reúne a central ONLINE com matchmaking
+aleatório e por código, a API Ranked, a configuração inicial de hospedagem no
+Render e a validação automatizada dos protocolos de connection code.
+
+A atribuição de uma partida no servidor ainda não significa conexão P2P nem
+início da luta. O ticket de sessão, a integração com a bridge, o relay UDP
+próprio e os testes em duas máquinas permanecem pendentes. A API Render
+planejada atende HTTP/HTTPS; o transporte UDP exige infraestrutura separada.
+
+A versão 0.8.1 ainda não é uma release pública. A `main` permanece intacta;
+a tag estável `v0.8.1` só deve ser criada após aprovação e integração explícita.
+Consulte [docs/RELEASE_0.8.1.md](docs/RELEASE_0.8.1.md) para o escopo e os
+critérios de liberação.
