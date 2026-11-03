@@ -115,6 +115,12 @@
                     <TextBlock x:Name="MatchDetailText"
                                Text="Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui."
                                Foreground="#C5C4D2" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="MatchStateText" Text="Nenhuma partida atribuída."
+                               Foreground="#E2DCE5" FontSize="11" TextWrapping="Wrap" Margin="0,14,0,6"/>
+                    <Button x:Name="AcceptMatchButton" Content="ACEITAR PARTIDA" Click="AcceptMatch_Click"
+                            IsEnabled="False" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
+                    <Button x:Name="DeclineMatchButton" Content="RECUSAR PARTIDA" Click="DeclineMatch_Click"
+                            IsEnabled="False"/>
                     <Border Background="#55202A40" CornerRadius="8" Padding="12" Margin="0,18,0,0">
                         <TextBlock Text="A atribuição da fila já está integrada. A abertura automática da luta aguarda ticket de sessão e integração segura com a bridge; esta versão não inicia uma partida P2P por conta própria."
                                    Foreground="#E2DCE5" FontSize="11" TextWrapping="Wrap"/>
