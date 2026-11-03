@@ -5,6 +5,14 @@ on:
     branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, release/0.8.1-stabilization, ops/windows-local-ranked-host, feature/0.8.1-radmin-room-start ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
+      - "offline_launcher.py"
+      - "inject_offline.py"
+      - "inject_overlay.py"
+      - "peer_session.py"
+      - "peer_native.py"
+      - "selection_sync.py"
+      - "live_fighter.py"
+      - "autopunch_transport.py"
       - "scripts/start-radmin-ranked-host.ps1"
       - "scripts/enable-radmin-peer-firewall.ps1"
       - "tests/LauncherIntegritySmoke/**"
@@ -13,6 +21,14 @@ on:
   pull_request:
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
+      - "offline_launcher.py"
+      - "inject_offline.py"
+      - "inject_overlay.py"
+      - "peer_session.py"
+      - "peer_native.py"
+      - "selection_sync.py"
+      - "live_fighter.py"
+      - "autopunch_transport.py"
       - "scripts/start-radmin-ranked-host.ps1"
       - ".github/workflows/build-launcher.yml"
   workflow_dispatch:
