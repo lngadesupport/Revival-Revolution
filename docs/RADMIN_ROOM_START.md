@@ -13,9 +13,17 @@ Each player still creates or restores their own account. The endpoint is not edi
 3. The API creates one private match and marks both room participants accepted automatically.
 4. The host sees the **INICIAR PARTIDA** button. The guest sees a waiting message.
 5. Only the authenticated host can call `POST /v1/rooms/start`.
-6. Both clients observe `room_status=starting` while polling `GET /v1/match`.
+6. The host launches the game bootstrap and direct UDP peer runtime bound to its local Radmin IPv4 address, then publishes the MR1 code through `POST /v1/rooms/connection-code`.
+7. The guest receives that code through `GET /v1/match`, launches the game bootstrap and joins the host over UDP port 8766.
+8. Both clients observe the peer session status in `peer-status.json` and `peer-summary.txt`.
 
 The endpoint is idempotent for the host. A guest cannot start another player's room. A private match has a two-hour setup expiry after the guest joins.
+
+## Local firewall and game startup
+
+Run `scripts/enable-radmin-peer-firewall.ps1` as Administrator on **both** PCs. It opens inbound UDP 8766 only from the Radmin 26.0.0.0/8 range. Keep both PCs connected to the same private Radmin network.
+
+The ONLINE bootstrap invokes `offline_launcher.py` to start/attach the game bridge. If the game's configuration window appears, press its Play button so the Mono runtime can load and the bridge can attach.
 
 ## Important implementation boundary
 
@@ -23,10 +31,10 @@ This change implements the server-side room transition and launcher UI signal on
 
 The current peer runtime requires:
 - a running `ufo.exe` with the netplay bridge attached and `netplay-pid.txt` available;
-- `MetalGekko.dll` beside `peer_session.py` for the native synthetic peer preflight;
+- the optional native synthetic preflight DLL is bypassed for this Radmin path; the authenticated direct UDP handshake is used as the transport preflight;
 - both clients to exchange a valid MR1 Radmin endpoint/key code and complete the authenticated UDP handshake.
 
-At the time of this change, `MetalGekko.dll` is not present in the feature branch repository tree (the root contains `MetalNetplayBridgeV8.dll`, `MetalOfflineBridgeImGuiV3.dll`, and `MetalImGuiOverlay.dll`). The repository's `Assembly-CSharp.dll` root file is zero bytes and must not be packaged as a valid assembly. Therefore this branch must not be described as a fully working online game build until the correct missing runtime dependency is supplied and the two-PC UDP/game-bridge flow is tested.
+The branch packages the three non-empty bridge/overlay DLLs present in the repository. The repository's root `Assembly-CSharp.dll` is zero bytes and is intentionally excluded; the game uses its own managed assembly from its installed `ufo_Data/Managed` directory. The Radmin path skips the optional `MetalGekko.dll` synthetic preflight, but the live game bridge and two-PC UDP/game flow still require real validation.
 
 ## Validation
 
