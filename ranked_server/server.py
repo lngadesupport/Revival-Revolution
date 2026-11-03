@@ -165,6 +165,8 @@ def make_handler(store: RankedStore):
                     return self._json(200, {"match": match})
                 if path == "/v1/rooms/start":
                     return self._json(200, {"room": store.start_private_room(player_id)})
+                if path == "/v1/rooms/connection-code":
+                    return self._json(200, store.publish_private_room_code(player_id, body.get("code")))
                 if path == "/v1/rooms/cancel":
                     return self._json(200, {"cancelled": store.cancel_private_room(player_id)})
                 return self._json(404, {"error": "not_found"})
