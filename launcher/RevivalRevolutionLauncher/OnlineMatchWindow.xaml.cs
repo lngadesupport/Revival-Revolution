@@ -208,6 +208,7 @@ public partial class OnlineMatchWindow : Window
                     {
                         _roomWaiting = false;
                         CancelRoomButton.IsEnabled = false;
+                        CopyRoomCodeButton.IsEnabled = false;
                         RoomStateText.Text = "A sala expirou ou foi encerrada.";
                         SetModeButtons(!string.IsNullOrWhiteSpace(_token));
                     });
@@ -276,6 +277,7 @@ public partial class OnlineMatchWindow : Window
         _polling?.Cancel();
         CancelButton.IsEnabled = false;
         CancelRoomButton.IsEnabled = false;
+        CopyRoomCodeButton.IsEnabled = false;
         SetModeButtons(false);
         QueueStateText.Text = "PARTIDA ENCONTRADA";
         RoomStateText.Text = "Partida privada atribuída.";
