@@ -24,7 +24,7 @@ public partial class MainWindow : Window
     private string? _gameFolder;
     private bool _busy;
     private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly DispatcherTimer _radminHostTimer = new() { Interval = TimeSpan.FromSeconds(10) };
+    private readonly DispatcherTimer _radminHostTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private bool _radminHostStarting;
     private bool _radminHostFirewallReady;
     private bool _radminHostTaskReady;
