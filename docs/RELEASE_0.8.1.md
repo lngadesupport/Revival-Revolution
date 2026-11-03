@@ -16,6 +16,8 @@
 - Importação do `peer_session.py` não falha somente porque o módulo
   diagnóstico legado `fighter_input_test.py` não está presente.
 - CI compila os módulos Python de multiplayer e testa os códigos MR1/MR2.
+- Atualizador compara hashes individuais e só substitui arquivos do launcher
+  ausentes/divergentes; arquivos do jogo continuam protegidos.
 
 ## Não incluído / ainda bloqueado
 
