@@ -59,6 +59,10 @@ public sealed class LauncherUpdateService
         var versionText = data.GetProperty("version").GetString() ?? "";
         if (!Version.TryParse(versionText, out var remoteVersion))
             throw new InvalidDataException("A versão remota do launcher não é válida.");
+        // Git tags use MAJOR.MINOR.PATCH while .NET assemblies use four parts.
+        // Normalize 0.8.1 to 0.8.1.0 so same-version repairs are not rejected.
+        remoteVersion = new Version(remoteVersion.Major, remoteVersion.Minor,
+            Math.Max(0, remoteVersion.Build), Math.Max(0, remoteVersion.Revision));
 
         var localVersion = typeof(LauncherUpdateService).Assembly.GetName().Version ?? new Version(0, 0);
         if (remoteVersion < localVersion) return null;
