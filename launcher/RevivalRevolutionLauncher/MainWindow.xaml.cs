@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _radminHostTimer = new() { Interval = TimeSpan.FromSeconds(10) };
     private bool _radminHostStarting;
     private bool _radminHostFirewallReady;
+    private bool _radminHostTaskReady;
     private bool _radminHostDisabled;
     private bool _gameRunning;
     private bool _launchPending;
@@ -58,7 +59,7 @@ public partial class MainWindow : Window
 
     private async void RadminHostTimer_Tick(object? sender, EventArgs e)
     {
-        if (_radminHostStarting || _radminHostDisabled) return;
+        if (_radminHostStarting || _radminHostDisabled || _radminHostTaskReady) return;
         var endpoint = RankedApiClient.LoadEndpoint();
         if (string.IsNullOrWhiteSpace(endpoint)) endpoint = RadminHostService.DefaultEndpoint;
         var hostAddress = RadminHostService.GetLocalRadminAddress(endpoint);
@@ -83,6 +84,8 @@ public partial class MainWindow : Window
             }
 
             await _radminHost.EnsureHostServerAsync(_root, python, hostAddress, CancellationToken.None);
+            _radminHostTaskReady = true;
+            _radminHostTimer.Stop();
             FooterStatus.Text = $"Servidor privado ativo em http://{hostAddress}:8765";
             Log($"API Ranked iniciada/verificada automaticamente em http://{hostAddress}:8765.");
         }
