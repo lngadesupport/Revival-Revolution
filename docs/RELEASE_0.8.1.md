@@ -38,7 +38,7 @@
 - Foi adicionado `scripts/check_render_api.py` para validar a URL HTTPS atribuída pelo Render, o payload de saúde e a versão 0.8.1 sem criar contas ou alterar dados.
 - Corrigida a exclusividade de partidas: jogadores com partida `ready` também ficam impedidos de criar ou entrar em salas privadas.
 - Foram adicionados testes HTTP de integração para saúde, cadastro, autenticação, rejeição sem token e ciclo de aceite/encerramento da partida.
-- O build do Render executa `unittest discover` antes de iniciar o serviço; a publicação automática também exige checks de CI aprovados.
+- O build do Render executa `unittest discover` antes de iniciar o serviço; commits nesta branch disparam deploy, mas uma falha de compilação/testes impede a nova implantação.
 
 ## Critérios mínimos antes da tag estável v0.8.1
 
