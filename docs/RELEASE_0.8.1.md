@@ -22,7 +22,7 @@
 ## Não incluído / ainda bloqueado
 
 - Deploy real da API na conta Render.
-- Ticket de sessão Ranked, aceite bilateral e ciclo de vida/reconexão.
+- Ticket de sessão Ranked, reconexão e integração do ciclo de aceite/encerramento no cliente. O backend agora persiste aceite bilateral, recusa, expiração e confirmação bilateral de encerramento; os novos testes ainda precisam passar no CI.
 - Integração do matchmaking com o transporte P2P e com a bridge.
 - Relay UDP próprio; o Render Web Service é para HTTP/HTTPS e não substitui
   um endpoint público UDP.
@@ -41,7 +41,8 @@
 - [ ] Diagnóstico validado contra a instalação real do usuário.
 - [ ] Sessão P2P validada em dois PCs e redes distintas.
 - [ ] API implantada e monitorada; persistência e backup restauráveis.
-- [ ] Ticket/aceite/reconexão e encerramento da partida definidos.
+- [ ] Ticket de transporte e reconexão definidos e integrados.
+- [ ] Novos testes do ciclo de vida aprovados no CI; cliente Online integrado às rotas de aceite/recusa/encerramento.
 - [ ] Nenhuma promoção para `main` ou publicação de tag sem aprovação explícita.
 
 ## Branch e segurança
