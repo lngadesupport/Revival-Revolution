@@ -17,6 +17,7 @@ public partial class OnlineMatchWindow : Window
             : RankedApiClient.LoadEndpoint()!;
     private readonly RankedApiClient _api = new();
     private readonly RankedCredentialStore _credentials = new();
+    private readonly RadminHostService _radminHost = new();
     private readonly OnlineGameSessionService _gameSession;
     private readonly CancellationTokenSource _sessionCancellation = new();
     private CancellationTokenSource? _roomSessionCancellation;
@@ -42,7 +43,20 @@ public partial class OnlineMatchWindow : Window
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         _api.Configure(RankedEndpoint, null);
-        await RestoreSessionAsync();
+        try
+        {
+            StatusText.Text = "Aguardando o servidor privado Radmin...";
+            await _radminHost.WaitForServerAsync(new Uri(RankedEndpoint).Host, _sessionCancellation.Token);
+            await RestoreSessionAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Servidor privado indisponível: " + ex.Message;
+            SetModeButtons(false);
+        }
     }
 
     private async Task RestoreSessionAsync()
