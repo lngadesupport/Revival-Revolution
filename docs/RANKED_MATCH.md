@@ -1,92 +1,84 @@
-# Ranked Match — arquitetura e estado
+# Ranked Match — arquitetura e estado da versão 0.8.1
 
 ## Identidade e perfil
 
 A identidade é um UUID emitido pelo servidor e associada a um token aleatório.
 O nickname é editável e não é único; o UUID não muda quando o jogador altera
-nickname ou avatar. O cliente integrado ao jogo deverá guardar o token em área
-privada do usuário, nunca em arquivos públicos ou logs.
+nickname ou avatar. A credencial deve ser armazenada em área privada do cliente.
+A experiência social pretendida (perfil, amigos, presença e leaderboard) é
+dentro do jogo, não em uma tela social do launcher.
 
-## Recursos sociais disponíveis na API
+## Recursos existentes na API
 
 - Perfil persistente com UUID, nickname e avatar PNG/JPEG/WebP (até 256 KiB).
-- Busca de jogadores por nickname e consulta pública por UUID.
+- Busca por nickname e consulta por UUID.
 - Solicitações de amizade, aceite, recusa, lista de amigos e remoção.
-- Bloqueio/desbloqueio de jogadores; bloquear encerra amizade e impede novos
-  pedidos entre as duas contas.
-- Presença aproximada, baseada na última atividade autenticada (90 segundos), com heartbeat.
+- Bloqueio/desbloqueio; bloquear remove amizade e impede novos pedidos.
+- Presença aproximada baseada em atividade autenticada.
 - Leaderboard ordenado pelo rating atual.
-- O nickname não é único; a identidade é sempre o UUID.
-- Alterar nickname/avatar não altera UUID, rating ou relações de amizade.
+- Clãs não implementados: não há ponto de extensão técnico confirmado.
 
-Clãs não foram implementados: não há evidência técnica suficiente de um sistema
-existente nem de um ponto de extensão seguro no jogo.
+## Matchmaking 0.8.1
 
-## Protocolo existente (main)
+- Fila aleatória 1v1 com região e janela de rating que se expande com a espera.
+- Sala privada com código de seis caracteres, validade de 15 minutos,
+  uso único, cancelamento pelo anfitrião e limite de tentativas por conta.
+- Ambas as modalidades criam uma atribuição persistida no SQLite.
+- A atribuição não inicia P2P e atualmente permanece `assigned`; falta
+  implementar o ciclo de aceite/timeout/fim para permitir partidas sucessivas.
+
+## Transporte multiplayer já existente
 
 - `peer_session.py` usa UDP, HMAC-SHA256, nonce, sequência, slot e build.
-- O segredo atual vem do connection code manual; não é uma credencial de Ranked
-  emitida por servidor.
-- A seleção tem proposta/aceitação/commit e sincroniza catálogo e setup.
-- `live_fighter.py` compara conclusão/checksum informados pelos dois peers.
-  Isso ajuda a detectar desync, mas não prova resultado contra clientes
-  modificados.
-- `peer_session.py` importa `fighter_input_test.FighterInputTest`, mas
-  `fighter_input_test.py` não aparece na árvore atual de `main`. O módulo
-  não pode iniciar até restaurar essa dependência ou refatorar o fluxo com
-  base na implementação correta.
-- A amostra versionada `game-response.json` diz
+- O segredo é derivado de connection code MR1/MR2 manual; não é ticket Ranked.
+- `autopunch_transport.py` integra STUN e um relay externo configurável
+  (padrão atual: `delthas.fr:14763`). Não devemos depender desse serviço
+  externo como infraestrutura oficial; precisamos avaliar e operar nosso
+  próprio relay UDP.
+- `selection_sync.py` tem proposta/aceitação/commit para sincronizar
+  personagens, roupas, cenário e prontidão.
+- `live_fighter.py` encaminha dados entre a sessão e a bridge local e compara
+  os relatos de conclusão/checksum dos dois peers. Isso ajuda a detectar
+  divergências, mas não prova o resultado contra clientes modificados.
+- `peer_session.py` agora trata `fighter_input_test.py` como diagnóstico
+  opcional, porque esse arquivo não está presente na árvore versionada. A
+  função legada não deve ser declarada testada.
+- A amostra versionada `game-response.json` registra
   `transport_connected=false` e `input_authority_enforced=false`.
-- A documentação técnica atual classifica multiplayer/rollback como
-  experimental e requer testes em dois PCs/redes.
 
-## Inspeção das DLLs existentes
+## Bridge e jogo
 
-A análise estática feita pelo workflow de CI confirmou:
+A inspeção estática identificou `MetalNetplayBridgeV8.dll` como assembly
+.NET/Mono x86 com pontos de reflexão e comandos de inspeção. Isso não prova
+que o jogo exponha telas sociais nem que a bridge aceite um novo fluxo Ranked.
+`Assembly-CSharp.dll` continua vazio (0 bytes) e não foi substituído; não há
+cópia alternativa disponível no projeto.
 
-- `MetalImGuiOverlay.dll` é um binário nativo x64 que importa Direct3D 11 e
-  contém Dear ImGui 1.91.9b. Seus textos incluem “Metal Revolution / Community
-  panel”, indicação de painel alternável por F1 e status do overlay.
-- `MetalNetplayBridgeV8.dll` e `MetalOfflineBridgeImGuiV3.dll` são assemblies
-  .NET/Mono x86. O primeiro contém `MetalNetplayController`, com métodos de
-  reflexão como `Get`, `Field`, `Set`, `Call`, `ActiveUI`, `BuiltIn`,
-  `Inspect` e `SelfTest`, e referências a `MetalFury.Logic.GameApp`,
-  `NetworkHandlerHub` e `MetalFury.UI.BaseUI`.
-- O bridge offline referencia `LoginScreen`, `MainMenuScreen`,
-  `ServerListScreen` e `WaitingScreen`.
-- `Assembly-CSharp-firstpass.dll` contém componentes de terceiros, como
-  `NativeGallery` e efeitos visuais; não revelou o código do Community Panel.
-- `Assembly-CSharp.dll` continua vazio (0 bytes). Não foi substituído.
+## Limites de segurança
 
-Essa inspeção prova que existem pontos de reflexão e componentes de overlay,
-mas não prova que o painel atual aceite novas abas nem que os tipos sociais
-existam no jogo. O bridge já oferece um comando somente leitura chamado
-`inspect`, que consulta as telas ativas em runtime sem precisar carregar uma
-cópia estática de `Assembly-CSharp.dll`. O procedimento está documentado em
-[RUNTIME_INSPECTION.md](RUNTIME_INSPECTION.md).
-O relatório pode ser baixado na execução do workflow
-“Inspect native game integration binaries”.
+- Cadastro aberto sem recuperação de conta nem controles suficientes contra
+  abuso/contas alternativas.
+- Sem aceite bilateral, ticket P2P, lease de reconexão ou administração.
+- Sem resultado autoritativo. Não alterar ELO por resultado informado pelo
+  cliente.
+- O checksum final informado pelos peers não é uma fonte independente.
+- O relay AutoPunch padrão é de terceiros e precisa ser substituído/validado.
+- O deploy da API e o transporte UDP são componentes separados.
 
-## Limites atuais
+## Próximas etapas técnicas
 
-Este MVP ainda não é uma temporada competitiva pública:
-- cadastro aberto, sem recuperação/anti-smurf/limites de criação;
-- sem aceitação de partida, lease de reconexão ou administração;
-- sem ticket de sessão P2P;
-- sem aplicação de ELO/vitória/derrota;
-- sem integração visual dentro do jogo/Community Panel;
-- sem validação autoritativa do resultado.
+1. Ciclo de vida de partidas: aceite bilateral, timeout, abandono, reconexão e
+   liberação de jogadores para a próxima partida.
+2. Ticket efêmero, vinculado a match/players/slots/build/protocolo, com
+   expiração e consumo único.
+3. Integração ticket -> peer_session -> bridge, sem reutilizar connection code
+   manual como autorização competitiva.
+4. Relay UDP próprio e teste de conectividade em NATs distintos.
+5. Inspeção em runtime da bridge com o jogo aberto e confirmação do fluxo
+   `peer_prepare`, `open_local_vs`, seleção e `live_start`.
+6. Adjudicação de resultados e rating apenas depois de um mecanismo confiável.
+7. Interface social dentro do jogo somente após confirmar um ponto de extensão
+   suportado.
 
-Não altere rating com base apenas no resultado informado pelos clientes.
-
-## Próximas etapas
-
-1. Entender o protocolo de comandos do `MetalNetplayBridgeV8` e seus pontos de
-   inspeção/reflexão em runtime.
-2. Definir um caminho suportado para exibir perfil/amigos/leaderboard dentro
-   do jogo, usando o overlay já existente apenas se houver um mecanismo real
-   de extensão; não presumir que o binário aceite plugins.
-3. Ligar o cliente do jogo à API social com credencial protegida.
-4. Criar ticket de partida e política de reconexão antes de abrir matchmaking
-   público.
-5. Projetar adjudicação confiável antes de aplicar ELO.
+A versão 0.8.1 é uma base de integração/estabilização, não uma release pública
+de Ranked competitivo.
