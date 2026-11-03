@@ -476,6 +476,9 @@ public partial class OnlineMatchWindow : Window
                 StartRoomButton.Content = "JOGO ABERTO";
             });
         }
+        catch (OperationCanceledException) when (sessionToken.IsCancellationRequested)
+        {
+        }
         catch (Exception ex)
         {
             _hostSessionActive = false;
@@ -522,6 +525,9 @@ public partial class OnlineMatchWindow : Window
                 VersusStateText.Text = "Conexão P2P estabelecida. A tela VS está aberta nos dois PCs; escolham personagens, roupas e cenário e confirmem Ready.";
                 StartRoomButton.Content = "JOGO ABERTO";
             });
+        }
+        catch (OperationCanceledException) when (sessionToken.IsCancellationRequested)
+        {
         }
         catch (Exception ex)
         {
