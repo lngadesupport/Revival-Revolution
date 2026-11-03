@@ -85,23 +85,23 @@ public sealed class RadminHostService
 
     private static async Task<bool> FirewallRuleExistsAsync(string name, CancellationToken token)
     {
-        var start = new ProcessStartInfo("netsh.exe")
+        var start = new ProcessStartInfo("powershell.exe")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
-        start.ArgumentList.Add("advfirewall");
-        start.ArgumentList.Add("firewall");
-        start.ArgumentList.Add("show");
-        start.ArgumentList.Add("rule");
-        start.ArgumentList.Add("name=" + name);
+        start.ArgumentList.Add("-NoProfile");
+        start.ArgumentList.Add("-NonInteractive");
+        start.ArgumentList.Add("-Command");
+        start.ArgumentList.Add($"(Get-NetFirewallRule -DisplayName '{name}' -ErrorAction SilentlyContinue | Measure-Object).Count");
         using var process = Process.Start(start);
         if (process is null) return false;
+        var outputTask = process.StandardOutput.ReadToEndAsync(token);
         await process.WaitForExitAsync(token);
-        var output = await process.StandardOutput.ReadToEndAsync(token);
-        return process.ExitCode == 0 && !output.Contains("No rules match", StringComparison.OrdinalIgnoreCase);
+        var output = (await outputTask).Trim();
+        return process.ExitCode == 0 && int.TryParse(output, out var count) && count > 0;
     }
 
     public async Task EnsureHostServerAsync(string root, string pythonExe, string hostAddress,
