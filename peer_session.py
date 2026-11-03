@@ -91,7 +91,7 @@ class GameBridge:
         return r['state']
 
 class Session:
-    def __init__(self,root,mode,code='',bind='0.0.0.0',port=0,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True):
+    def __init__(self,root,mode,code='',bind='0.0.0.0',port=0,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True,skip_native_preflight=False):
         self.root=pathlib.Path(root);self.root.mkdir(parents=True,exist_ok=True);self.slot=0 if mode=='host' else 1
         self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((bind,port));self.sock.setblocking(False)
         self.logical_port=self.sock.getsockname()[1];self.autopunch=False
@@ -216,8 +216,13 @@ class Session:
         if now-self.started>90 and self.phase!='vs_ready':raise RuntimeError('Connection setup timed out')
         if not self.prepared:
             if self.bridge.poll()=='peer_prepared':self.prepared=True;self.phase='ready'
-        if self.prepared and not self.preflight_done and self.remote_phase in ('ready','checking','verified','opening_vs','vs_ready') and self.native is None:
-            self.native=SyntheticPeer(self.root/'MetalGekko.dll',self.slot);self.phase='checking'
+        if self.prepared and not self.preflight_done and self.remote_phase in ('ready','checking','verified','opening_vs','vs_ready') and self.native is None and not self.route_started:
+            if self.skip_native_preflight:
+                # Radmin's authenticated direct UDP handshake is the transport preflight.
+                # The optional synthetic native peer library is not part of the game package.
+                self.bridge.begin('open_local_vs');self.route_started=True;self.phase='opening_vs'
+            else:
+                self.native=SyntheticPeer(self.root/'MetalGekko.dll',self.slot);self.phase='checking'
         if self.native and now-self.last_tick>=1/60:
             self.last_tick=now;self.native.tick()
             for packet in self.native.packets():self.send('gekko',base64.b64encode(packet).decode())
@@ -231,6 +236,8 @@ class Session:
         if self.native and self.vs_ready and self.remote_phase=='vs_ready':
             self.metrics=dict(frame=self.native.frame,rollback_advances=self.native.report.rollback_advances,desyncs=self.native.report.desyncs)
             self.native.close();self.native=None;self.preflight_done=True
+        if self.skip_native_preflight and self.vs_ready and self.remote_phase=='vs_ready':
+            self.preflight_done=True
         if self.preflight_done and self.enable_selection:
             if self.selection is None:self.selection=SelectionSync(self.root,self.slot,self.bridge,atomic_json)
             self.selection.step(self.remote_selection)
@@ -266,7 +273,7 @@ class Session:
             self.sock.close();self.closed=True;self.phase='error' if error else 'closed';self.write_status()
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=0);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true');p.add_argument('--preflight-only',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=0);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true');p.add_argument('--preflight-only',action='store_true');p.add_argument('--skip-native-preflight',action='store_true');args=p.parse_args()
     root=args.root.resolve();root.mkdir(parents=True,exist_ok=True)
     # This runtime is Windows-only; keeping the module importable elsewhere
     # allows CI to validate its connection-code protocol without game DLLs.
@@ -295,7 +302,7 @@ def main():
         if args.mode=='host' and args.autopunch:
             atomic_json(root/'peer-status.json',dict(state='discovering_public_endpoint',autopunch=True,live_netplay=False))
             (root/'peer-summary.txt').write_text('AutoPunch: discovering the public endpoint...',encoding='utf-8');(root/'peer-code.txt').write_text('')
-        session=Session(root,args.mode,args.code,args.bind,args.port,args.advertise,autopunch=args.autopunch,selection_sync=not args.preflight_only)
+        session=Session(root,args.mode,args.code,args.bind,args.port,args.advertise,autopunch=args.autopunch,selection_sync=not args.preflight_only,skip_native_preflight=args.skip_native_preflight)
         while not session.closed:
             if stop.exists():break
             session.step();time.sleep(.002)
