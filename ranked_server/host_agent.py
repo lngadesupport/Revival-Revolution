@@ -94,6 +94,7 @@ def main() -> None:
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
                 logging.info("Ranked API process started (pid=%s)", child.pid)
+                log.close()
             except OSError:
                 log.close()
                 logging.exception("Unable to start Ranked API process")
