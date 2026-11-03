@@ -172,5 +172,18 @@ class RankedStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no joined private room"):
             self.store.start_private_room(guest["player_id"])
 
+    def test_host_can_publish_connection_code_for_guest(self):
+        host = self.store.register("CODE-HOST")
+        guest = self.store.register("CODE-GUEST")
+        room = self.store.create_private_room(host["player_id"], "sa-east")
+        self.store.join_private_room(guest["player_id"], room["room_code"])
+        self.store.start_private_room(host["player_id"])
+        code = "MR1-" + "A" * 42
+        result = self.store.publish_private_room_code(host["player_id"], code)
+        self.assertTrue(result["connection_code_published"])
+        self.assertEqual(self.store.current_match(guest["player_id"])["connection_code"], code)
+        with self.assertRaisesRegex(ValueError, "no started private room"):
+            self.store.publish_private_room_code(guest["player_id"], code)
+
 if __name__ == "__main__":
     unittest.main()
