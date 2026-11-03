@@ -285,5 +285,35 @@ class RankedApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("too many", body["message"])
 
+    def test_private_room_start_is_host_only_and_visible_to_both_players(self):
+        host = self.register("START-HOST")
+        guest = self.register("START-GUEST")
+        status, created = self.request("POST", "/v1/rooms/create", {"region": "sa-east"}, host["token"])
+        self.assertEqual(status, 201)
+        code = created["room"]["room_code"]
+
+        status, joined = self.request("POST", "/v1/rooms/join", {"code": code}, guest["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(joined["match"]["status"], "ready")
+        self.assertEqual(joined["match"]["room_role"], "guest")
+        self.assertEqual(joined["match"]["room_status"], "matched")
+
+        status, host_room = self.request("GET", "/v1/rooms/current", token=host["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(host_room["match"]["room_role"], "host")
+        self.assertEqual(host_room["match"]["status"], "ready")
+
+        status, started = self.request("POST", "/v1/rooms/start", {}, host["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(started["room"]["status"], "starting")
+
+        status, guest_match = self.request("GET", "/v1/match", token=guest["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(guest_match["match"]["room_status"], "starting")
+
+        status, denied = self.request("POST", "/v1/rooms/start", {}, guest["token"])
+        self.assertEqual(status, 400)
+        self.assertEqual(denied["error"], "invalid_request")
+
 if __name__ == "__main__":
     unittest.main()
