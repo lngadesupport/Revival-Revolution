@@ -43,7 +43,7 @@
 ## Critérios mínimos antes da tag estável v0.8.1
 
 - [ ] CI Python atualizado: testes adicionais cobrem exclusividade entre partidas prontas e salas privadas, health check HTTP, cadastro/autenticação e rejeição de chamadas sem token. A execução desta revisão ainda precisa ficar verde.
-- [x] Build Windows x64, verificação do artefato publicado e smoke tests do reparo seletivo aprovados no CI.
+- [ ] Reexecutar build Windows x64 e smoke tests do launcher após a integração dos controles de aceite/recusa e restauração de partida ativa.
 - [ ] Teste do launcher em Windows limpo.
 - [ ] Teste de runtime Python e atualização com SHA-256, staging e rollback.
 - [ ] Diagnóstico validado contra a instalação real do usuário.
