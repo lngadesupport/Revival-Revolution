@@ -6,6 +6,7 @@ on:
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - "scripts/start-radmin-ranked-host.ps1"
+      - "scripts/enable-radmin-peer-firewall.ps1"
       - "tests/LauncherIntegritySmoke/**"
       - ".github/workflows/build-launcher.yml"
       - ".github/workflows/publish-launcher-release.yml"
@@ -26,13 +27,15 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - name: Validate Radmin host script syntax
+      - name: Validate Radmin PowerShell scripts
         shell: pwsh
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path ".\scripts\start-radmin-ranked-host.ps1"), [ref]$tokens, [ref]$errors) | Out-Null
-          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error }
+          foreach ($script in @(".\scripts\start-radmin-ranked-host.ps1", ".\scripts\enable-radmin-peer-firewall.ps1")) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error }
+          }
       - name: Restore
         run: dotnet restore .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj
       - name: Build
