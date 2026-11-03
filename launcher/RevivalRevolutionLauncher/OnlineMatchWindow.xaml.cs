@@ -7,6 +7,7 @@ namespace RevivalRevolution;
 
 public partial class OnlineMatchWindow : Window
 {
+    private const string RankedEndpoint = "http://26.226.57.19:8765";
     private readonly RankedApiClient _api = new();
     private readonly RankedCredentialStore _credentials = new();
     private CancellationTokenSource? _polling;
@@ -22,16 +23,15 @@ public partial class OnlineMatchWindow : Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        var saved = RankedApiClient.LoadEndpoint();
-        if (!string.IsNullOrWhiteSpace(saved)) ApiUrlBox.Text = saved;
-        if (!string.IsNullOrWhiteSpace(ApiUrlBox.Text)) await RestoreSessionAsync();
+        _api.Configure(RankedEndpoint, null);
+        await RestoreSessionAsync();
     }
 
     private async Task RestoreSessionAsync()
     {
         try
         {
-            var endpoint = RankedApiClient.ValidateEndpoint(ApiUrlBox.Text);
+            var endpoint = RankedEndpoint;
             _token = _credentials.Read(endpoint);
             if (string.IsNullOrWhiteSpace(_token)) return;
             _api.Configure(endpoint, _token);
@@ -52,10 +52,9 @@ public partial class OnlineMatchWindow : Window
         ConnectButton.IsEnabled = false;
         try
         {
-            var endpoint = RankedApiClient.ValidateEndpoint(ApiUrlBox.Text);
+            var endpoint = RankedEndpoint;
             if (string.IsNullOrWhiteSpace(NicknameBox.Text))
                 throw new InvalidOperationException("Informe um nickname para criar ou identificar a conta.");
-            RankedApiClient.SaveEndpoint(endpoint);
             _token = _credentials.Read(endpoint);
             _api.Configure(endpoint, _token);
             if (string.IsNullOrWhiteSpace(_token))
@@ -314,17 +313,40 @@ public partial class OnlineMatchWindow : Window
         MatchTitleText.Text = opponent;
         MatchDetailText.Text = $"Adversário: {opponent}\nRating: {rating}\nSua posição: Player {(slot == "0" ? "1" : slot == "1" ? "2" : slot)}\nPartida: {matchId ?? "—"}";
 
-        if (_matchStatus == "ready")
+        var roomRole = match["room_role"]?.GetValue<string>();
+        var roomStatus = match["room_status"]?.GetValue<string>();
+        StartRoomButton.Visibility = roomRole == "host" ? Visibility.Visible : Visibility.Collapsed;
+        StartRoomButton.IsEnabled = roomRole == "host" && roomStatus == "matched";
+        if (_matchStatus == "ready" && roomRole is "host" or "guest")
+        {
+            QueueStateText.Text = roomStatus == "starting" ? "INÍCIO AUTORIZADO" : "SALA COMPLETA";
+            MatchStateText.Text = roomStatus == "starting"
+                ? "O anfitrião autorizou o início. A preparação da conexão P2P ainda precisa ser concluída."
+                : roomRole == "host"
+                    ? "O convidado entrou. Você está na sala automaticamente; clique em INICIAR PARTIDA quando estiver pronto."
+                    : "Você entrou na sala. Aguarde o anfitrião clicar em INICIAR PARTIDA.";
+            AcceptMatchButton.IsEnabled = false;
+            DeclineMatchButton.IsEnabled = true;
+            DeclineMatchButton.Content = "SAIR DA SALA";
+            StatusText.Text = roomStatus == "starting"
+                ? "Sinal de início recebido do servidor. A sessão P2P não foi iniciada automaticamente nesta etapa."
+                : roomRole == "host"
+                    ? "Sala privada pronta. O anfitrião não precisa aceitar a própria sala."
+                    : "Entrada confirmada. Aguardando o anfitrião.";
+        }
+        else if (_matchStatus == "ready")
         {
             QueueStateText.Text = "PARTIDA PRONTA";
             MatchStateText.Text = "Os dois jogadores aceitaram. A partida está pronta para a próxima etapa.";
             AcceptMatchButton.IsEnabled = false;
             DeclineMatchButton.IsEnabled = true;
             DeclineMatchButton.Content = "CANCELAR PARTIDA";
-            StatusText.Text = "Aceite bilateral concluído. A sessão P2P ainda não foi iniciada: falta emitir e validar o ticket de conexão.";
+            StatusText.Text = "Aceite bilateral concluído. A sessão P2P ainda não foi iniciada.";
         }
         else
         {
+            StartRoomButton.Visibility = Visibility.Collapsed;
+            StartRoomButton.IsEnabled = false;
             QueueStateText.Text = "PARTIDA ENCONTRADA";
             MatchStateText.Text = accepted
                 ? "Você aceitou. Aguardando a confirmação do adversário..."
@@ -387,6 +409,29 @@ public partial class OnlineMatchWindow : Window
         catch (OperationCanceledException) { }
     }
 
+    private async void StartRoom_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_matchActive || _matchStatus != "ready" || StartRoomButton.IsEnabled == false) return;
+        StartRoomButton.IsEnabled = false;
+        try
+        {
+            var result = await _api.PostAsync("/v1/rooms/start", new JsonObject());
+            if (result["room"] is JsonObject room)
+            {
+                MatchStateText.Text = "Início autorizado pelo servidor. A conexão P2P ainda precisa ser preparada.";
+                StatusText.Text = "O servidor registrou o início da sala. A inicialização do jogo e a sessão UDP ainda não estão integradas nesta build.";
+                if (room["status"]?.GetValue<string>() == "starting")
+                    StartRoomButton.Content = "INÍCIO AUTORIZADO";
+            }
+            StartMatchLifecyclePolling();
+        }
+        catch (Exception ex)
+        {
+            StartRoomButton.IsEnabled = true;
+            StatusText.Text = "Não foi possível iniciar a sala: " + ex.Message;
+        }
+    }
+
     private async void AcceptMatch_Click(object sender, RoutedEventArgs e)
     {
         if (!_matchActive || _matchStatus != "assigned") return;
@@ -433,6 +478,8 @@ public partial class OnlineMatchWindow : Window
         MatchDetailText.Text = "Quando o servidor encontrar um adversário, os dados da partida aparecerão aqui.";
         MatchStateText.Text = message;
         AcceptMatchButton.IsEnabled = false;
+        StartRoomButton.IsEnabled = false;
+        StartRoomButton.Visibility = Visibility.Collapsed;
         DeclineMatchButton.IsEnabled = false;
         DeclineMatchButton.Content = "RECUSAR PARTIDA";
         QueueStateText.Text = "PRONTO PARA BUSCAR";
