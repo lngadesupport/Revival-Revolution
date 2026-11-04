@@ -24,6 +24,18 @@ def game_pid(game):
  k.CloseHandle(snap)
  if len(found)>1:raise RuntimeError('More than one game is running. Close duplicate game sessions and try again.')
  return found[0] if found else None
+def unity_launch_args():
+ fullscreen=os.environ.get('REVIVAL_UNITY_SCREEN_FULLSCREEN','1')
+ if fullscreen not in ('0','1'):fullscreen='1'
+ args=['-screen-fullscreen',fullscreen]
+ try:
+  width=int(os.environ.get('REVIVAL_UNITY_SCREEN_WIDTH','0'))
+  height=int(os.environ.get('REVIVAL_UNITY_SCREEN_HEIGHT','0'))
+ except (TypeError,ValueError):
+  width=height=0
+ supported={(1280,720),(1600,900),(1920,1080),(2560,1440),(3840,2160)}
+ if (width,height) in supported:args.extend(['-screen-width',str(width),'-screen-height',str(height)])
+ return args
 def main():
  print('Metal Revolution - Offline Launcher\n')
  config=ROOT/'launcher-config.json'
@@ -33,7 +45,7 @@ def main():
   if not (ROOT/name).exists():raise RuntimeError('Missing package file: '+name)
  pid=game_pid(game)
  if not pid:
-  subprocess.Popen([str(game/'ufo.exe'),'-screen-fullscreen','1'],cwd=game);print('Started ufo.exe directly in fullscreen mode without invoking a separate configuration launcher; waiting for the game process.')
+  launch_args=unity_launch_args();subprocess.Popen([str(game/'ufo.exe'),*launch_args],cwd=game);print('Started ufo.exe with validated Unity display options:', ' '.join(launch_args), '; waiting for the game process.')
   for _ in range(100):
    pid=game_pid(game)
    if pid:break
