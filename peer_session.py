@@ -66,7 +66,7 @@ class GameBridge:
         return r['state']
 
 class Session:
-    def __init__(self,root,mode,code='',bind='0.0.0.0',port=0,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True):
+    def __init__(self,root,mode,code='',bind='0.0.0.0',port=8766,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True):
         self.root=pathlib.Path(root);self.root.mkdir(parents=True,exist_ok=True);self.slot=0 if mode=='host' else 1
         self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((bind,port));self.sock.setblocking(False)
         self.logical_port=self.sock.getsockname()[1];self.autopunch=False
@@ -237,7 +237,7 @@ class Session:
             self.sock.close();self.closed=True;self.phase='error' if error else 'closed';self.write_status()
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=0);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true');p.add_argument('--preflight-only',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=8766);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true');p.add_argument('--preflight-only',action='store_true');args=p.parse_args()
     root=args.root.resolve();root.mkdir(parents=True,exist_ok=True)
     # This runtime is Windows-only; keeping the module importable elsewhere
     # allows CI to validate its connection-code protocol without game DLLs.
