@@ -335,13 +335,13 @@ public sealed class LauncherSettingsWindow : Window
         track.SetValue(UIElement.SnapsToDevicePixelsProperty, true);
         grid.AppendChild(track);
 
-        var knob = new FrameworkElementFactory(typeof(Ellipse));
+        var knob = new FrameworkElementFactory(typeof(System.Windows.Shapes.Ellipse));
         knob.Name = "Knob";
         knob.SetValue(FrameworkElement.WidthProperty, 17d);
         knob.SetValue(FrameworkElement.HeightProperty, 17d);
         knob.SetValue(FrameworkElement.MarginProperty, new Thickness(3));
         knob.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Left);
-        knob.SetValue(Ellipse.FillProperty, Brushes.White);
+        knob.SetValue(System.Windows.Shapes.Shape.FillProperty, Brushes.White);
         knob.SetValue(UIElement.IsHitTestVisibleProperty, false);
         grid.AppendChild(knob);
 
