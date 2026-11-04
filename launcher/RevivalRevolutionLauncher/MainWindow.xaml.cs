@@ -423,16 +423,42 @@ public partial class MainWindow : Window
     {
         SetActiveNavigation("diagnostics");
         if (_busy) return;
-        await RunBusyAsync("Executando diagnóstico...", async token =>
+
+        IReadOnlyList<DiagnosticItem>? items = null;
+        _busy = true;
+        IsEnabled = false;
+        FooterStatus.Text = "Executando diagnóstico da instalação...";
+        try
         {
             var python = _python.FindRuntime(_root);
             _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
-            var items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python), token);
+            items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python));
             foreach (var item in items)
                 Log($"{(item.Optional ? "INFO" : item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
+
             var required = items.Where(item => !item.Optional).ToArray();
             FooterStatus.Text = $"Diagnóstico: {required.Count(item => item.Passed)}/{required.Length} verificações essenciais aprovadas.";
-        });
+        }
+        catch (Exception ex)
+        {
+            Log("Falha ao executar diagnóstico: " + ex.Message);
+            FooterStatus.Text = "Não foi possível concluir o diagnóstico.";
+            MessageBox.Show(this, "O diagnóstico não pôde ser concluído: " + ex.Message,
+                "Diagnósticos", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _busy = false;
+            if (IsVisible) IsEnabled = true;
+            RefreshGameState();
+        }
+
+        if (items is null || !IsVisible) return;
+        var window = new LauncherDiagnosticsWindow(items, _settingsService.GetLogDirectory())
+        {
+            Owner = this
+        };
+        window.ShowDialog();
     }
 
     private async Task RunBusyAsync(string status, Func<CancellationToken,Task> operation)
