@@ -336,8 +336,8 @@ public sealed class LauncherSettingsWindow : Window
 
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.ContentSourceProperty, "Header");
-        presenter.SetValue(UIElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        presenter.SetValue(UIElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+        presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
         border.AppendChild(presenter);
 
         var template = new ControlTemplate(typeof(TabItem)) { VisualTree = border };
