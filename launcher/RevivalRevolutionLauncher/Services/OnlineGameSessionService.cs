@@ -30,35 +30,44 @@ public sealed class OnlineGameSessionService : IDisposable
         ResetPeerFiles();
         StartPeer("host", address, null);
 
-        var codePath = Path.Combine(_distributionRoot, "peer-code.txt");
-        var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
-        var deadline = DateTime.UtcNow.AddSeconds(45);
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (_peerProcess is { HasExited: true })
-                throw new InvalidOperationException("A sessão P2P encerrou antes de gerar o código: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
-            if (File.Exists(codePath))
+            var codePath = Path.Combine(_distributionRoot, "peer-code.txt");
+            var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
+            var deadline = DateTime.UtcNow.AddSeconds(45);
+            while (DateTime.UtcNow < deadline)
             {
-                try
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_peerProcess is { HasExited: true })
+                    throw new InvalidOperationException("A sessão P2P encerrou antes de gerar o código: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
+                if (File.Exists(codePath))
                 {
-                    var code = (await File.ReadAllTextAsync(codePath, cancellationToken)).Trim();
-                    if (code.StartsWith("MR1-", StringComparison.Ordinal) && code.Length == 46)
-                        return code;
+                    try
+                    {
+                        var code = (await File.ReadAllTextAsync(codePath, cancellationToken)).Trim();
+                        if (code.StartsWith("MR1-", StringComparison.Ordinal) && code.Length == 46)
+                            return code;
+                    }
+                    catch (IOException)
+                    {
+                        // A transient file lock must not abort creation of the room.
+                    }
                 }
-                catch (IOException)
-                {
-                    // A transient file lock must not abort creation of the room.
-                }
+                var error = ReadPeerError(statusPath);
+                if (!string.IsNullOrWhiteSpace(error))
+                    throw new InvalidOperationException("A sessão P2P não iniciou: " + error);
+                await Task.Delay(250, cancellationToken);
             }
-            var error = ReadPeerError(statusPath);
-            if (!string.IsNullOrWhiteSpace(error))
-                throw new InvalidOperationException("A sessão P2P não iniciou: " + error);
-            await Task.Delay(250, cancellationToken);
-        }
 
-        Stop();
-        throw new TimeoutException("A sessão P2P não gerou um código MR1 em 45 segundos. Consulte peer-status.json e peer-summary.txt.");
+            throw new TimeoutException("A sessão P2P não gerou um código MR1 em 45 segundos. Consulte peer-status.json e peer-summary.txt.");
+        }
+        catch
+        {
+            // Do not leave a background peer process alive when setup is cancelled
+            // or fails before the invitation is returned to the UI.
+            Stop();
+            throw;
+        }
     }
 
     public async Task StartGuestAsync(string connectionCode, CancellationToken cancellationToken = default)
@@ -78,39 +87,50 @@ public sealed class OnlineGameSessionService : IDisposable
     {
         var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
         var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (_peerProcess is { HasExited: true })
-                throw new InvalidOperationException("A sessão P2P encerrou: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
-            try
+            while (DateTime.UtcNow < deadline)
             {
-                using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(statusPath, cancellationToken));
-                var root = json.RootElement;
-                if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_peerProcess is { HasExited: true })
+                    throw new InvalidOperationException("A sessão P2P encerrou: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
+                try
                 {
-                    await Task.Delay(300, cancellationToken);
-                    continue;
+                    using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(statusPath, cancellationToken));
+                    var root = json.RootElement;
+                    if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+                    {
+                        await Task.Delay(300, cancellationToken);
+                        continue;
+                    }
+                    if (root.TryGetProperty("state", out var state) &&
+                        state.ValueKind == System.Text.Json.JsonValueKind.String &&
+                        state.GetString() == "error")
+                    {
+                        var detail = root.TryGetProperty("message", out var message) &&
+                                     message.ValueKind == System.Text.Json.JsonValueKind.String
+                            ? message.GetString() : null;
+                        throw new InvalidOperationException(detail ?? "A sessão P2P foi encerrada por um erro sem detalhes.");
+                    }
+                    var connected = ReadBoolean(root, "peer_connected");
+                    var localReady = ReadBoolean(root, "local_vs_ready");
+                    var remoteReady = ReadBoolean(root, "remote_vs_ready");
+                    if (connected && localReady && remoteReady) return;
                 }
-                if (root.TryGetProperty("state", out var state) &&
-                    state.ValueKind == System.Text.Json.JsonValueKind.String &&
-                    state.GetString() == "error")
-                {
-                    var detail = root.TryGetProperty("message", out var message) &&
-                                 message.ValueKind == System.Text.Json.JsonValueKind.String
-                        ? message.GetString() : null;
-                    throw new InvalidOperationException(detail ?? "A sessão P2P foi encerrada por um erro sem detalhes.");
-                }
-                var connected = ReadBoolean(root, "peer_connected");
-                var localReady = ReadBoolean(root, "local_vs_ready");
-                var remoteReady = ReadBoolean(root, "remote_vs_ready");
-                if (connected && localReady && remoteReady) return;
+                catch (System.Text.Json.JsonException) { }
+                catch (IOException) { }
+                await Task.Delay(300, cancellationToken);
             }
-            catch (System.Text.Json.JsonException) { }
-            catch (IOException) { }
-            await Task.Delay(300, cancellationToken);
+
+            throw new TimeoutException("A sessão não concluiu o handshake UDP e a entrada VS no tempo limite. Confira peer-status.json e peer-summary.txt.");
         }
-        throw new TimeoutException("A sessão não concluiu o handshake UDP e a entrada VS no tempo limite. Confira peer-status.json e peer-summary.txt.");
+        catch
+        {
+            // A failed readiness wait must release the peer process and its UDP
+            // socket; otherwise a retry collides with a stale session.
+            Stop();
+            throw;
+        }
     }
 
     private async Task PrepareGameAsync(CancellationToken cancellationToken)
