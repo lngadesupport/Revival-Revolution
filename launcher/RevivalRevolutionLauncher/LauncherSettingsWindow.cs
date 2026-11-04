@@ -18,7 +18,6 @@ public sealed class LauncherSettingsWindow : Window
     private static readonly Color MutedColor = Color.FromRgb(157, 163, 181);
     private static readonly Color AccentColor = Color.FromRgb(218, 48, 62);
 
-    private readonly ToggleButton _startupUpdates = null!;
     private readonly ToggleButton _confirmLaunch = null!;
     private readonly ToggleButton _persistLogs = null!;
     private readonly CheckBox _customRadminIpEnabled = null!;
@@ -77,7 +76,7 @@ public sealed class LauncherSettingsWindow : Window
         });
         heading.Children.Add(new TextBlock
         {
-            Text = "Preferências, instalação e suporte em um só lugar.",
+            Text = "Preferências e suporte em um só lugar.",
             Margin = new Thickness(0, 2, 0, 0),
             FontSize = 12,
             Foreground = Brush(MutedColor)
@@ -91,7 +90,6 @@ public sealed class LauncherSettingsWindow : Window
         var reset = MakeButton("RESTAURAR PADRÕES", false);
         reset.Click += (_, _) =>
         {
-            _startupUpdates.IsChecked = true;
             _confirmLaunch.IsChecked = false;
             _persistLogs.IsChecked = true;
             _customRadminIpEnabled.IsChecked = false;
@@ -104,7 +102,6 @@ public sealed class LauncherSettingsWindow : Window
         save.Click += (_, _) =>
         {
             Result = CopySettings(current);
-            Result.CheckUpdatesOnStartup = _startupUpdates.IsChecked == true;
             Result.ConfirmBeforeLaunch = _confirmLaunch.IsChecked == true;
             Result.PersistLogs = _persistLogs.IsChecked == true;
             Result.UseCustomRadminIp = _customRadminIpEnabled.IsChecked == true;
@@ -168,9 +165,6 @@ public sealed class LauncherSettingsWindow : Window
         var appCard = MakeCard();
         var app = CardContent(appCard);
         AddCardHeading(app, "APP SETTINGS", "Comportamento do launcher");
-        _startupUpdates = AddSwitchRow(app, "Verificar atualizações ao abrir",
-            "Consulta a versão oficial quando o launcher inicia.", current.CheckUpdatesOnStartup);
-        AddRowDivider(app);
         _confirmLaunch = AddSwitchRow(app, "Confirmar antes de iniciar o jogo",
             "Solicita confirmação antes de abrir o modo offline.", current.ConfirmBeforeLaunch);
         AddRowDivider(app);
@@ -187,7 +181,7 @@ public sealed class LauncherSettingsWindow : Window
 
         var supportCard = MakeCard();
         var support = CardContent(supportCard);
-        AddCardHeading(support, "SUPPORT", "Instalação, arquivos e ajuda");
+        AddCardHeading(support, "SUPPORT", "Arquivos e ajuda");
         AddInfoRow(support, "Pasta do jogo", string.IsNullOrWhiteSpace(gameFolder)
             ? "Nenhuma pasta selecionada." : gameFolder);
         AddRowDivider(support);
@@ -263,7 +257,6 @@ public sealed class LauncherSettingsWindow : Window
     {
         PlayerName = current.PlayerName,
         PlayerTag = current.PlayerTag,
-        CheckUpdatesOnStartup = current.CheckUpdatesOnStartup,
         ConfirmBeforeLaunch = current.ConfirmBeforeLaunch,
         PersistLogs = current.PersistLogs,
         UseCustomRadminIp = current.UseCustomRadminIp,
