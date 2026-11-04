@@ -11,13 +11,13 @@ This contract separates three concerns:
 1. **Game installation** — the actual game executable, Unity data, managed assemblies and
    asset bundles. These remain game-owned files.
 2. **Community/user content** — imported ports, mods, profiles and backups. These are
-   user-owned and must never be silently replaced by an official launcher update.
+   user-owned and are not managed or modified by the launcher.
 3. **Compatibility metadata** — a small description of the game build, bridge protocol,
    roster and content pack. This is used to prevent incompatible peers from starting a match.
 
 ## Launcher ownership and safe paths
 
-The official launcher updater must not manage files under:
+The launcher does not install, update or manage files under these paths:
 
 - `Metal Revolution/` and `ufo_Data/` — original game installation.
 - `Launcher/Mods/` — community mods and character ports.
@@ -26,11 +26,10 @@ The official launcher updater must not manage files under:
 - `Launcher/Profiles/` — user compatibility profiles.
 - `Launcher/Backups/` — user-created recovery copies.
 - `Launcher/Config/`, `Launcher/Logs/`, `Launcher/Runtime/`, `Launcher/Downloads/`,
-  `Launcher/UpdateStaging/` and `Launcher/UpdateBackup/` — local launcher state.
+  `Launcher/Downloads/` — downloaded runtime dependencies and temporary packages.
 
-These directories are deliberately outside the official updater's ownership. A future
-installer/content manager must use explicit import, backup, conflict detection and rollback;
-it must not expand the official update manifest into these locations.
+The launcher does not replace or patch the game or community content. Any future, separately
+approved content-management feature would need explicit import, backup, conflict detection and rollback.
 
 ## Selection catalog contract
 
@@ -95,8 +94,8 @@ scripts, assets or rollback behavior are compatible.
 
 ## Current implementation boundary
 
-The Python selection layer now supports larger rosters and fingerprints optional
-compatibility metadata. The launcher updater protects user-managed content directories.
+The Python selection layer supports larger rosters and fingerprints optional
+compatibility metadata. The launcher does not include an automatic updater or game installer.
 However, the shipped native bridge is a compiled DLL and currently does not expose a
 verified content-hash producer in this repository snapshot. Until that bridge is updated,
 the new metadata fields remain optional and legacy catalog behavior continues.
