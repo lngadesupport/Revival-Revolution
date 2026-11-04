@@ -68,6 +68,16 @@ class CompetitiveRatingTests(unittest.TestCase):
                 self.match_id, "not-a-player", authority_event_id="event-2"
             )
 
+    def test_unrated_room_is_rejected(self):
+        host = self.accounts.register("ROOM-HOST")
+        guest = self.accounts.register("ROOM-GUEST")
+        room = self.accounts.create_private_room(host["player_id"], "sa-east")
+        match = self.accounts.join_private_room(guest["player_id"], room["room_code"])
+        with self.assertRaisesRegex(ValueError, "match_is_not_ranked"):
+            self.competitive.record_authoritative_result(
+                match["match_id"], host["player_id"], authority_event_id="room-event"
+            )
+
     def test_draw_record(self):
         result = self.competitive.record_authoritative_result(
             self.match_id, None, is_draw=True, authority_event_id="event-draw"
