@@ -31,6 +31,36 @@ try
         "The planner did not select only the modified and missing files.");
     Require(!changed.Contains("valid.txt"), "An intact file was incorrectly selected.");
 
+    var staging = Path.Combine(root, "staging");
+    Directory.CreateDirectory(staging);
+    await File.WriteAllTextAsync(Path.Combine(staging, "corrupt.txt"), "expected");
+    await File.WriteAllTextAsync(Path.Combine(staging, "missing.txt"), "new file");
+    LauncherUpdateService.VerifyStagedFiles(staging, new[] { "corrupt.txt", "missing.txt" }, hashes);
+
+    await File.WriteAllTextAsync(Path.Combine(staging, "corrupt.txt"), "tampered after download");
+    var stagedTamperRejected = false;
+    try
+    {
+        LauncherUpdateService.VerifyStagedFiles(staging, new[] { "corrupt.txt" }, hashes);
+    }
+    catch (InvalidDataException)
+    {
+        stagedTamperRejected = true;
+    }
+    Require(stagedTamperRejected, "The staging verifier must reject a modified extracted file.");
+
+    var stagedMissingRejected = false;
+    try
+    {
+        LauncherUpdateService.VerifyStagedFiles(staging, new[] { "absent.txt" },
+            new Dictionary<string, string> { ["absent.txt"] = Hash("absent") });
+    }
+    catch (InvalidDataException)
+    {
+        stagedMissingRejected = true;
+    }
+    Require(stagedMissingRejected, "The staging verifier must reject missing extracted files.");
+
     var protectedRejected = false;
     try
     {
@@ -87,7 +117,7 @@ try
     }
     Require(nonRadminRejected, "The Radmin launcher must reject public/non-Radmin endpoints.");
 
-    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, intact-file preservation, protected game paths, and SHA-256 validation.");
+    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, staged per-file SHA-256 verification, tamper rejection, protected game paths, and connection-code validation.");
 }
 finally
 {
