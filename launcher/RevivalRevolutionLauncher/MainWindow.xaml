@@ -259,6 +259,9 @@
                                         <TextBlock x:Name="DashboardLocalStatus" Text="NÃO CONFIGURADA"
                                                    FontSize="19" FontWeight="Bold" Margin="0,4,0,0"
                                                    TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="DashboardBuildStatus" Text="Versão do jogo: aguardando detecção"
+                                                   FontFamily="Segoe UI" FontSize="9" Foreground="#B9BECE"
+                                                   Margin="0,5,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Background="#70131B2B" CornerRadius="10" Padding="12">
