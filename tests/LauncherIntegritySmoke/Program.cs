@@ -16,6 +16,8 @@ Require(legacySettings is not null, "Legacy launcher settings must deserialize."
 Require(legacySettings!.PlayerName == "LegacyPlayer", "Legacy player profile was not preserved.");
 Require(legacySettings.FpsLimit == 60 && legacySettings.ControllerLeftDeadZone == 8,
     "New 0.8.4 settings must receive defaults when loading an older settings file.");
+Require(legacySettings.VideoFullscreen,
+    "Legacy settings must preserve the launcher's previous fullscreen default.");
 var currentSettings = new LauncherSettings
 {
     FpsLimit = 144,
