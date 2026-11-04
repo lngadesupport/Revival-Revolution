@@ -1,8 +1,8 @@
-"""Small standard-library HTTP API for the Ranked matchmaking MVP.
+"""Standard-library API for Radmin matchmaking and Ranked account data.
 
-Run behind HTTPS in production. This service intentionally does not accept match
-results or modify ratings: the current client-reported peer completion is not
-server-authoritative enough for competitive rating changes.
+Run behind HTTPS in production. Competitive results are accepted only through
+the internal authority endpoint protected by RANKED_RESULT_SECRET; player
+bearer tokens cannot submit winners.
 """
 from __future__ import annotations
 
@@ -206,12 +206,6 @@ def make_handler(store: RankedStore):
                     return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="casual"))
                 if path == "/v1/ranked/match/connection-code":
                     return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="ranked"))
-                if path == "/v1/match/accept":
-                    return self._json(200, {"match": store.accept_match(player_id)})
-                if path == "/v1/match/decline":
-                    return self._json(200, store.decline_match(player_id))
-                if path == "/v1/match/finish":
-                    return self._json(200, store.confirm_match_finished(player_id))
                 if path == "/v1/rooms/create":
                     room = store.create_private_room(player_id, body.get("region", "sa-east"))
                     return self._json(201, {"room": room})
