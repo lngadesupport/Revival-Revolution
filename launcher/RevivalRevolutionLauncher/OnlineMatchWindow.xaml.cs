@@ -33,6 +33,10 @@ public partial class OnlineMatchWindow : Window
     private bool _hostSessionActive;
     private bool _peerReady;
     private bool _closing;
+    private bool _queueActive;
+    private string _queueMode = "casual";
+    private string _matchType = "private";
+    private string _rankedProfileText = "";
 
     public OnlineMatchWindow(string distributionRoot, string gameFolder, string pythonExe)
     {
@@ -72,6 +76,8 @@ public partial class OnlineMatchWindow : Window
 
             _api.Configure(RankedEndpoint, _token);
             ApplyProfile(await _api.GetAsync("/v1/me"));
+            await RefreshRankedSummaryAsync();
+            await RefreshLeaderboardAsync();
             if (await RestoreActiveMatchAsync()) return;
             await RestoreOpenRoomAsync();
             StatusText.Text = _roomWaiting
@@ -107,11 +113,15 @@ public partial class OnlineMatchWindow : Window
                 _credentials.Write(RankedEndpoint, _token);
                 _api.Configure(RankedEndpoint, _token);
                 ApplyProfile(await _api.GetAsync("/v1/me"));
+                await RefreshRankedSummaryAsync();
+                await RefreshLeaderboardAsync();
                 StatusText.Text = "Conta criada. Sua credencial foi protegida no Gerenciador de Credenciais do Windows.";
             }
             else
             {
                 ApplyProfile(await _api.GetAsync("/v1/me"));
+                await RefreshRankedSummaryAsync();
+                await RefreshLeaderboardAsync();
                 if (!await RestoreActiveMatchAsync())
                     await RestoreOpenRoomAsync();
                 StatusText.Text = "Conta conectada.";
@@ -136,7 +146,7 @@ public partial class OnlineMatchWindow : Window
         var name = profile["display_name"]?.GetValue<string>() ?? NicknameBox.Text;
         NicknameBox.Text = name;
         MyNicknameText.Text = name;
-        ProfileText.Text = "CONTA CONECTADA";
+        ProfileText.Text = string.IsNullOrWhiteSpace(_rankedProfileText) ? "CONTA CONECTADA" : _rankedProfileText;
         AvatarButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
         var avatar = profile["avatar_data"]?.GetValue<string>() ?? string.Empty;
         SetOwnAvatar(avatar, name);
@@ -145,9 +155,183 @@ public partial class OnlineMatchWindow : Window
 
     private void SetModeButtons(bool enabled)
     {
-        CreateRoomButton.IsEnabled = enabled && !_roomWaiting && !_matchActive;
-        JoinRoomButton.IsEnabled = enabled && !_roomWaiting && !_matchActive;
-        RoomCodeBox.IsEnabled = enabled && !_roomWaiting && !_matchActive;
+        var canSearch = enabled && !_roomWaiting && !_matchActive && !_queueActive;
+        CasualSearchButton.IsEnabled = canSearch;
+        RankedSearchButton.IsEnabled = canSearch;
+        LeaderboardRefreshButton.IsEnabled = enabled;
+        CancelQueueButton.IsEnabled = enabled && _queueActive;
+        CreateRoomButton.IsEnabled = canSearch;
+        JoinRoomButton.IsEnabled = canSearch;
+        RoomCodeBox.IsEnabled = canSearch;
+    }
+
+    private async Task RefreshRankedSummaryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_token)) return;
+        try
+        {
+            var summary = await _api.GetAsync("/v1/ranked/me");
+            var rating = summary["rating"]?.ToString() ?? "1000";
+            var division = summary["division"]?.GetValue<string>() ?? "Bronze";
+            var wins = summary["wins"]?.ToString() ?? "0";
+            var losses = summary["losses"]?.ToString() ?? "0";
+            var draws = summary["draws"]?.ToString() ?? "0";
+            _rankedProfileText = $"RATING {rating} • {division} • V {wins}/D {losses}/E {draws}";
+        }
+        catch
+        {
+            _rankedProfileText = "CONTA CONECTADA • RANKED INDISPONÍVEL";
+        }
+        ProfileText.Text = _rankedProfileText;
+    }
+
+    private async void LeaderboardRefresh_Click(object sender, RoutedEventArgs e)
+        => await RefreshLeaderboardAsync();
+
+    private async Task RefreshLeaderboardAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_token)) return;
+        LeaderboardRefreshButton.IsEnabled = false;
+        LeaderboardStatusText.Text = "Carregando classificação...";
+        try
+        {
+            var response = await _api.GetAsync("/v1/ranked/leaderboard?limit=100");
+            var entries = response["entries"] as JsonArray;
+            var rows = new List<string>();
+            if (entries is not null)
+            {
+                foreach (var item in entries)
+                {
+                    if (item is not JsonObject entry) continue;
+                    var position = entry["position"]?.ToString() ?? "—";
+                    var name = entry["display_name"]?.GetValue<string>() ?? "Jogador";
+                    var rating = entry["rating"]?.ToString() ?? "—";
+                    var division = entry["division"]?.GetValue<string>() ?? "—";
+                    rows.Add($"{position}. {name} • {rating} • {division}");
+                }
+            }
+            LeaderboardList.ItemsSource = rows;
+            LeaderboardStatusText.Text = rows.Count == 0
+                ? "Nenhum jogador classificado nesta temporada."
+                : $"Temporada {response["season_id"]?.GetValue<string>() ?? "atual"} • {rows.Count} jogadores";
+        }
+        catch (Exception ex)
+        {
+            LeaderboardStatusText.Text = "Falha ao carregar: " + ex.Message;
+        }
+        finally
+        {
+            LeaderboardRefreshButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
+        }
+    }
+
+    private async void QueueSearch_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_token) || _roomWaiting || _matchActive || _queueActive) return;
+        _queueMode = (sender as FrameworkElement)?.Tag?.ToString() == "ranked" ? "ranked" : "casual";
+        SetModeButtons(false);
+        try
+        {
+            var prefix = _queueMode == "ranked" ? "/v1/ranked" : "/v1";
+            var response = await _api.PostAsync(prefix + "/queue/join", new JsonObject { ["region"] = "sa-east" });
+            if (response["match"] is JsonObject match)
+            {
+                ShowMatch(match);
+                return;
+            }
+            _queueActive = true;
+            QueueStateText.Text = _queueMode == "ranked"
+                ? "FILA RANQUEADA ATIVA • procurando adversário..."
+                : "FILA CASUAL ATIVA • procurando adversário...";
+            SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+            _polling?.Cancel();
+            _polling = new CancellationTokenSource();
+            _ = PollQueueAsync(_polling.Token);
+        }
+        catch (Exception ex)
+        {
+            SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+            QueueStateText.Text = "Não foi possível entrar na fila: " + ex.Message;
+        }
+    }
+
+    private async Task PollQueueAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var prefix = _queueMode == "ranked" ? "/v1/ranked" : "/v1";
+            while (!cancellationToken.IsCancellationRequested && _queueActive)
+            {
+                var result = await _api.GetAsync(prefix + "/match", cancellationToken);
+                if (result["match"] is JsonObject match)
+                {
+                    await Dispatcher.InvokeAsync(() => ShowMatch(match));
+                    return;
+                }
+                var queue = await _api.GetAsync(prefix + "/queue", cancellationToken);
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    QueueStateText.Text = queue["queued"]?.GetValue<bool>() == true
+                        ? $"FILA {(_queueMode == "ranked" ? "RANQUEADA" : "CASUAL")} • posição {queue["position"]?.ToString() ?? "—"}"
+                        : "A fila não está ativa no servidor.";
+                });
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                _queueActive = false;
+                QueueStateText.Text = "Falha ao consultar fila: " + ex.Message;
+                SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+            });
+        }
+    }
+
+    private async void CancelQueue_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_queueActive) return;
+        _polling?.Cancel();
+        try
+        {
+            var prefix = _queueMode == "ranked" ? "/v1/ranked" : "/v1";
+            var current = await _api.GetAsync(prefix + "/match");
+            if (current["match"] is JsonObject match)
+            {
+                ShowMatch(match);
+                return;
+            }
+            await _api.PostAsync(prefix + "/queue/leave", new JsonObject());
+            _queueActive = false;
+            QueueStateText.Text = "Busca cancelada.";
+        }
+        catch (Exception ex)
+        {
+            QueueStateText.Text = "Falha ao cancelar a busca: " + ex.Message;
+        }
+        finally
+        {
+            CancelQueueButton.IsEnabled = false;
+            SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+        }
+    }
+
+    private async Task AcceptAssignedMatchAsync(string mode, string? matchId)
+    {
+        if (string.IsNullOrWhiteSpace(matchId)) return;
+        try
+        {
+            var prefix = mode == "ranked" ? "/v1/ranked" : "/v1";
+            var accepted = await _api.PostAsync(prefix + "/match/accept", new JsonObject());
+            if (accepted["match"] is JsonObject match)
+                await Dispatcher.InvokeAsync(() => UpdateMatch(match));
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() => StatusText.Text = "Não foi possível confirmar a partida: " + ex.Message);
+        }
     }
 
     private async Task<bool> RestoreActiveMatchAsync()
