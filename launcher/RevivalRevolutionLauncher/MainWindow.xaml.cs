@@ -159,7 +159,6 @@ public partial class MainWindow : Window
         _gameFolder = folder;
         _distributionRoot = _distributionLocator.Find(_root, folder);
         GameFolderBox.Text = folder;
-        CommunityGamePath.Text = folder;
         _config.SaveGameFolder(_root, folder, _distributionRoot);
         RefreshGameState();
         FooterStatus.Text = IsValidFolder(folder)
@@ -591,7 +590,6 @@ public partial class MainWindow : Window
         if (_privateMatchView is not null)
         {
             DashboardPage.Visibility = Visibility.Collapsed;
-            CommunityPage.Visibility = Visibility.Collapsed;
             PrivateMatchHost.Visibility = Visibility.Visible;
             FooterStatus.Text = "SALA POR CÓDIGO — pronta para criar ou entrar em um convite.";
             return;
@@ -653,7 +651,6 @@ public partial class MainWindow : Window
         _privateMatchView = roomView;
         PrivateMatchHost.Content = roomView;
         DashboardPage.Visibility = Visibility.Collapsed;
-        CommunityPage.Visibility = Visibility.Collapsed;
         PrivateMatchHost.Visibility = Visibility.Visible;
         FooterStatus.Text = "SALA POR CÓDIGO — conectando ao servidor privado.";
     }
@@ -664,7 +661,6 @@ public partial class MainWindow : Window
         _privateMatchView = null;
         PrivateMatchHost.Content = null;
         PrivateMatchHost.Visibility = Visibility.Collapsed;
-        CommunityPage.Visibility = Visibility.Collapsed;
         DashboardPage.Visibility = Visibility.Visible;
         SetActiveNavigation("offline");
         if (view is not null)
