@@ -163,7 +163,7 @@ public sealed class LauncherSettingsWindow : Window
 
         tabs.Items.Add(BuildGeneralTab(current, gameFolder, settingsPath, logDirectory));
         tabs.Items.Add(BuildControllerTab(current));
-        tabs.Items.Add(BuildVideoTab(current));
+        tabs.Items.Add(BuildVideoTab(current, gameFolder));
         tabs.Items.Add(BuildAudioTab(current));
         tabs.Items.Add(BuildSubtitlesTab(current));
         tabs.Items.Add(BuildAboutTab());
@@ -220,12 +220,45 @@ public sealed class LauncherSettingsWindow : Window
         return MakeTab("CONTROLE", panel);
     }
 
-    private TabItem BuildVideoTab(LauncherSettings current)
+    private TabItem BuildVideoTab(LauncherSettings current, string gameFolder)
     {
         var panel = NewPanel();
         AddSectionTitle(panel, "VÍDEO E GRÁFICOS");
         AddText(panel, "Preferências preparadas para o próximo patch. A lista será conectada apenas às opções que forem confirmadas nos arquivos/configuração do jogo.", 11);
         AddNotice(panel, "ALTERAÇÕES GRÁFICAS AINDA NÃO SÃO APLICADAS AO EXECUTÁVEL", true);
+        var inspect = MakeButton("ANALISAR CONFIGURAÇÃO DA INSTALAÇÃO", false);
+        inspect.HorizontalAlignment = HorizontalAlignment.Left;
+        inspect.Margin = new Thickness(0, 0, 0, 10);
+        inspect.Click += (_, _) =>
+        {
+            var report = new GameSettingsDiscoveryService().Inspect(gameFolder);
+            var lines = new List<string> { report.Summary };
+            if (report.CandidateFiles.Count > 0)
+            {
+                lines.Add("");
+                lines.Add("ARQUIVOS CANDIDATOS:");
+                lines.AddRange(report.CandidateFiles.Take(12));
+                if (report.CandidateFiles.Count > 12)
+                    lines.Add("... e mais " + (report.CandidateFiles.Count - 12) + " arquivo(s).");
+            }
+            if (report.RegistryLocations.Count > 0)
+            {
+                lines.Add("");
+                lines.Add("LOCAIS UNITY / REGISTRO:");
+                lines.AddRange(report.RegistryLocations);
+            }
+            if (report.RelevantKeys.Count > 0)
+            {
+                lines.Add("");
+                lines.Add("TERMOS/CHAVES ENCONTRADOS:");
+                lines.AddRange(report.RelevantKeys);
+            }
+            MessageBox.Show(this, string.Join(Environment.NewLine, lines),
+                "Análise somente leitura", MessageBoxButton.OK,
+                report.InstallationFound ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        };
+        panel.Children.Add(inspect);
+
         _resolution = AddCombo(panel, "Resolução", current.VideoResolution, "Padrão do jogo", "1280 × 720", "1600 × 900", "1920 × 1080", "2560 × 1440", "3840 × 2160");
         _graphicsPreset = AddCombo(panel, "Qualidade gráfica", current.GraphicsPreset, "Padrão do jogo", "Baixa", "Média", "Alta", "Personalizada");
         _fpsLimit = AddCombo(panel, "Limite de FPS", current.FpsLimit.ToString(), "60", "75", "90", "120", "144", "165", "180", "200", "240");
