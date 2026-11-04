@@ -118,6 +118,63 @@ class LiveFighterReportTests(unittest.TestCase):
                 live.close()
 
 
+class PeerPacketBindingTests(unittest.TestCase):
+    class FakeBridge:
+        def __init__(self, root, slot, session):
+            self.root = root
+            self.slot = slot
+            self.session = session
+            self.action = None
+
+        def begin(self, action, **extra):
+            self.action = action
+
+        def poll(self):
+            return None
+
+    def packet(self, session, sender, *, target, sequence):
+        import hashlib
+        import hmac
+        import json
+
+        body = json.dumps({
+            "v": peer_session.PROTOCOL,
+            "build": peer_session.BUILD,
+            "slot": 1 - session.slot,
+            "port": sender.getsockname()[1],
+            "nonce": session.remote_nonce,
+            "to": target,
+            "seq": sequence,
+            "kind": "hello",
+            "payload": None,
+        }, sort_keys=True, separators=(",", ":")).encode()
+        return hmac.new(session.key, body, hashlib.sha256).digest() + body
+
+    def test_authenticated_packet_must_target_current_session_after_handshake(self):
+        with tempfile.TemporaryDirectory() as temp:
+            host = peer_session.Session(
+                pathlib.Path(temp), "host", bind="127.0.0.1", port=0,
+                advertise="127.0.0.1", bridge_factory=self.FakeBridge,
+                selection_sync=False, skip_native_preflight=True,
+            )
+            sender = peer_session.socket.socket(peer_session.socket.AF_INET, peer_session.socket.SOCK_DGRAM)
+            sender.bind(("127.0.0.1", 0))
+            try:
+                host.remote_nonce = "a" * 16
+                host.peer = sender.getsockname()
+                sender.sendto(self.packet(host, sender, target=None, sequence=1), host.sock.getsockname())
+                host.read()
+                self.assertIsNone(host.last_received, "A null target must not refresh an established session.")
+
+                sender.sendto(self.packet(host, sender, target=host.nonce, sequence=2), host.sock.getsockname())
+                host.read()
+                self.assertIsNotNone(host.last_received, "A packet bound to this session nonce should be accepted.")
+            finally:
+                host.peer = None
+                sender.close()
+                host.close()
+
+
 class DirectUdpPeerSessionTests(unittest.TestCase):
     class FakeBridge:
         def __init__(self, root, slot, session):
