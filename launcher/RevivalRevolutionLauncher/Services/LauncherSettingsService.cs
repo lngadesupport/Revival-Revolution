@@ -14,10 +14,16 @@ public sealed class LauncherSettings
 public sealed class LauncherSettingsService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    private static string SettingsDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "RevivalRevolution");
-    private static string SettingsPath => Path.Combine(SettingsDirectory, "launcher-settings.json");
+    private readonly string _settingsDirectory;
+    private string SettingsDirectory => _settingsDirectory;
+    private string SettingsPath => Path.Combine(SettingsDirectory, "launcher-settings.json");
+
+    public LauncherSettingsService(string? settingsDirectory = null)
+    {
+        _settingsDirectory = string.IsNullOrWhiteSpace(settingsDirectory)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RevivalRevolution")
+            : Path.GetFullPath(settingsDirectory);
+    }
 
     public LauncherSettings Load()
     {
@@ -75,21 +81,24 @@ public sealed class LauncherSettingsService
         }
     }
 
+    private static string BoundedText(string? value, int maxLength)
+    {
+        var normalized = (value ?? string.Empty).Trim();
+        return normalized.Length <= maxLength ? normalized : normalized[..maxLength];
+    }
+
     private static LauncherSettings Normalize(LauncherSettings settings) => new()
     {
-        // Older releases stored these fields even though the current UI no
-        // longer exposes them. Keep bounded legacy values for forward/backward
-        // compatibility and prevent malformed JSON from injecting nulls.
-        PlayerName = (settings.PlayerName ?? string.Empty).Trim()[..Math.Min(
-            (settings.PlayerName ?? string.Empty).Trim().Length, 24)],
-        PlayerTag = (settings.PlayerTag ?? string.Empty).Trim()[..Math.Min(
-            (settings.PlayerTag ?? string.Empty).Trim().Length, 12)],
+        // Preserve bounded legacy profile values even though the current UI
+        // no longer exposes them.
+        PlayerName = BoundedText(settings.PlayerName, 24),
+        PlayerTag = BoundedText(settings.PlayerTag, 12),
         CheckUpdatesOnStartup = settings.CheckUpdatesOnStartup,
         ConfirmBeforeLaunch = settings.ConfirmBeforeLaunch,
         PersistLogs = settings.PersistLogs
     };
 
-    private static void TryArchiveCorruptSettings()
+    private void TryArchiveCorruptSettings()
     {
         try
         {
