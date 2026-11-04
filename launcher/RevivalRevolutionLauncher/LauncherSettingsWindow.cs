@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using RevivalRevolution.Services;
 
 namespace RevivalRevolution;
@@ -200,8 +201,53 @@ public sealed class LauncherSettingsWindow : Window
     {
         var panel = NewPanel();
         AddSectionTitle(panel, "DISPOSITIVO");
-        AddText(panel, "A configuração abaixo já pode ser salva no perfil local. A detecção ao vivo, o teste físico e a aplicação durante a partida dependem da integração de entrada com o jogo; não serão simulados nesta etapa.", 11);
-        AddNotice(panel, "CONTROLE: PREFERÊNCIAS SALVAS • INTEGRAÇÃO IN-GAME PENDENTE", true);
+        AddText(panel, "As preferências ficam salvas no perfil local. O teste abaixo lê controles compatíveis com XInput em tempo real; a aplicação de dead zones e sensibilidade dentro da partida ainda depende de integração com o jogo.", 11);
+        AddNotice(panel, "TESTE XINPUT ATIVO • AJUSTES DE INPUT NO JOGO PENDENTES", true);
+        AddSectionTitle(panel, "DETECÇÃO E TESTE AO VIVO");
+        AddText(panel, "Compatível com controles que expõem a interface XInput (incluindo controles Xbox e dispositivos mapeados pelo Steam Input). Controles HID genéricos podem não aparecer.", 10, muted: true);
+        var controllerService = new XInputControllerService();
+        var controllerOutput = new TextBlock
+        {
+            Text = "Clique em INICIAR TESTE AO VIVO para detectar controles conectados.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(190, 198, 213)),
+            Margin = new Thickness(0, 8, 0, 10)
+        };
+        var controllerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        var controllerButton = MakeButton("INICIAR TESTE AO VIVO", false);
+        controllerButton.HorizontalAlignment = HorizontalAlignment.Left;
+        controllerButton.Click += (_, _) =>
+        {
+            if (controllerTimer.IsEnabled)
+            {
+                controllerTimer.Stop();
+                controllerButton.Content = "INICIAR TESTE AO VIVO";
+                controllerOutput.Text = "Teste pausado.";
+                return;
+            }
+            controllerTimer.Start();
+            controllerButton.Content = "PARAR TESTE AO VIVO";
+        };
+        controllerTimer.Tick += (_, _) =>
+        {
+            var connected = controllerService.ReadConnected();
+            if (connected.Count == 0)
+            {
+                controllerOutput.Text = "Nenhum controle XInput detectado. Verifique a conexão ou o mapeamento do dispositivo.";
+                return;
+            }
+            controllerOutput.Text = string.Join(Environment.NewLine + Environment.NewLine,
+                connected.Select(item =>
+                    "Controle " + (item.UserIndex + 1) + Environment.NewLine +
+                    "Botões: " + item.Buttons + Environment.NewLine +
+                    "Gatilhos L/R: " + item.LeftTrigger + " / " + item.RightTrigger + Environment.NewLine +
+                    "Analógico esquerdo X/Y: " + item.LeftStickX + "% / " + item.LeftStickY + "%" + Environment.NewLine +
+                    "Analógico direito X/Y: " + item.RightStickX + "% / " + item.RightStickY + "%"));
+        };
+        Closed += (_, _) => controllerTimer.Stop();
+        panel.Children.Add(controllerButton);
+        panel.Children.Add(controllerOutput);
         AddSectionTitle(panel, "ZONAS MORTAS");
         _leftDeadZone = AddSlider(panel, "Dead zone do analógico esquerdo", current.ControllerLeftDeadZone, 0, 50, "%");
         _rightDeadZone = AddSlider(panel, "Dead zone do analógico direito", current.ControllerRightDeadZone, 0, 50, "%");
