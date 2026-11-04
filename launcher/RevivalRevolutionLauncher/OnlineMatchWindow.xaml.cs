@@ -554,7 +554,7 @@ public partial class OnlineMatchWindow : Window
         }
 
         StartRoomButton.Visibility = role == "host" ? Visibility.Visible : Visibility.Collapsed;
-        StartRoomButton.IsEnabled = role == "host" && !_hostSessionActive &&
+        StartRoomButton.IsEnabled = _matchStatus == "ready" && role == "host" && !_hostSessionActive &&
             (roomStatus == "matched" || (roomStatus == "starting" && string.IsNullOrWhiteSpace(connectionCode)));
         if (role == "host" && roomStatus == "starting")
         {
@@ -567,7 +567,14 @@ public partial class OnlineMatchWindow : Window
             StartRoomButton.Content = "INICIAR PARTIDA";
         }
 
-        if (_matchStatus == "ready" && role is "host" or "guest")
+        if (_matchStatus == "assigned" && role is "host" or "guest")
+        {
+            VersusStateText.Text = "Partida encontrada. Confirmando o aceite dos dois jogadores...";
+            LeaveRoomButton.Content = "CANCELAR PARTIDA";
+            LeaveRoomButton.IsEnabled = true;
+            StatusText.Text = "Aguardando confirmação bilateral antes de abrir o jogo.";
+        }
+        else if (_matchStatus == "ready" && role is "host" or "guest")
         {
             VersusStateText.Text = _peerReady
                 ? "Conexão P2P estabelecida. A tela VS está aberta nos dois PCs; escolham personagens, roupas e cenário e confirmem Ready."
