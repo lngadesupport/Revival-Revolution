@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -8,7 +9,7 @@ namespace RevivalRevolution.Services;
 
 public sealed class OnlineGameSessionService : IDisposable
 {
-    private const int PeerPort = 8766;
+    private const int PeerPort = 0; // Let Windows allocate a free UDP port for every session.
     private readonly string _distributionRoot;
     private readonly string _gameFolder;
     private readonly string _pythonExe;
@@ -22,35 +23,51 @@ public sealed class OnlineGameSessionService : IDisposable
         _pythonExe = Path.GetFullPath(pythonExe);
     }
 
-    public async Task<string> StartHostAsync(CancellationToken cancellationToken = default)
+    public async Task<string> StartHostAsync(CancellationToken cancellationToken = default, string? preferredRadminAddress = null)
     {
-        var address = FindRadminAddress();
+        var address = FindHostRadminAddress(preferredRadminAddress);
         await PrepareGameAsync(cancellationToken);
         ResetPeerFiles();
         StartPeer("host", address, null);
 
-        var codePath = Path.Combine(_distributionRoot, "peer-code.txt");
-        var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
-        var deadline = DateTime.UtcNow.AddSeconds(45);
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (_peerProcess is { HasExited: true })
-                throw new InvalidOperationException("A sessão P2P encerrou antes de gerar o código: " + ReadPeerError(statusPath));
-            if (File.Exists(codePath))
+            var codePath = Path.Combine(_distributionRoot, "peer-code.txt");
+            var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
+            var deadline = DateTime.UtcNow.AddSeconds(45);
+            while (DateTime.UtcNow < deadline)
             {
-                var code = (await File.ReadAllTextAsync(codePath, cancellationToken)).Trim();
-                if (code.StartsWith("MR1-", StringComparison.Ordinal) && code.Length == 46)
-                    return code;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_peerProcess is { HasExited: true })
+                    throw new InvalidOperationException("A sessão P2P encerrou antes de gerar o código: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
+                if (File.Exists(codePath))
+                {
+                    try
+                    {
+                        var code = (await File.ReadAllTextAsync(codePath, cancellationToken)).Trim();
+                        if (code.StartsWith("MR1-", StringComparison.Ordinal) && code.Length == 46)
+                            return code;
+                    }
+                    catch (IOException)
+                    {
+                        // A transient file lock must not abort creation of the room.
+                    }
+                }
+                var error = ReadPeerError(statusPath);
+                if (!string.IsNullOrWhiteSpace(error))
+                    throw new InvalidOperationException("A sessão P2P não iniciou: " + error);
+                await Task.Delay(250, cancellationToken);
             }
-            var error = ReadPeerError(statusPath);
-            if (!string.IsNullOrWhiteSpace(error))
-                throw new InvalidOperationException("A sessão P2P não iniciou: " + error);
-            await Task.Delay(250, cancellationToken);
-        }
 
-        Stop();
-        throw new TimeoutException("A sessão P2P não gerou um código MR1 em 45 segundos. Consulte peer-status.json e peer-summary.txt.");
+            throw new TimeoutException("A sessão P2P não gerou um código MR1 em 45 segundos. Consulte peer-status.json e peer-summary.txt.");
+        }
+        catch
+        {
+            // Do not leave a background peer process alive when setup is cancelled
+            // or fails before the invitation is returned to the UI.
+            Stop();
+            throw;
+        }
     }
 
     public async Task StartGuestAsync(string connectionCode, CancellationToken cancellationToken = default)
@@ -60,7 +77,7 @@ public sealed class OnlineGameSessionService : IDisposable
             connectionCode.Length != 46)
             throw new InvalidOperationException("O servidor não forneceu um código MR1 Radmin válido.");
 
-        var address = FindRadminAddress();
+        var address = FindLocalAddressForPeer(connectionCode);
         await PrepareGameAsync(cancellationToken);
         ResetPeerFiles();
         StartPeer("join", address, connectionCode);
@@ -70,28 +87,50 @@ public sealed class OnlineGameSessionService : IDisposable
     {
         var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
         var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (_peerProcess is { HasExited: true })
-                throw new InvalidOperationException("A sessão P2P encerrou: " + ReadPeerError(statusPath));
-            try
+            while (DateTime.UtcNow < deadline)
             {
-                using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(statusPath, cancellationToken));
-                var root = json.RootElement;
-                if (root.TryGetProperty("state", out var state) && state.GetString() == "error")
-                    throw new InvalidOperationException(root.TryGetProperty("message", out var message)
-                        ? message.GetString() ?? "erro sem detalhes" : "erro sem detalhes");
-                var connected = root.TryGetProperty("peer_connected", out var peer) && peer.GetBoolean();
-                var localReady = root.TryGetProperty("local_vs_ready", out var local) && local.GetBoolean();
-                var remoteReady = root.TryGetProperty("remote_vs_ready", out var remote) && remote.GetBoolean();
-                if (connected && localReady && remoteReady) return;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_peerProcess is { HasExited: true })
+                    throw new InvalidOperationException("A sessão P2P encerrou: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
+                try
+                {
+                    using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(statusPath, cancellationToken));
+                    var root = json.RootElement;
+                    if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+                    {
+                        await Task.Delay(300, cancellationToken);
+                        continue;
+                    }
+                    if (root.TryGetProperty("state", out var state) &&
+                        state.ValueKind == System.Text.Json.JsonValueKind.String &&
+                        state.GetString() == "error")
+                    {
+                        var detail = root.TryGetProperty("message", out var message) &&
+                                     message.ValueKind == System.Text.Json.JsonValueKind.String
+                            ? message.GetString() : null;
+                        throw new InvalidOperationException(detail ?? "A sessão P2P foi encerrada por um erro sem detalhes.");
+                    }
+                    var connected = ReadBoolean(root, "peer_connected");
+                    var localReady = ReadBoolean(root, "local_vs_ready");
+                    var remoteReady = ReadBoolean(root, "remote_vs_ready");
+                    if (connected && localReady && remoteReady) return;
+                }
+                catch (System.Text.Json.JsonException) { }
+                catch (IOException) { }
+                await Task.Delay(300, cancellationToken);
             }
-            catch (System.Text.Json.JsonException) { }
-            catch (IOException) { }
-            await Task.Delay(300, cancellationToken);
+
+            throw new TimeoutException("A sessão não concluiu o handshake UDP e a entrada VS no tempo limite. Confira peer-status.json e peer-summary.txt.");
         }
-        throw new TimeoutException("A sessão não concluiu o handshake UDP e a entrada VS no tempo limite. Confira peer-status.json e peer-summary.txt.");
+        catch
+        {
+            // A failed readiness wait must release the peer process and its UDP
+            // socket; otherwise a retry collides with a stale session.
+            Stop();
+            throw;
+        }
     }
 
     private async Task PrepareGameAsync(CancellationToken cancellationToken)
@@ -206,33 +245,192 @@ public sealed class OnlineGameSessionService : IDisposable
             start.ArgumentList.Add(code!);
         }
 
-        _peerProcess = Process.Start(start)
-            ?? throw new InvalidOperationException("O Windows não conseguiu iniciar peer_session.py.");
+        start.RedirectStandardOutput = true;
+        start.RedirectStandardError = true;
+        RotatePeerLog();
+
+        var process = new Process { StartInfo = start, EnableRaisingEvents = true };
+        process.OutputDataReceived += (_, args) =>
+        {
+            if (args.Data is not null) AppendPeerLog("OUT", args.Data);
+        };
+        process.ErrorDataReceived += (_, args) =>
+        {
+            if (args.Data is not null) AppendPeerLog("ERR", args.Data);
+        };
+        process.Exited += (_, _) =>
+        {
+            try { AppendPeerLog("EXIT", "peer_session.py encerrou com código " + process.ExitCode); }
+            catch (InvalidOperationException) { AppendPeerLog("EXIT", "peer_session.py encerrou."); }
+        };
+
+        if (!process.Start())
+        {
+            process.Dispose();
+            throw new InvalidOperationException("O Windows não conseguiu iniciar peer_session.py.");
+        }
+
+        _peerProcess = process;
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        AppendPeerLog("INFO", $"Sessão {mode} iniciada; bind={address}; porta UDP automática.");
     }
 
-    private string FindRadminAddress()
+    private string PeerLogPath => Path.Combine(_distributionRoot, "peer-session.log");
+
+    private void RotatePeerLog()
     {
-        foreach (var adapter in NetworkInterface.GetAllNetworkInterfaces())
+        try
         {
-            if (adapter.OperationalStatus != OperationalStatus.Up) continue;
-            foreach (var item in adapter.GetIPProperties().UnicastAddresses)
+            var info = new FileInfo(PeerLogPath);
+            if (info.Exists && info.Length > 1024 * 1024)
+                File.Move(PeerLogPath, PeerLogPath + ".1", overwrite: true);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private void AppendPeerLog(string level, string message)
+    {
+        try
+        {
+            lock (_logLock)
+                File.AppendAllText(PeerLogPath,
+                    $"{DateTimeOffset.UtcNow:O} [{level}] {message}{Environment.NewLine}");
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static bool IsRadminAddress(IPAddress address) =>
+        address.AddressFamily == AddressFamily.InterNetwork && address.GetAddressBytes()[0] == 26;
+
+    private string FindHostRadminAddress(string? preferredAddress)
+    {
+        var candidates = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(adapter => adapter.OperationalStatus == OperationalStatus.Up)
+            .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses
+                .Where(item => IsRadminAddress(item.Address))
+                .Select(item => new { Address = item.Address, Adapter = adapter }))
+            .ToArray();
+
+        if (!string.IsNullOrWhiteSpace(preferredAddress))
+        {
+            if (!IPAddress.TryParse(preferredAddress, out var preferred) || !IsRadminAddress(preferred))
+                throw new InvalidOperationException("O endereço configurado do anfitrião não é um IPv4 Radmin válido.");
+            var exact = candidates.FirstOrDefault(item => item.Address.Equals(preferred));
+            if (exact is not null) return exact.Address.ToString();
+            throw new InvalidOperationException(
+                $"O IP Radmin configurado ({preferred}) não está ativo neste computador. " +
+                "Conecte a Radmin VPN correta antes de criar a sala.");
+        }
+
+        if (candidates.Length == 1) return candidates[0].Address.ToString();
+        var named = candidates.Where(item =>
+            item.Adapter.Name.Contains("Radmin", StringComparison.OrdinalIgnoreCase) ||
+            item.Adapter.Description.Contains("Radmin", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (named.Length == 1) return named[0].Address.ToString();
+
+        var available = candidates.Select(item => item.Address.ToString()).Distinct().ToArray();
+        if (available.Length == 0)
+            throw new InvalidOperationException("Radmin VPN não está conectada. Abra a Radmin VPN e conecte-se à mesma rede do anfitrião.");
+        throw new InvalidOperationException(
+            "Há mais de uma interface VPN 26.x ativa e não foi possível escolher a correta: " +
+            string.Join(", ", available) + ". Verifique a rede Radmin selecionada.");
+    }
+
+    private static string FindLocalAddressForPeer(string connectionCode)
+    {
+        var (remoteAddress, remotePort) = DecodeRadminConnectionCode(connectionCode);
+        try
+        {
+            using var routeProbe = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            routeProbe.Connect(new IPEndPoint(remoteAddress, remotePort));
+            if (routeProbe.LocalEndPoint is not IPEndPoint local || !IsRadminAddress(local.Address))
+                throw new InvalidOperationException(
+                    "O Windows não encontrou uma rota Radmin até o anfitrião. Confirme se os dois PCs estão na mesma rede Radmin.");
+            return local.Address.ToString();
+        }
+        catch (SocketException ex)
+        {
+            throw new InvalidOperationException(
+                "Não foi possível selecionar a interface Radmin para alcançar o anfitrião. " +
+                "Confirme se a VPN está conectada nos dois PCs.", ex);
+        }
+    }
+
+    public static (IPAddress Address, int Port) DecodeRadminConnectionCode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || !code.StartsWith("MR1-", StringComparison.Ordinal) || code.Length != 46)
+            throw new InvalidOperationException("O convite P2P não contém um código MR1 Radmin válido.");
+
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        var decoded = new List<byte>(26);
+        uint buffer = 0;
+        var bits = 0;
+        foreach (var character in code.AsSpan(4))
+        {
+            var value = alphabet.IndexOf(character);
+            if (value < 0) throw new InvalidOperationException("O código de conexão contém caracteres inválidos.");
+            buffer = (buffer << 5) | (uint)value;
+            bits += 5;
+            if (bits >= 8)
             {
-                var address = item.Address;
-                if (address.AddressFamily == AddressFamily.InterNetwork &&
-                    address.GetAddressBytes()[0] == 26)
-                    return address.ToString();
+                bits -= 8;
+                decoded.Add((byte)(buffer >> bits));
+                buffer &= bits == 0 ? 0u : (1u << bits) - 1;
             }
         }
-        throw new InvalidOperationException("Radmin VPN não está conectada. Conecte-se à rede Radmin antes de iniciar a partida.");
+
+        if (decoded.Count != 26 || (bits > 0 && buffer != 0))
+            throw new InvalidOperationException("O código de conexão está incompleto ou malformado.");
+
+        var bytes = decoded.ToArray();
+        var expectedCrc = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(22, 4));
+        if (ComputeCrc32(bytes.AsSpan(0, 22)) != expectedCrc)
+            throw new InvalidOperationException("A verificação de integridade do código de conexão falhou.");
+
+        var address = new IPAddress(bytes.AsSpan(0, 4));
+        var port = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(4, 2));
+        if (!IsRadminAddress(address) || port == 0)
+            throw new InvalidOperationException("O convite não aponta para um endpoint Radmin válido.");
+        return (address, port);
     }
+
+    private static uint ComputeCrc32(ReadOnlySpan<byte> bytes)
+    {
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in bytes)
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+                crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
+        }
+        return ~crc;
+    }
+
+    private static bool ReadBoolean(System.Text.Json.JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) &&
+        (value.ValueKind == System.Text.Json.JsonValueKind.True ||
+         value.ValueKind == System.Text.Json.JsonValueKind.False) &&
+        value.GetBoolean();
 
     private void ResetPeerFiles()
     {
-        foreach (var name in new[] { "peer-code.txt", "peer-status.json", "peer-summary.txt", "peer-stop.json" })
+        foreach (var name in new[] { "peer-code.txt", "peer-status.json", "peer-summary.txt", "peer-stop.json", "peer-end.json" })
         {
             var path = Path.Combine(_distributionRoot, name);
-            try { if (File.Exists(path)) File.Delete(path); }
-            catch (IOException) { }
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+                if (File.Exists(path))
+                    throw new IOException("O arquivo de estado antigo continua presente.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                throw new InvalidOperationException(
+                    $"Não foi possível limpar o estado antigo da sessão ({name}). Feche uma partida anterior e tente novamente.", ex);
+            }
         }
     }
 
@@ -260,7 +458,16 @@ public sealed class OnlineGameSessionService : IDisposable
         catch (UnauthorizedAccessException) { }
         if (_peerProcess is { HasExited: false })
         {
-            try { _peerProcess.WaitForExit(1500); } catch (InvalidOperationException) { }
+            try
+            {
+                if (!_peerProcess.WaitForExit(2000) && !_peerProcess.HasExited)
+                {
+                    _peerProcess.Kill(entireProcessTree: true);
+                    _peerProcess.WaitForExit(2000);
+                }
+            }
+            catch (InvalidOperationException) { }
+            catch (System.ComponentModel.Win32Exception) { }
         }
         _peerProcess?.Dispose();
         _peerProcess = null;

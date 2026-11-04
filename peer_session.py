@@ -67,28 +67,56 @@ def decode_connection_code(code):
         if not relay[1] or ip.is_multicast or ip.is_unspecified or int(ip)==0xffffffff:raise ValueError('Invalid AutoPunch relay endpoint')
     return (address,port),raw[6:22],relay
 
-def atomic_json(path,value):
-    tmp=path.with_name(path.name+'.'+str(os.getpid())+'.tmp')
-    tmp.write_text(json.dumps(value,indent=2),encoding='utf-8')
-    try:os.replace(tmp,path)
+def atomic_text(path,value,encoding='utf-8'):
+    path=pathlib.Path(path)
+    tmp=path.with_name(path.name+'.'+str(os.getpid())+'.'+secrets.token_hex(4)+'.tmp')
+    try:
+        tmp.write_text(value,encoding=encoding)
+        os.replace(tmp,path)
     except PermissionError:
         try:tmp.unlink()
         except OSError:pass
+        # A reader may temporarily hold the destination without delete sharing.
+        # Keep the previous complete file and retry on the next status tick.
+        return False
+    except OSError:
+        try:tmp.unlink()
+        except OSError:pass
+        raise
+    return True
+
+def atomic_json(path,value):
+    return atomic_text(path,json.dumps(value,indent=2),encoding='utf-8')
 
 class GameBridge:
     def __init__(self,root,slot,session):self.root=root;self.slot=slot;self.session=session;self.command=None
     def begin(self,action,**extra):
-        pid=int((self.root/'netplay-pid.txt').read_text().strip())
+        try:
+            pid=int((self.root/'netplay-pid.txt').read_text().strip())
+        except (OSError,ValueError) as exc:
+            raise RuntimeError('Game process identity is unavailable; relaunch the game through the launcher') from exc
+        if pid<=0:raise RuntimeError('Game process identity is invalid')
         self.command=dict(id=uuid.uuid4().hex,action=action,session_id=self.session,target_pid=pid,protocol=1,slot=self.slot,frames=8)
         self.command.update(extra)
-        atomic_json(self.root/'game-command.json',self.command);self.deadline=time.monotonic()+(120 if action in ('live_local_test','peer_prepare') else 65 if action=='fighter_test_load' else 60 if action=='open_local_vs' else 18)
+        if not atomic_json(self.root/'game-command.json',self.command):
+            raise RuntimeError('Game bridge command is temporarily locked; retry the action')
+        self.deadline=time.monotonic()+(120 if action in ('live_local_test','peer_prepare') else 65 if action=='fighter_test_load' else 60 if action=='open_local_vs' else 18)
     def poll(self):
         if time.monotonic()>self.deadline:raise RuntimeError('Game bridge timed out; return to the main menu and attach the launcher')
         try:r=json.loads((self.root/'game-response.json').read_text())
         except (OSError,ValueError):return None
-        if r.get('id')!=self.command['id'] or r.get('pid')!=self.command['target_pid'] or r.get('state') in ('opening_vs','selection_applying','selection_waiting','fighter_loading','fighter_capturing','live_trial_running'):return None
-        if r.get('state') not in ('peer_prepared','vs_ready','selection_ready','selection_previewed','selection_applied','selection_ended','fighter_loaded','fighter_captured','fighter_replayed','fighter_replay_failed','live_started','live_trial_passed','live_trial_failed'):raise RuntimeError(r.get('message','Game bridge rejected the session'))
-        return r['state']
+        if not isinstance(r,dict):return None
+        if (r.get('id')!=self.command['id'] or type(r.get('pid')) is not int
+                or r.get('pid')!=self.command['target_pid']):
+            return None
+        state=r.get('state')
+        if state in ('opening_vs','selection_applying','selection_waiting','fighter_loading','fighter_capturing','live_trial_running'):
+            return None
+        if state not in ('peer_prepared','vs_ready','selection_ready','selection_previewed','selection_applied','selection_ended','fighter_loaded','fighter_captured','fighter_replayed','fighter_replay_failed','live_started','live_trial_passed','live_trial_failed'):
+            message=r.get('message')
+            if not isinstance(message,str) or not message.strip():message='Game bridge rejected the session'
+            raise RuntimeError(message[:1024])
+        return state
 
 class Session:
     def __init__(self,root,mode,code='',bind='0.0.0.0',port=0,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True,skip_native_preflight=False,setup_timeout=90):
@@ -143,9 +171,8 @@ class Session:
         if self.native or self.metrics:summary+='Rollback frames: '+str(data.get('rollback_advances',0))+'; desyncs: '+str(data.get('desyncs',0))+'. '
         summary+='\n'+data['message']
         # Readers may briefly hold a file open without delete sharing.
-        for name,text in [('peer-summary.txt',summary),('peer-code.txt',self.code if self.phase not in ('closed','error') else '')]:
-            try:(self.root/name).write_text(text,encoding='utf-8')
-            except PermissionError:pass
+        atomic_text(self.root/'peer-summary.txt',summary)
+        atomic_text(self.root/'peer-code.txt',self.code if self.phase not in ('closed','error') else '')
     def send(self,kind,payload=None):
         if self.peer is None:return
         self.seq+=1
@@ -165,13 +192,23 @@ class Session:
             except (ValueError,UnicodeError):continue
             if not isinstance(m,dict) or m.get('v')!=PROTOCOL or m.get('slot')!=1-self.slot:continue
             if m.get('build')!=BUILD:raise RuntimeError('Peer build/protocol differs; install the same launcher package')
-            nonce=m.get('nonce');seq=m.get('seq');kind=m.get('kind')
-            if not isinstance(nonce,str) or len(nonce)!=16 or type(seq) is not int or seq<1:continue
+            nonce=m.get('nonce');seq=m.get('seq');kind=m.get('kind');target=m.get('to')
+            if (not isinstance(nonce,str) or len(nonce)!=16 or type(seq) is not int or seq<1
+                    or type(m.get('port')) is not int or not 1<=m['port']<=65535
+                    or kind not in ('hello','close','state','gekko','selection','fighter_test','live_state','live_gekko')):
+                continue
             first=self.remote_nonce is None
             if first:
-                if kind!='hello' or (self.slot==1 and m.get('to')!=self.nonce):continue
-            elif nonce!=self.remote_nonce:continue
-            if m.get('to') not in (None,self.nonce) or seq in self.seen or seq<self.high-512:continue
+                # The joining peer addresses its first hello to the host's nonce.
+                # The host has not learned the guest nonce yet, so its first hello
+                # is the only packet allowed to carry a null target.
+                if kind!='hello' or (self.slot==1 and target!=self.nonce):continue
+            elif nonce!=self.remote_nonce or target!=self.nonce:
+                # Once authenticated, every packet must be explicitly bound to
+                # this session nonce. Accepting a null target permits cross-session
+                # replay of otherwise valid packets captured with the shared key.
+                continue
+            if (target not in (None,self.nonce) or seq in self.seen or seq<self.high-512):continue
             if self.autopunch:
                 internal=m.get('port')
                 if type(internal) is not int or not 1<=internal<=65535:continue

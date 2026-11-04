@@ -1,7 +1,7 @@
-using System.ComponentModel;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
@@ -9,7 +9,7 @@ using RevivalRevolution.Services;
 
 namespace RevivalRevolution;
 
-public partial class OnlineMatchWindow : Window
+public partial class OnlineMatchWindow : UserControl
 {
     private static readonly string RankedEndpoint =
         string.IsNullOrWhiteSpace(RankedApiClient.LoadEndpoint())
@@ -28,11 +28,17 @@ public partial class OnlineMatchWindow : Window
     private string? _matchStatus;
     private string? _opponentId;
     private bool _roomWaiting;
+    private bool _queueSearching;
+    private string? _acceptingMatchId;
+    private string? _autoStartMatchId;
     private bool _matchActive;
     private bool _guestSessionStarted;
     private bool _hostSessionActive;
     private bool _peerReady;
     private bool _closing;
+    private bool _shutdown;
+
+    public event EventHandler? BackRequested;
 
     public OnlineMatchWindow(string distributionRoot, string gameFolder, string pythonExe)
     {
@@ -46,7 +52,11 @@ public partial class OnlineMatchWindow : Window
         try
         {
             StatusText.Text = "Aguardando o servidor privado Radmin...";
+            NetworkStateText.Text = "Radmin VPN  /  verificando servidor...";
+            NetworkStateDot.Fill = new SolidColorBrush(Color.FromRgb(214, 164, 91));
             await _radminHost.WaitForServerAsync(new Uri(RankedEndpoint).Host, _sessionCancellation.Token);
+            NetworkStateText.Text = "Radmin VPN  /  servidor alcançável";
+            NetworkStateDot.Fill = new SolidColorBrush(Color.FromRgb(107, 197, 139));
             await RestoreSessionAsync();
         }
         catch (OperationCanceledException)
@@ -54,6 +64,8 @@ public partial class OnlineMatchWindow : Window
         }
         catch (Exception ex)
         {
+            NetworkStateText.Text = "Radmin VPN  /  servidor indisponível";
+            NetworkStateDot.Fill = new SolidColorBrush(Color.FromRgb(224, 91, 101));
             StatusText.Text = "Servidor privado indisponível: " + ex.Message;
             SetModeButtons(false);
         }
@@ -74,13 +86,30 @@ public partial class OnlineMatchWindow : Window
             ApplyProfile(await _api.GetAsync("/v1/me"));
             if (await RestoreActiveMatchAsync()) return;
             await RestoreOpenRoomAsync();
+            if (!_roomWaiting)
+            {
+                var queue = await _api.GetAsync("/v1/queue");
+                if (queue["queued"]?.GetValue<bool>() == true)
+                {
+                    _queueSearching = true;
+                    CreateRoomButton.IsEnabled = false;
+                    RoomCodeBox.IsEnabled = false;
+                    UpdateJoinRoomButtonState();
+                    UpdateQueueButtons();
+                    StatusText.Text = "Busca aleatória restaurada. Aguardando adversário pela Radmin...";
+                    StartQueuePolling();
+                    return;
+                }
+            }
             StatusText.Text = _roomWaiting
                 ? "Convite restaurado. Aguardando o convidado entrar."
-                : "Conta conectada. Crie uma sala ou insira o código de um convite.";
+                : "Conta conectada. Busque uma partida aleatória ou use um código.";
         }
         catch (Exception ex)
         {
             _token = null;
+            NicknameBox.IsReadOnly = false;
+            ConnectButton.Content = "CONECTAR";
             ProfileText.Text = "Não foi possível restaurar a sessão.";
             StatusText.Text = "Falha ao conectar ao servidor: " + ex.Message;
             SetModeButtons(false);
@@ -135,6 +164,8 @@ public partial class OnlineMatchWindow : Window
         _playerId = profile["player_id"]?.GetValue<string>() ?? _playerId;
         var name = profile["display_name"]?.GetValue<string>() ?? NicknameBox.Text;
         NicknameBox.Text = name;
+        NicknameBox.IsReadOnly = true;
+        ConnectButton.Content = "ATUALIZAR";
         MyNicknameText.Text = name;
         ProfileText.Text = "CONTA CONECTADA";
         AvatarButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
@@ -145,9 +176,151 @@ public partial class OnlineMatchWindow : Window
 
     private void SetModeButtons(bool enabled)
     {
-        CreateRoomButton.IsEnabled = enabled && !_roomWaiting && !_matchActive;
-        JoinRoomButton.IsEnabled = enabled && !_roomWaiting && !_matchActive;
-        RoomCodeBox.IsEnabled = enabled && !_roomWaiting && !_matchActive;
+        FindRandomButton.IsEnabled = enabled && !_roomWaiting && !_queueSearching && !_matchActive;
+        CreateRoomButton.IsEnabled = enabled && !_roomWaiting && !_queueSearching && !_matchActive;
+        RoomCodeBox.IsEnabled = enabled && !_roomWaiting && !_queueSearching && !_matchActive;
+        UpdateQueueButtons(enabled);
+        UpdateJoinRoomButtonState();
+    }
+
+    private void UpdateQueueButtons(bool enabled = true)
+    {
+        FindRandomButton.IsEnabled = enabled && !string.IsNullOrWhiteSpace(_token) &&
+            !_roomWaiting && !_queueSearching && !_matchActive;
+        CancelQueueButton.Visibility = _queueSearching ? Visibility.Visible : Visibility.Collapsed;
+        CancelQueueButton.IsEnabled = _queueSearching;
+    }
+
+    private async void FindRandom_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_token) || _queueSearching || _roomWaiting || _matchActive) return;
+        FindRandomButton.IsEnabled = false;
+        CreateRoomButton.IsEnabled = false;
+        JoinRoomButton.IsEnabled = false;
+        try
+        {
+            var result = await _api.PostAsync("/v1/queue/join", new JsonObject { ["region"] = "sa-east" });
+            if (result["match"] is JsonObject match)
+            {
+                ShowMatch(match);
+                return;
+            }
+
+            _queueSearching = true;
+            UpdateQueueButtons();
+            RoomCodeBox.IsEnabled = false;
+            StatusText.Text = "Procurando adversário na rede Radmin... Você pode cancelar a busca.";
+            StartQueuePolling();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Não foi possível entrar na fila: " + ex.Message;
+            SetModeButtons(true);
+        }
+    }
+
+    private void StartQueuePolling()
+    {
+        _polling?.Cancel();
+        _polling?.Dispose();
+        _polling = new CancellationTokenSource();
+        _ = PollQueueAsync(_polling.Token);
+    }
+
+    private async Task PollQueueAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (_queueSearching && !cancellationToken.IsCancellationRequested)
+            {
+                var matchResult = await _api.GetAsync("/v1/match", cancellationToken);
+                if (matchResult["match"] is JsonObject match)
+                {
+                    await Dispatcher.InvokeAsync(() => ShowMatch(match));
+                    return;
+                }
+
+                var queue = await _api.GetAsync("/v1/queue", cancellationToken);
+                if (queue["queued"]?.GetValue<bool>() == true)
+                {
+                    var position = queue["position"]?.GetValue<int>() ?? 1;
+                    await Dispatcher.InvokeAsync(() =>
+                        StatusText.Text = $"Procurando adversário pela Radmin... Posição na fila: {position}");
+                }
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!_closing)
+                await Dispatcher.InvokeAsync(() =>
+                    StatusText.Text = "Falha ao atualizar a fila. Tentando novamente: " + ex.Message);
+            try { await Task.Delay(TimeSpan.FromSeconds(4), cancellationToken); }
+            catch (OperationCanceledException) { }
+            if (_queueSearching && !cancellationToken.IsCancellationRequested)
+                _ = PollQueueAsync(cancellationToken);
+        }
+    }
+
+    private async void CancelQueue_Click(object sender, RoutedEventArgs e)
+    {
+        CancelQueueButton.IsEnabled = false;
+        try
+        {
+            var current = await _api.GetAsync("/v1/match");
+            if (current["match"] is JsonObject assigned)
+            {
+                ShowMatch(assigned);
+                return;
+            }
+            await _api.PostAsync("/v1/queue/leave", new JsonObject());
+            _queueSearching = false;
+            _polling?.Cancel();
+            RoomCodeBox.IsEnabled = true;
+            SetModeButtons(true);
+            StatusText.Text = "Busca cancelada. Você saiu da fila de partidas aleatórias.";
+        }
+        catch (Exception ex)
+        {
+            CancelQueueButton.IsEnabled = true;
+            StatusText.Text = "Não foi possível cancelar a busca: " + ex.Message;
+        }
+    }
+
+    private void UpdateJoinRoomButtonState()
+    {
+        var code = RoomCodeBox.Text.Trim();
+        JoinRoomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token) &&
+            !_roomWaiting && !_matchActive && RoomCodeBox.IsEnabled &&
+            code.Length == 6 && code.All(char.IsAsciiLetterOrDigit);
+    }
+
+    private void RoomCodeBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter && JoinRoomButton.IsEnabled)
+        {
+            JoinRoom_Click(sender, new RoutedEventArgs());
+            e.Handled = true;
+        }
+    }
+
+    private void RoomCodeBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var normalized = new string(RoomCodeBox.Text
+            .Where(char.IsAsciiLetterOrDigit)
+            .Take(6)
+            .ToArray())
+            .ToUpperInvariant();
+
+        if (!string.Equals(RoomCodeBox.Text, normalized, StringComparison.Ordinal))
+        {
+            var caret = Math.Min(normalized.Length, RoomCodeBox.CaretIndex);
+            RoomCodeBox.Text = normalized;
+            RoomCodeBox.CaretIndex = caret;
+        }
+
+        UpdateJoinRoomButtonState();
     }
 
     private async Task<bool> RestoreActiveMatchAsync()
@@ -266,9 +439,9 @@ public partial class OnlineMatchWindow : Window
     {
         if (string.IsNullOrWhiteSpace(_token) || _roomWaiting || _matchActive) return;
         var code = RoomCodeBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(code))
+        if (code.Length != 6 || !code.All(char.IsAsciiLetterOrDigit))
         {
-            StatusText.Text = "Digite o código de seis caracteres recebido do anfitrião.";
+            StatusText.Text = "O código deve conter exatamente seis letras ou números.";
             return;
         }
 
@@ -283,13 +456,15 @@ public partial class OnlineMatchWindow : Window
         catch (Exception ex)
         {
             StatusText.Text = "Não foi possível entrar na sala: " + ex.Message;
-            JoinRoomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
+            UpdateJoinRoomButtonState();
         }
     }
 
     private void ShowMatch(JsonObject match)
     {
         _roomWaiting = false;
+        _queueSearching = false;
+        UpdateQueueButtons();
         _matchActive = true;
         _activeMatchId = match["match_id"]?.GetValue<string>();
         InvitePanel.Visibility = Visibility.Collapsed;
@@ -309,6 +484,12 @@ public partial class OnlineMatchWindow : Window
         _activeMatchId = matchId;
         _matchStatus = match["status"]?.GetValue<string>() ?? "ready";
         _matchActive = _matchStatus is "assigned" or "ready";
+        if (_matchStatus == "assigned" && !string.IsNullOrWhiteSpace(matchId) &&
+            !string.Equals(_acceptingMatchId, matchId, StringComparison.Ordinal))
+        {
+            _acceptingMatchId = matchId;
+            _ = AcceptAssignedMatchAsync(matchId);
+        }
         var opponent = match["opponent"] as JsonObject;
         var opponentName = opponent?["display_name"]?.GetValue<string>() ?? "Adversário";
         var opponentId = opponent?["player_id"]?.GetValue<string>();
@@ -327,6 +508,7 @@ public partial class OnlineMatchWindow : Window
         var role = match["room_role"]?.GetValue<string>();
         var roomStatus = match["room_status"]?.GetValue<string>();
         var connectionCode = match["connection_code"]?.GetValue<string>();
+        var matchType = match["match_type"]?.GetValue<string>();
         if (role == "guest")
         {
             OpponentRoleText.Text = "ANFITRIÃO";
@@ -341,8 +523,15 @@ public partial class OnlineMatchWindow : Window
         }
 
         StartRoomButton.Visibility = role == "host" ? Visibility.Visible : Visibility.Collapsed;
-        StartRoomButton.IsEnabled = role == "host" && !_hostSessionActive &&
+        StartRoomButton.IsEnabled = role == "host" && _matchStatus == "ready" && !_hostSessionActive &&
             (roomStatus == "matched" || (roomStatus == "starting" && string.IsNullOrWhiteSpace(connectionCode)));
+        if (matchType == "random" && role == "host" && _matchStatus == "ready" &&
+            StartRoomButton.IsEnabled && !string.IsNullOrWhiteSpace(matchId) &&
+            !string.Equals(_autoStartMatchId, matchId, StringComparison.Ordinal))
+        {
+            _autoStartMatchId = matchId;
+            _ = Dispatcher.InvokeAsync(() => StartRoom_Click(this, new RoutedEventArgs()));
+        }
         if (role == "host" && roomStatus == "starting")
         {
             StartRoomButton.Content = _peerReady ? "JOGO ABERTO"
@@ -377,6 +566,22 @@ public partial class OnlineMatchWindow : Window
             StatusText.Text = "A partida expirou ou foi encerrada.";
         }
         SetModeButtons(false);
+    }
+
+    private async Task AcceptAssignedMatchAsync(string matchId)
+    {
+        try
+        {
+            var result = await _api.PostAsync("/v1/match/accept", new JsonObject());
+            if (result["match"] is JsonObject accepted)
+                await Dispatcher.InvokeAsync(() => UpdateMatch(accepted));
+        }
+        catch (Exception ex)
+        {
+            if (!_closing && string.Equals(_activeMatchId, matchId, StringComparison.Ordinal))
+                await Dispatcher.InvokeAsync(() =>
+                    StatusText.Text = "Não foi possível confirmar a partida encontrada: " + ex.Message);
+        }
     }
 
     private async Task LoadOpponentAvatarAsync(string playerId, string nickname)
@@ -512,6 +717,7 @@ public partial class OnlineMatchWindow : Window
             }
             else
             {
+                _autoStartMatchId = null;
                 StartRoomButton.IsEnabled = true;
                 StartRoomButton.Content = "TENTAR NOVAMENTE";
                 StatusText.Text = "Não foi possível iniciar o jogo: " + ex.Message;
@@ -596,7 +802,12 @@ public partial class OnlineMatchWindow : Window
         catch (Exception ex)
         {
             StatusText.Text = "Falha ao cancelar o convite: " + ex.Message;
-            if (_roomWaiting) _polling = new CancellationTokenSource();
+            if (_roomWaiting)
+            {
+                _polling?.Dispose();
+                _polling = new CancellationTokenSource();
+                _ = PollRoomAsync(_polling.Token);
+            }
         }
     }
 
@@ -605,6 +816,9 @@ public partial class OnlineMatchWindow : Window
         StopRoomSession();
         _polling?.Cancel();
         _roomWaiting = false;
+        _queueSearching = false;
+        _acceptingMatchId = null;
+        _autoStartMatchId = null;
         _matchActive = false;
         _activeMatchId = null;
         _matchStatus = null;
@@ -618,6 +832,9 @@ public partial class OnlineMatchWindow : Window
         RoomCodeBox.Clear();
         RoomCodeBox.IsEnabled = true;
         CopyRoomCodeButton.IsEnabled = false;
+        CancelQueueButton.IsEnabled = false;
+        CancelQueueButton.Visibility = Visibility.Collapsed;
+        FindRandomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
         CancelRoomButton.IsEnabled = false;
         CancelRoomButton.Visibility = Visibility.Collapsed;
         StartRoomButton.Content = "INICIAR PARTIDA";
@@ -637,7 +854,7 @@ public partial class OnlineMatchWindow : Window
             Filter = "Imagens PNG/JPEG|*.png;*.jpg;*.jpeg",
             Multiselect = false
         };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
 
         try
         {
@@ -706,8 +923,13 @@ public partial class OnlineMatchWindow : Window
         return (parts[0][0].ToString() + parts[^1][0]).ToUpperInvariant();
     }
 
-    private async void Window_Closing(object? sender, CancelEventArgs e)
+    private void Back_Click(object sender, RoutedEventArgs e)
+        => BackRequested?.Invoke(this, EventArgs.Empty);
+
+    public async Task ShutdownAsync()
     {
+        if (_shutdown) return;
+        _shutdown = true;
         _closing = true;
         _sessionCancellation.Cancel();
         StopRoomSession();
@@ -717,6 +939,10 @@ public partial class OnlineMatchWindow : Window
             if (_matchActive)
             {
                 try { await _api.PostAsync("/v1/match/decline", new JsonObject()); } catch { }
+            }
+            if (_queueSearching)
+            {
+                try { await _api.PostAsync("/v1/queue/leave", new JsonObject()); } catch { }
             }
             if (_roomWaiting)
             {

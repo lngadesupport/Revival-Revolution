@@ -83,7 +83,7 @@ public sealed class LauncherDiagnosticService
     {
         if (managed is null || !Directory.Exists(managed))
         {
-            results.Add(new("DLLs vazias em Managed", false, "Pasta Managed não encontrada."));
+            results.Add(new("DLLs vazias em Managed", false, "Pasta Managed não encontrada.", Optional: true));
             return;
         }
 
@@ -94,11 +94,11 @@ public sealed class LauncherDiagnosticService
                 .Select(Path.GetFileName)
                 .ToArray();
             results.Add(new("DLLs vazias em Managed", empty.Length == 0,
-                empty.Length == 0 ? "Nenhuma DLL vazia encontrada." : string.Join(", ", empty)));
+                empty.Length == 0 ? "Nenhuma DLL vazia encontrada." : "Aviso não bloqueante: " + string.Join(", ", empty), Optional: true));
         }
         catch (Exception ex)
         {
-            results.Add(new("DLLs vazias em Managed", false, "Não foi possível inspecionar a pasta: " + ex.Message));
+            results.Add(new("DLLs vazias em Managed", false, "Não foi possível inspecionar a pasta: " + ex.Message, Optional: true));
         }
     }
 

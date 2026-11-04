@@ -1,11 +1,16 @@
 # Revival Revolution Launcher — 0.8.1
 
-Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
+Launcher do jogo para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 .NET 8.
 
 ## Escopo desta versão
 
-- Interface WPF escura com identidade visual preta/vermelha.
+- Interface WPF com dashboard editorial, navegação agrupada e identidade visual escura com acento vermelho.
+- Sala online integrada ao conteúdo principal, com matchmaking aleatório Radmin e entrada por código.
+- Launcher focado em localizar e iniciar o jogo, buscar adversários aleatórios pela Radmin, acessar salas por código, diagnósticos e configurações; não inclui loja, biblioteca de mods ou central social.
+- Configurações em abas Geral, Interface, Rede, Dados e Suporte, com validação em tempo real do endpoint Radmin e preferência de acessibilidade para reduzir animações.
+- Central de diagnósticos com filtros por criticidade, resumo de integridade, avisos não bloqueantes, cópia de relatório com caminhos pessoais redigidos e acesso aos logs.
+- Atalhos de navegação: Ctrl+1 (offline), Ctrl+2 (jogo online), Ctrl+3 (diagnósticos), Ctrl+4 (configurações) e Esc (voltar da sala).
 - Seleção e persistência da pasta que contém `ufo.exe` e `ufo_Data/Managed`.
 - Inicialização do fluxo offline original via `offline_launcher.py`, com logs
   em `Launcher/Logs`.
@@ -14,13 +19,10 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 - Diagnóstico de dependências essenciais offline e componentes opcionais
   multiplayer; a lista identifica a bridge correta `MetalNetplayBridgeV8.dll`
   e os scripts de sessão.
-- Atualização do launcher por manifesto HTTPS, hash SHA-256 do pacote e hashes
-  SHA-256 por arquivo, com reparo seletivo de arquivos ausentes/divergentes,
-  staging, backup e rollback durante a aplicação.
-- Central ONLINE com matchmaking aleatório e salas privadas por código,
-  usando a API Ranked e token no Gerenciador de Credenciais do Windows.
-- Instalação/reparo automático de pacotes do jogo permanece bloqueado até
-  autenticação dos ZIPs por hashes confiáveis publicados em canal independente.
+- Conta e token protegidos pelo Gerenciador de Credenciais do Windows; fila
+  regional de matchmaking Radmin, posição e cancelamento de busca; salas
+  privadas por código. Não há matchmaking global pela internet nem ranking
+  competitivo público nesta entrega.
 
 ## Build
 
@@ -51,43 +53,27 @@ Consulte [docs/RADMIN_VPN_SETUP.md](../../docs/RADMIN_VPN_SETUP.md) para
 instalação, teste de conectividade e execução do peer UDP direto. O anfitrião
 precisa permanecer ligado e conectado. Não abra portas no roteador.
 
-## Segurança e distribuição
+## Distribuição e instalação do jogo
 
-- O manifesto de atualização aponta para GitHub Releases e o pacote ZIP é
-  validado por SHA-256 antes da extração.
-- O hash detecta corrupção, mas manifesto e hash no mesmo canal não equivalem
-  a assinatura digital independente.
-- O pacote de atualização contém somente arquivos do launcher. Não incluir
-  executáveis, DLLs, assets ou dados proprietários do jogo.
-- A instalação/reparação da distribuição do jogo segue bloqueada enquanto não
-  houver hashes autenticados por canal independente.
-- O atualizador e o runtime precisam ser exercitados em Windows limpo antes
-  da publicação estável.
+- O launcher não possui atualizador automático, verificação de versões ou aplicação de pacotes.
+- O launcher não baixa, instala nem fornece links para baixar o jogo.
+- Para jogar, selecione a pasta de uma instalação existente que contenha `ufo.exe` e `ufo_Data/Managed`.
+- O runtime Python portátil necessário aos scripts auxiliares continua sendo preparado separadamente; isso não instala nem baixa o jogo.
 
 ## Estado multiplayer 0.8.1
 
-A central ONLINE atribui partidas no servidor e integra aceite/recusa bilateral,
-acompanha a confirmação do adversário e restaura uma atribuição ativa ao
-reconectar a conta. A configuração Radmin permite API local e transporte UDP
-direto pela VPN sem AutoPunch/STUN/relay externo. A janela ONLINE ainda não
-inicia o processo P2P automaticamente nem abre a luta sozinha. Não anunciar
-Ranked público nem aplicação de ELO nesta versão.
+A tela ONLINE oferece matchmaking aleatório e sala por código. O matchmaking
+pareia jogadores conectados ao mesmo servidor Ranked pela mesma rede Radmin,
+cria uma sala P2P para o par, aceita a atribuição nos dois clientes e inicia
+automaticamente o jogo no anfitrião quando ambos confirmam. A sala por código
+mantém o início manual pelo anfitrião. A configuração Radmin usa API local e
+transporte UDP direto pela VPN, sem AutoPunch/STUN/relay externo. Não anunciar
+matchmaking global pela internet nem aplicação de ELO nesta versão.
 
-A interface ONLINE é uma janela WPF dedicada aberta pelo item de navegação;
-ainda não é uma aba embutida na janela principal. Recursos sociais de perfil,
-amigos e leaderboard devem permanecer dentro do jogo quando houver um ponto
-de extensão técnico verificável.
+A sala por código é um UserControl WPF embutido no conteúdo principal do
+launcher. A interface mostra o estado de disponibilidade do servidor, valida o
+formato do código de convite localmente e recupera a consulta da sala quando uma
+solicitação de cancelamento falha. O fluxo de conta, convite e confronto permanece separado do dashboard,
+mas compartilha a mesma janela e o mesmo shell de navegação. Não há recursos sociais, loja, biblioteca de mods, perfil público, amigos ou
+leaderboard na interface do launcher.
 
-## Publicar uma atualização
-
-1. Concluir a validação de código e os testes de Windows limpo e duas máquinas.
-2. Integrar o commit aprovado à `main`; a branch de estabilização não é uma
-   release pública.
-3. Criar e enviar a tag `v0.8.1` sobre o commit já integrado à `main`.
-4. O workflow `.github/workflows/publish-launcher-release.yml` compila o
-   launcher self-contained Windows x64, gera o ZIP, calcula SHA-256 e publica
-   o ZIP e o manifesto como assets da GitHub Release.
-5. Não criar a tag estável enquanto os critérios de validação estiverem
-   pendentes.
-
-O launcher não redistribui o jogo nem substitui os scripts/bridges originais.

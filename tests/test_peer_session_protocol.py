@@ -10,6 +10,25 @@ class PeerConnectionCodeTests(unittest.TestCase):
     def setUp(self):
         self.key = bytes(range(16))
 
+    def test_atomic_text_replaces_complete_invitation_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = pathlib.Path(temp) / "peer-code.txt"
+            target.write_text("stale-invitation", encoding="utf-8")
+            self.assertTrue(peer_session.atomic_text(target, "MR1-valid-invitation"))
+            self.assertEqual(target.read_text(encoding="utf-8"), "MR1-valid-invitation")
+            self.assertEqual([p.name for p in pathlib.Path(temp).iterdir()], ["peer-code.txt"])
+
+    def test_atomic_text_keeps_previous_file_when_reader_blocks_replace(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as temp:
+            target = pathlib.Path(temp) / "peer-code.txt"
+            target.write_text("complete-old-invitation", encoding="utf-8")
+            with patch.object(peer_session.os, "replace", side_effect=PermissionError("sharing violation")):
+                self.assertFalse(peer_session.atomic_text(target, "partial-new-invitation"))
+            self.assertEqual(target.read_text(encoding="utf-8"), "complete-old-invitation")
+            self.assertEqual([p.name for p in pathlib.Path(temp).iterdir()], ["peer-code.txt"])
+
     def test_mr1_code_round_trip(self):
         code = peer_session.encode_code("203.0.113.10", 27015, self.key)
         endpoint, key, relay = peer_session.decode_connection_code(code)
@@ -59,6 +78,132 @@ class PeerConnectionCodeTests(unittest.TestCase):
         # Its absence must not prevent loading the supported live-play module.
         self.assertTrue(hasattr(peer_session, "Session"))
         self.assertTrue(hasattr(peer_session, "LiveFighter"))
+
+
+class LiveFighterReportTests(unittest.TestCase):
+    def test_partial_or_missing_report_keeps_last_good_until_heartbeat_expires(self):
+        import json
+        from types import SimpleNamespace
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            bridge = SimpleNamespace(session="session-123")
+            selection = SimpleNamespace(proposal_hash="setup-hash")
+            live = peer_session.LiveFighter(root, 0, bridge, selection, peer_session.atomic_json)
+            live.test_id = "test-123"
+            report_path = root / "live-fighter.json"
+            report_path.write_text(json.dumps({
+                "session_id": bridge.session,
+                "test_id": live.test_id,
+                "state": "playing",
+                "frame": 120,
+                "port": 40000
+            }), encoding="utf-8")
+            try:
+                live.refresh_report()
+                self.assertEqual(live.report["frame"], 120)
+
+                report_path.write_text('{"partial":', encoding="utf-8")
+                live.refresh_report()
+                self.assertEqual(live.report["frame"], 120)
+
+                report_path.unlink()
+                live.refresh_report()
+                self.assertEqual(live.report["frame"], 120)
+
+                live.last_report_seen = time.monotonic() - 6
+                with self.assertRaisesRegex(RuntimeError, "heartbeat expired"):
+                    live.refresh_report()
+            finally:
+                live.close()
+
+
+class GameBridgeValidationTests(unittest.TestCase):
+    def test_begin_requires_a_valid_game_process_id(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "netplay-pid.txt").write_text("not-a-pid", encoding="utf-8")
+            bridge = peer_session.GameBridge(root, 0, "session-1")
+            with self.assertRaisesRegex(RuntimeError, "process identity"):
+                bridge.begin("peer_prepare")
+
+    def test_poll_ignores_non_object_bridge_response(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "netplay-pid.txt").write_text("12345", encoding="utf-8")
+            bridge = peer_session.GameBridge(root, 0, "session-1")
+            bridge.begin("peer_prepare")
+            (root / "game-response.json").write_text("[]", encoding="utf-8")
+            self.assertIsNone(bridge.poll())
+
+    def test_poll_rejects_response_for_another_process(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "netplay-pid.txt").write_text("12345", encoding="utf-8")
+            bridge = peer_session.GameBridge(root, 0, "session-1")
+            bridge.begin("peer_prepare")
+            (root / "game-response.json").write_text(
+                '{"id":"' + bridge.command["id"] + '","pid":12346,"state":"peer_prepared"}',
+                encoding="utf-8",
+            )
+            self.assertIsNone(bridge.poll())
+
+
+class PeerPacketBindingTests(unittest.TestCase):
+    class FakeBridge:
+        def __init__(self, root, slot, session):
+            self.root = root
+            self.slot = slot
+            self.session = session
+            self.action = None
+
+        def begin(self, action, **extra):
+            self.action = action
+
+        def poll(self):
+            return None
+
+    def packet(self, session, sender, *, target, sequence):
+        import hashlib
+        import hmac
+        import json
+
+        body = json.dumps({
+            "v": peer_session.PROTOCOL,
+            "build": peer_session.BUILD,
+            "slot": 1 - session.slot,
+            "port": sender.getsockname()[1],
+            "nonce": session.remote_nonce,
+            "to": target,
+            "seq": sequence,
+            "kind": "hello",
+            "payload": None,
+        }, sort_keys=True, separators=(",", ":")).encode()
+        return hmac.new(session.key, body, hashlib.sha256).digest() + body
+
+    def test_authenticated_packet_must_target_current_session_after_handshake(self):
+        with tempfile.TemporaryDirectory() as temp:
+            host = peer_session.Session(
+                pathlib.Path(temp), "host", bind="127.0.0.1", port=0,
+                advertise="127.0.0.1", bridge_factory=self.FakeBridge,
+                selection_sync=False, skip_native_preflight=True,
+            )
+            sender = peer_session.socket.socket(peer_session.socket.AF_INET, peer_session.socket.SOCK_DGRAM)
+            sender.bind(("127.0.0.1", 0))
+            try:
+                host.remote_nonce = "a" * 16
+                host.peer = sender.getsockname()
+                sender.sendto(self.packet(host, sender, target=None, sequence=1), host.sock.getsockname())
+                host.read()
+                self.assertIsNone(host.last_received, "A null target must not refresh an established session.")
+
+                sender.sendto(self.packet(host, sender, target=host.nonce, sequence=2), host.sock.getsockname())
+                host.read()
+                self.assertIsNotNone(host.last_received, "A packet bound to this session nonce should be accepted.")
+            finally:
+                host.peer = None
+                sender.close()
+                host.close()
 
 
 class DirectUdpPeerSessionTests(unittest.TestCase):

@@ -18,24 +18,35 @@ A distribuição original inclui scripts Python, bridges gerenciadas e nativas, 
 
 ## Arquitetura do launcher
 
-- `MainWindow.xaml`: interface WPF, estilos locais e navegação.
-- `MainWindow.xaml.cs`: coordenação de eventos, estado ocupado e mensagens.
+- `MainWindow.xaml`: shell WPF, identidade visual, navegação lateral e dashboard.
+- `MainWindow.xaml.cs`: coordenação de eventos, atalhos, estado ocupado e transições.
+- `OnlineMatchWindow.xaml` / `.xaml.cs`: matchmaking aleatório pela Radmin, sala por código, perfil, aceite bilateral e ciclo de conexão P2P.
+- `LauncherSettingsWindow.cs`: preferências organizadas por abas (Geral, Interface, Rede, Dados e Suporte).
+- `LauncherDiagnosticsWindow.cs`: resultados de integridade com filtros, resumo e exportação de relatório.
 - `DownloadService`: downloads HTTPS retomáveis com validação de redirecionamento.
 - `ArchiveExtractionService`: extração ZIP com limites de tamanho, proteção contra traversal, links e colisões.
 - `PythonRuntimeService`: runtime Python 3.13.17, verificação SHA-256, extração em staging e teste de inicialização antes da troca.
 - `GameLaunchService`: validação da pasta e execução do script offline com logs.
-- `LauncherUpdateService`: validação do manifesto, hash do pacote, staging e aplicação com backup/rollback.
-- `LauncherDiagnosticService`: verificação de arquivos essenciais e DLLs vazias.
+- `LauncherDiagnosticService`: verificação de arquivos essenciais, dependências opcionais e avisos não bloqueantes de DLLs vazias.
 
 ## Segurança e distribuição
 
 - Os pacotes de jogo não são baixados nem extraídos pelo launcher enquanto não houver hashes autenticados por canal independente. Um manifesto contido no próprio ZIP não autentica esse ZIP.
-- O atualizador exige HTTPS e hash SHA-256, mas o hash publicado no mesmo manifesto não equivale a uma assinatura digital do publicador.
+- O launcher não contém atualizador automático nem mecanismo para baixar/instalar o jogo. O download permanece restrito ao runtime Python auxiliar.
 - Não incluir arquivos proprietários do jogo neste repositório sem autorização.
 - A publicação deve ocorrer em Windows x64; a compilação automatizada não substitui testes em uma instalação limpa.
+
+## Experiência da interface
+
+- A navegação principal mantém apenas JOGAR (modo offline, matchmaking Radmin e sala por código) e SISTEMA (diagnósticos e configurações). O launcher não inclui loja, biblioteca de mods nem central social.
+- Atalhos: Ctrl+1 (modo offline), Ctrl+2 (jogo online), Ctrl+3 (diagnósticos), Ctrl+4 (configurações); Esc retorna da sala ao dashboard.
+- As configurações oferecem abas Geral, Interface, Rede, Dados e Suporte, com confirmação de inicialização, redução de movimento, logs locais e validação em tempo real do endpoint Radmin manual.
+- O diagnóstico distingue dependências essenciais das opcionais, apresenta avisos não bloqueantes e permite filtrar e copiar o relatório.
+- A tela ONLINE permite buscar adversários aleatórios na fila regional Radmin, acompanhar posição/cancelar a busca ou usar códigos de convite de seis caracteres. O pareamento cria uma sala Radmin P2P; ambos aceitam automaticamente e o anfitrião aleatório inicia o jogo automaticamente após o aceite bilateral.
+- O escopo da interface é restrito às funções necessárias para jogar e manter o launcher; não há loja, conteúdo social, catálogo de mods ou links promocionais.
 
 ## Limitações conhecidas
 
 - A compatibilidade depende da build do jogo, das bridges e dos arquivos da distribuição.
-- O multiplayer/rollback é experimental; testes em dois PCs e diferentes redes ainda são necessários.
+- O matchmaking só reúne jogadores conectados à mesma rede Radmin e ao mesmo servidor Ranked hospedado nela; não existe matchmaking global pela internet. O transporte UDP/rollback continua experimental e requer teste real em dois PCs, incluindo handshake, bridge, desconexão e reentrada.
 - O runtime embeddable pode depender do Visual C++ Redistributable x64 na máquina de destino.

@@ -18,27 +18,23 @@ public partial class MainWindow : Window
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly DistributionLocator _distributionLocator = new();
     private string? _distributionRoot;
-    private readonly LauncherUpdateService _updates = new();
     private readonly LauncherSettingsService _settingsService = new();
     private LauncherSettings _settings = new();
     private string? _gameFolder;
     private bool _busy;
     private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly DispatcherTimer _radminHostTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private bool _radminHostStarting;
-    private bool _radminHostFirewallReady;
-    private bool _radminHostTaskReady;
-    private bool _radminHostDisabled;
     private bool _gameRunning;
     private bool _launchPending;
     private DateTime _launchRequestedAt;
     private const int LaunchDetectionTimeoutSeconds = 45;
     private string _lastGameStateFooterStatus = string.Empty;
     private string _lastDashboardState = string.Empty;
+    private OnlineMatchWindow? _privateMatchView;
 
     public MainWindow()
     {
         InitializeComponent();
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
         _settings = _settingsService.Load();
         SetActiveNavigation("offline");
         var version = typeof(MainWindow).Assembly.GetName().Version;
@@ -50,59 +46,25 @@ public partial class MainWindow : Window
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
-        _radminHostTimer.Tick += RadminHostTimer_Tick;
-        _radminHostTimer.Start();
         RefreshGameState();
         Log("Revival Revolution Launcher iniciado.");
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
     }
 
-    private async void RadminHostTimer_Tick(object? sender, EventArgs e)
-    {
-        if (_radminHostStarting || _radminHostDisabled || _radminHostTaskReady) return;
-        var endpoint = RankedApiClient.LoadEndpoint();
-        if (string.IsNullOrWhiteSpace(endpoint)) endpoint = RadminHostService.DefaultEndpoint;
-        var hostAddress = RadminHostService.GetLocalRadminAddress(endpoint);
-        if (hostAddress is null) return;
-
-        _radminHostStarting = true;
-        try
-        {
-            var python = _python.FindRuntime(_root);
-            if (python is null)
-            {
-                FooterStatus.Text = "Preparando o servidor privado Radmin pela primeira vez...";
-                Log("Este computador é o anfitrião Radmin. Instalando o runtime necessário para iniciar a API automaticamente.");
-                python = await _python.InstallAsync(_root, CreateProgress(), CancellationToken.None);
-            }
-
-            if (!_radminHostFirewallReady)
-            {
-                FooterStatus.Text = "Configurando o firewall privado Radmin (autorização única)...";
-                await _radminHost.EnsureFirewallAsync(python, hostAddress, CancellationToken.None);
-                _radminHostFirewallReady = true;
-            }
-
-            await _radminHost.EnsureHostServerAsync(_root, python, hostAddress, CancellationToken.None);
-            _radminHostTaskReady = true;
-            _radminHostTimer.Stop();
-            FooterStatus.Text = $"Servidor privado ativo em http://{hostAddress}:8765";
-            Log($"API Ranked iniciada/verificada automaticamente em http://{hostAddress}:8765.");
-        }
-        catch (Exception ex)
-        {
-            _radminHostDisabled = true;
-            FooterStatus.Text = "Não foi possível iniciar o servidor Radmin automaticamente.";
-            Log("ERRO ao iniciar o servidor Radmin em segundo plano: " + ex.Message);
-        }
-        finally
-        {
-            _radminHostStarting = false;
-        }
-    }
-
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
     {
+        if (_settings.ReduceMotion)
+        {
+            MainContent.Opacity = 1;
+            WindowChrome.Opacity = 1;
+            HeaderPanel.Opacity = 1;
+            SidebarPanel.Opacity = 1;
+            HeroPanel.Opacity = 1;
+            QuickAccessPanel.Opacity = 1;
+            BottomPanel.Opacity = 1;
+            return;
+        }
+
         // Staggered entrance: soft fade plus a short upward settle, with no impact on launch logic.
         AnimateEntrance(MainContent, 0, 420, 10);
         AnimateEntrance(WindowChrome, 45, 360, 4);
@@ -154,18 +116,30 @@ public partial class MainWindow : Window
         var logo = Path.Combine(assets, "metal-revolution-logo.png");
 
         if (File.Exists(background))
-            HeroBackground.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(background));
+            HeroBackground.Source = LoadBitmap(background, 1600);
         else
             Log("Arte de fundo opcional ausente: Assets\\metal-revolution-background.jpg");
 
         if (File.Exists(logo))
         {
-            MetalLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(logo));
+            MetalLogo.Source = LoadBitmap(logo, 640);
             MetalLogo.Visibility = Visibility.Visible;
             LogoFallback.Visibility = Visibility.Collapsed;
         }
         else
             Log("Logo PNG opcional ausente: Assets\\metal-revolution-logo.png");
+    }
+
+    private static System.Windows.Media.Imaging.BitmapImage LoadBitmap(string path, int decodeWidth)
+    {
+        var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+        bitmap.DecodePixelWidth = decodeWidth;
+        bitmap.UriSource = new Uri(path);
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
     }
 
     private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
@@ -198,6 +172,7 @@ public partial class MainWindow : Window
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("offline");
+        DashboardPage.Visibility = Visibility.Visible;
         if (_busy || IsGameRunning()) return;
         RefreshGameState();
         if (!IsValidFolder(_gameFolder))
@@ -383,8 +358,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private static void FadeStateChange(UIElement element)
+    private void FadeStateChange(UIElement element)
     {
+        if (_settings.ReduceMotion)
+        {
+            element.Opacity = 1;
+            return;
+        }
+
         var animation = new System.Windows.Media.Animation.DoubleAnimation(0.55, 1,
             TimeSpan.FromMilliseconds(220))
         {
@@ -409,8 +390,8 @@ public partial class MainWindow : Window
         var buttons = new (string Key, System.Windows.Controls.Button Button)[]
         {
             ("offline", OfflineNavButton),
-            ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
-            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton),
+            ("private", PrivateMatchNavButton),
+            ("diagnostics", DiagnosticsNavButton),
             ("settings", SettingsNavButton)
         };
 
@@ -429,6 +410,45 @@ public partial class MainWindow : Window
         }
     }
 
+    private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape &&
+            PrivateMatchHost.Visibility == Visibility.Visible &&
+            _privateMatchView is not null)
+        {
+            PrivateMatchBackRequested(_privateMatchView, EventArgs.Empty);
+            e.Handled = true;
+            return;
+        }
+
+        if (System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.Control)
+            return;
+
+        switch (e.Key)
+        {
+            case System.Windows.Input.Key.D1:
+            case System.Windows.Input.Key.NumPad1:
+                Launch_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.D2:
+            case System.Windows.Input.Key.NumPad2:
+                PrivateMatch_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.D3:
+            case System.Windows.Input.Key.NumPad3:
+                Diagnostics_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.D4:
+            case System.Windows.Input.Key.NumPad4:
+                Settings_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+        }
+    }
+
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("settings");
@@ -441,8 +461,13 @@ public partial class MainWindow : Window
 
         try
         {
+            var hadCustomRadminIp = _settings.UseCustomRadminIp;
             _settingsService.Save(window.Result);
             _settings = window.Result;
+            if (_settings.UseCustomRadminIp)
+                RankedApiClient.SaveEndpoint($"http://{_settings.CustomRadminIp}:8765");
+            else if (hadCustomRadminIp)
+                RankedApiClient.SaveEndpoint(RadminHostService.DefaultEndpoint);
             Log("Configurações salvas.");
             FooterStatus.Text = "Configurações atualizadas.";
         }
@@ -453,171 +478,46 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Install_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show(this,
-            "A instalação e o reparo automáticos estão temporariamente bloqueados por segurança. " +
-            "Os pacotes ZIP ainda não possuem hashes SHA-256 autenticados por um canal independente. " +
-            "Um manifesto de checksums dentro do próprio pacote não comprova sua origem. " +
-            "Nenhum arquivo será baixado, extraído ou sobrescrito. A inicialização de uma instalação existente continua disponível.",
-            "Instalação protegida", MessageBoxButton.OK, MessageBoxImage.Information);
-        Log("Instalação/reparo automático bloqueados até autenticação independente dos pacotes.");
-        FooterStatus.Text = "Instalação automática aguardando hashes confiáveis.";
-    }
-
     private async void Diagnostics_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("diagnostics");
         if (_busy) return;
-        await RunBusyAsync("Executando diagnóstico...", async token =>
+
+        IReadOnlyList<DiagnosticItem>? items = null;
+        _busy = true;
+        IsEnabled = false;
+        FooterStatus.Text = "Executando diagnóstico da instalação...";
+        try
         {
             var python = _python.FindRuntime(_root);
             _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
-            var items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python), token);
+            items = await Task.Run(() => _diagnostics.Run(_root, _gameFolder, python));
             foreach (var item in items)
                 Log($"{(item.Optional ? "INFO" : item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
+
             var required = items.Where(item => !item.Optional).ToArray();
             FooterStatus.Text = $"Diagnóstico: {required.Count(item => item.Passed)}/{required.Length} verificações essenciais aprovadas.";
-        });
-    }
-
-    private async void Window_Loaded(object sender, RoutedEventArgs e)
-    {
-        // A checagem automática não bloqueia a abertura caso o GitHub esteja indisponível.
-        try
-        {
-            if (_settings.CheckUpdatesOnStartup)
-                await CheckForUpdatesAsync(automatic: true);
         }
         catch (Exception ex)
         {
-            Log("Não foi possível verificar atualizações automaticamente: " + ex.Message);
+            Log("Falha ao executar diagnóstico: " + ex.Message);
+            FooterStatus.Text = "Não foi possível concluir o diagnóstico.";
+            MessageBox.Show(this, "O diagnóstico não pôde ser concluído: " + ex.Message,
+                "Diagnósticos", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-    }
-
-    private async void Updates_Click(object sender, RoutedEventArgs e)
-    {
-        SetActiveNavigation("updates");
-        if (_busy) return;
-        try { await CheckForUpdatesAsync(automatic: false); }
-        catch (Exception ex) { Log("ERRO ao atualizar: " + ex.Message); FooterStatus.Text = "Falha ao verificar/aplicar atualização."; }
-    }
-
-    private void ShowUpdateProgress(string version, bool repair)
-    {
-        UpdateVersionText.Text = repair
-            ? $"Reparo seletivo dos arquivos do launcher — {version}"
-            : $"Versão {version} pronta para instalação";
-        UpdateStageText.Text = "Conectando ao servidor oficial...";
-        UpdateProgressDetail.Text = "Aguardando início do download...";
-        UpdatePercentText.Text = "—";
-        UpdateProgressBar.Value = 0;
-        UpdateProgressBar.IsIndeterminate = true;
-        UpdateOverlay.Visibility = Visibility.Visible;
-        UpdateOverlay.Opacity = 0;
-        var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
-            TimeSpan.FromMilliseconds(260))
+        finally
         {
-            EasingFunction = new System.Windows.Media.Animation.CubicEase
-            {
-                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
-            }
+            _busy = false;
+            if (IsVisible) IsEnabled = true;
+            RefreshGameState();
+        }
+
+        if (items is null || !IsVisible) return;
+        var window = new LauncherDiagnosticsWindow(items, _settingsService.GetLogDirectory())
+        {
+            Owner = this
         };
-        UpdateOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
-    }
-
-    private async Task CheckForUpdatesAsync(bool automatic)
-    {
-        await RunBusyAsync("Verificando atualizações...", async token =>
-        {
-            var update = await _updates.CheckAsync(_root, token);
-            if (update is null)
-            {
-                if (!automatic) Log("O launcher já está atualizado.");
-                return;
-            }
-
-            Log(update.IsRepair
-                ? $"Arquivos do launcher ausentes ou alterados; reparo seletivo da versão {update.Version} disponível."
-                : $"Nova versão disponível: {update.Version}");
-            if (string.IsNullOrWhiteSpace(update.PackageUrl) || update.Files.Count == 0)
-                throw new InvalidDataException("Manifesto remoto incompleto: packageUrl/files ausentes.");
-
-            var prompt = update.IsRepair
-                ? $"Foram encontrados {update.Files.Count} arquivo(s) do launcher ausentes ou com SHA-256 diferente.\n\nA versão instalada é {update.Version}. Somente os arquivos divergentes serão substituídos.\n\nDeseja reparar agora?"
-                : $"A versão {update.Version} está disponível.\n\n{update.ReleaseNotes}\n\nDeseja baixar e instalar agora?";
-            var choice = MessageBox.Show(this, prompt,
-                update.IsRepair ? "Reparo do launcher" : "Atualização disponível",
-                MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (choice != MessageBoxResult.Yes)
-            {
-                Log("Atualização adiada pelo usuário.");
-                return;
-            }
-
-            ShowUpdateProgress(update.Version, update.IsRepair);
-            string script;
-            try
-            {
-                var progress = new Progress<DownloadProgress>(p =>
-                {
-                    var received = p.BytesReceived / 1048576d;
-                    var total = p.TotalBytes is long bytes ? $" / {bytes / 1048576d:F1} MB" : "";
-                    var resumed = p.IsResuming ? " • retomada" : "";
-                    UpdateProgressDetail.Text = $"{p.FileName}: {received:F1} MB{total}{resumed}";
-                    if (p.Percent is double percent)
-                    {
-                        UpdateProgressBar.IsIndeterminate = false;
-                        UpdateProgressBar.Value = Math.Clamp(percent, 0, 100);
-                        UpdatePercentText.Text = $"{percent:F0}%";
-                    }
-                    else
-                    {
-                        UpdateProgressBar.IsIndeterminate = true;
-                        UpdatePercentText.Text = "—";
-                    }
-                });
-                var stageProgress = new Progress<UpdateOperationProgress>(stage =>
-                {
-                    UpdateStageText.Text = stage.Stage switch
-                    {
-                        "verify" => "Verificando integridade do pacote...",
-                        "extract" => "Preparando arquivos da atualização...",
-                        "finalize" => "Finalizando preparação...",
-                        _ => "Baixando pacote de atualização..."
-                    };
-                    UpdateProgressDetail.Text = stage.Detail;
-                    if (stage.Stage != "download")
-                    {
-                        UpdateProgressBar.IsIndeterminate = true;
-                        UpdatePercentText.Text = stage.Stage == "verify" ? "SHA-256" : "…";
-                    }
-                });
-
-                UpdateStageText.Text = "Baixando pacote de atualização...";
-                script = await _updates.DownloadAndStageAsync(_root, update, progress, token, stageProgress);
-                UpdateProgressBar.IsIndeterminate = false;
-                UpdateProgressBar.Value = 100;
-                UpdatePercentText.Text = "100%";
-                UpdateStageText.Text = "Download verificado e arquivos preparados.";
-                UpdateProgressDetail.Text = "SHA-256 validado • Preparação concluída";
-            }
-            catch
-            {
-                UpdateOverlay.Visibility = Visibility.Collapsed;
-                UpdateOverlay.Opacity = 0;
-                throw;
-            }
-
-            Log(update.IsRepair
-                ? $"Reparo seletivo de {update.Files.Count} arquivo(s) verificado e preparado."
-                : "Atualização verificada e preparada. O launcher será fechado para aplicar os arquivos.");
-            var apply = new ProcessStartInfo("cmd.exe") { WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true };
-            apply.ArgumentList.Add("/c");
-            apply.ArgumentList.Add(script);
-            Process.Start(apply);
-            Close();
-        });
+        window.ShowDialog();
     }
 
     private async Task RunBusyAsync(string status, Func<CancellationToken,Task> operation)
@@ -674,7 +574,11 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _gameStateTimer.Stop();
-        _radminHostTimer.Stop();
+        if (_privateMatchView is not null)
+        {
+            _ = _privateMatchView.ShutdownAsync();
+            _privateMatchView = null;
+        }
         base.OnClosed(e);
     }
 
@@ -683,21 +587,19 @@ public partial class MainWindow : Window
     private async void PrivateMatch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("private");
-        FooterStatus.Text = "PRIVATE MATCH — abrindo salas por código.";
+        if (_privateMatchView is not null)
+        {
+            DashboardPage.Visibility = Visibility.Collapsed;
+            PrivateMatchHost.Visibility = Visibility.Visible;
+            FooterStatus.Text = "SALA POR CÓDIGO — pronta para criar ou entrar em um convite.";
+            return;
+        }
+        FooterStatus.Text = "SALA POR CÓDIGO — preparando conexão.";
         Log("Central Private Match aberta.");
         var configuredEndpoint = RankedApiClient.LoadEndpoint();
-        if (string.IsNullOrWhiteSpace(configuredEndpoint)) configuredEndpoint = RadminHostService.DefaultEndpoint;
-        var isConfiguredHost = RadminHostService.GetLocalRadminAddress(configuredEndpoint) is not null;
-        if (isConfiguredHost)
-        {
-            while (!_radminHostTaskReady && !_radminHostDisabled) await Task.Delay(200);
-            if (_radminHostDisabled)
-            {
-                MessageBox.Show(this, "O servidor privado não foi inicializado. Confira o log do launcher e autorize a configuração única do firewall do Windows.",
-                    "Servidor Radmin indisponível", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-        }
+        if (string.IsNullOrWhiteSpace(configuredEndpoint))
+            configuredEndpoint = RadminHostService.DefaultEndpoint;
+        var localHostAddress = RadminHostService.GetLocalRadminAddress(configuredEndpoint);
         var distributionRoot = _distributionRoot ?? _distributionLocator.Find(_root, _gameFolder);
         var python = _python.FindRuntime(_root);
         if (string.IsNullOrWhiteSpace(_gameFolder) || distributionRoot is null)
@@ -728,9 +630,14 @@ public partial class MainWindow : Window
         }
         try
         {
-            var endpoint = RankedApiClient.LoadEndpoint();
-            var hostAddress = string.IsNullOrWhiteSpace(endpoint) ? null : RadminHostService.GetLocalRadminAddress(endpoint);
-            await _radminHost.EnsureFirewallAsync(python, hostAddress, CancellationToken.None);
+            await _radminHost.EnsureFirewallAsync(python, localHostAddress, CancellationToken.None);
+            if (localHostAddress is not null)
+            {
+                FooterStatus.Text = "Iniciando servidor privado Radmin...";
+                await _radminHost.EnsureHostServerAsync(_root, python, localHostAddress, CancellationToken.None);
+                FooterStatus.Text = $"Servidor privado ativo em http://{localHostAddress}:8765";
+                Log($"Servidor Radmin pronto em http://{localHostAddress}:8765.");
+            }
         }
         catch (Exception ex)
         {
@@ -739,21 +646,27 @@ public partial class MainWindow : Window
             return;
         }
         _config.SaveGameFolder(_root, _gameFolder, distributionRoot);
-        var window = new OnlineMatchWindow(distributionRoot, _gameFolder, python) { Owner = this };
-        window.ShowDialog();
+        var roomView = new OnlineMatchWindow(distributionRoot, _gameFolder, python);
+        roomView.BackRequested += PrivateMatchBackRequested;
+        _privateMatchView = roomView;
+        PrivateMatchHost.Content = roomView;
+        DashboardPage.Visibility = Visibility.Collapsed;
+        PrivateMatchHost.Visibility = Visibility.Visible;
+        FooterStatus.Text = "SALA POR CÓDIGO — conectando ao servidor privado.";
+    }
+
+    private async void PrivateMatchBackRequested(object? sender, EventArgs e)
+    {
+        var view = _privateMatchView;
+        _privateMatchView = null;
+        PrivateMatchHost.Content = null;
+        PrivateMatchHost.Visibility = Visibility.Collapsed;
+        DashboardPage.Visibility = Visibility.Visible;
+        SetActiveNavigation("offline");
+        if (view is not null)
+            await view.ShutdownAsync();
         RefreshGameState();
     }
-
-    private void ModList_Click(object sender, RoutedEventArgs e)
-    {
-        SetActiveNavigation("mods");
-        FooterStatus.Text = "MOD LIST — catálogo ainda não integrado.";
-        MessageBox.Show(this,
-            "A lista de mods será integrada em uma etapa própria. Por enquanto, o launcher não altera nem instala mods.",
-            "Mod List", MessageBoxButton.OK, MessageBoxImage.Information);
-        Log("Mod List selecionada; catálogo ainda não integrado.");
-    }
-
 
     private void WindowChrome_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -797,19 +710,4 @@ public partial class MainWindow : Window
     private void CloseWindow_Click(object sender, RoutedEventArgs e)
         => Close();
 
-    private void Discord_Click(object sender, RoutedEventArgs e)
-    {
-        const string discordUrl = "https://discord.gg/Zw2GCscKU";
-        try
-        {
-            Process.Start(new ProcessStartInfo { FileName = discordUrl, UseShellExecute = true });
-            Log("Convite do Discord aberto no navegador padrão.");
-        }
-        catch (Exception ex)
-        {
-            Log("Não foi possível abrir o Discord: " + ex.Message);
-            MessageBox.Show(this, "Não foi possível abrir o navegador automaticamente. Acesse:\n" + discordUrl,
-                "Discord", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-    }
 }

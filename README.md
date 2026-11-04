@@ -14,14 +14,13 @@
 - Prepara um runtime Python portátil para executar os scripts do pacote sem exigir instalação global de Python.
 - Executa o fluxo offline existente por meio de `offline_launcher.py`.
 - Reúne diagnósticos para arquivos, scripts, DLLs, runtime e instalação.
-- Prepara um mecanismo de atualização do launcher baseado em manifesto HTTPS.
-- Mantém instalação/reparo automático de pacotes do jogo desabilitados até que hashes SHA-256 dos arquivos ZIP sejam autenticados por canal independente. Um manifesto de checksums dentro do próprio ZIP não prova a autenticidade do pacote.
+- Não possui atualizador automático e não baixa, instala nem oferece links para baixar o jogo. É necessário selecionar uma instalação já existente.
 - Documenta a integração multiplayer comunitária, que permanece experimental e depende das bridges/scripts já presentes na distribuição.
 
 ## Estrutura
 
 - `launcher/RevivalRevolutionLauncher/` — projeto C# / WPF (.NET 8).
-- `launcher/RevivalRevolutionLauncher/Services/` — serviços de download, extração segura, configuração, runtime, inicialização, diagnóstico e atualização.
+- `launcher/RevivalRevolutionLauncher/Services/` — serviços de preparação do runtime Python, extração segura, configuração, inicialização e diagnóstico. O download do runtime auxiliar não inclui arquivos do jogo.
 - `launcher/RevivalRevolutionLauncher/Properties/PublishProfiles/` — perfil de publicação Windows x64 self-contained.
 - `docs/` — documentação técnica e avisos de compatibilidade.
 
@@ -40,14 +39,6 @@ dotnet publish .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.cs
 ```
 
 O pacote self-contained inclui o runtime .NET necessário. O SDK só é necessário na máquina que compila. O single-file não é forçado por causa das particularidades de WPF e componentes nativos.
-
-## Atualizações do launcher\n\nO launcher consulta automaticamente as GitHub Releases ao iniciar. Para publicar uma versão, crie uma tag `vX.Y.Z` sobre um commit já integrado à `main`; o workflow publica o ZIP self-contained e o manifesto com SHA-256. Tags com sufixo, como `v0.7.0-rc.1`, são publicadas como pré-lançamentos e não substituem a Release estável mais recente. Consulte `launcher/RevivalRevolutionLauncher/README.md` para o procedimento.\n\n## Configuração antes de uma versão pública
-
-1. Obter e publicar hashes SHA-256 confiáveis dos pacotes de distribuição por canal independente dos ZIPs.
-2. Conferir o formato e os caminhos de `SHA256SUMS.json` contra os ZIPs reais.
-3. O atualizador consulta o manifesto oficial em `https://github.com/lngadesupport/Revival-Revolution/releases/latest/download/launcher-update.json`; publique versões com tags `vX.Y.Z` somente depois que o commit estiver integrado à `main`.
-4. Executar build, preparação do Python portátil, inicialização offline e diagnóstico em Windows x64. A instalação/reparação automática só deve ser reativada após autenticação dos pacotes.
-5. Testar multiplayer em duas máquinas independentes. O rollback/netplay não deve ser anunciado como universalmente compatível.
 
 ## Preservação e propriedade intelectual
 
