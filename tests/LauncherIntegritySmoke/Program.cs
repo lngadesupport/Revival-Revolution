@@ -36,6 +36,7 @@ try
         PlayerName = "  " + new string('P', 40) + "  ",
         PlayerTag = new string('T', 20),
         ConfirmBeforeLaunch = true,
+        ReduceMotion = true,
         PersistLogs = false,
         UseCustomRadminIp = true,
         CustomRadminIp = "26.226.57.19"
@@ -43,8 +44,8 @@ try
     var savedSettings = settingsService.Load();
     Require(savedSettings.PlayerName.Length == 24 && savedSettings.PlayerTag.Length == 12,
         "Legacy profile fields must be trimmed and bounded during persistence.");
-    Require(savedSettings.ConfirmBeforeLaunch && !savedSettings.PersistLogs,
-        "Launcher preferences did not survive a save/load round trip.");
+    Require(savedSettings.ConfirmBeforeLaunch && savedSettings.ReduceMotion && !savedSettings.PersistLogs,
+        "Launcher and accessibility preferences did not survive a save/load round trip.");
     Require(savedSettings.UseCustomRadminIp && savedSettings.CustomRadminIp == "26.226.57.19",
         "Manual Radmin IP preferences did not survive a save/load round trip.");
 
@@ -58,7 +59,7 @@ try
     await File.WriteAllTextAsync(settingsService.GetSettingsPath(), "{ invalid json");
     var recoveredSettings = settingsService.Load();
     Require(!recoveredSettings.ConfirmBeforeLaunch && recoveredSettings.PersistLogs &&
-            !recoveredSettings.UseCustomRadminIp,
+            !recoveredSettings.UseCustomRadminIp && !recoveredSettings.ReduceMotion,
         "Corrupt settings must recover to safe defaults.");
     Require(Directory.EnumerateFiles(settingsRoot, "launcher-settings.json.corrupt-*").Any(),
         "Corrupt settings must be preserved in a recovery copy.");
