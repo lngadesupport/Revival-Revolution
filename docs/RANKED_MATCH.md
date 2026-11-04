@@ -67,6 +67,25 @@ cópia estática de `Assembly-CSharp.dll`. O procedimento está documentado em
 O relatório pode ser baixado na execução do workflow
 “Inspect native game integration binaries”.
 
+## Hospedar o backend dentro da rede Radmin
+
+Para uma rede privada, um jogador pode hospedar a API no próprio Windows:
+`scripts/start-radmin-ranked-host.ps1` detecta o IP virtual Radmin (26.x.x.x),
+cria regras de firewall limitadas ao adaptador e à faixa Radmin e inicia a API
+em `http://IP-RADMIN:8765`. O banco SQLite fica em
+`%LOCALAPPDATA%\RevivalRevolution\RankedServer\ranked.sqlite3`.
+
+- Todos os jogadores devem estar conectados à mesma rede Radmin e apontar o
+  launcher para o IP Radmin do computador que está hospedando a API.
+- TCP 8765 é usado pela API; UDP 8766 fica reservado para o transporte P2P.
+- O launcher aceita HTTP somente para endereços IPv4 da faixa virtual 26.0.0.0/8
+  ou localhost. HTTP em endereços públicos continua bloqueado; fora da VPN,
+  use HTTPS.
+- Isso não cria matchmaking público na internet. Não usar Render, STUN,
+  AutoPunch, relay de terceiros ou fallback público.
+- O script não configura `RANKED_RESULT_SECRET`. A adjudicação continua
+  desativada até existir uma autoridade confiável integrada ao jogo/bridge.
+
 ## Limites atuais
 
 Este MVP ainda não é uma temporada competitiva pública:
