@@ -111,6 +111,30 @@ try
         localConfigRejected = true;
     }
     Require(localConfigRejected, "User-specific launcher configuration must remain protected.");
+    foreach (var userContentPath in new[]
+    {
+        "Launcher/Mods/mobile-port/character.bundle",
+        "Launcher/UserContent/custom-roster.json",
+        "Launcher/Content/imported-assets/pack.bin",
+        "Launcher/Profiles/community-profile.json",
+        "Launcher/Backups/original-assembly.dll"
+    })
+    {
+        var userContentRejected = false;
+        try
+        {
+            await LauncherUpdateService.FindFilesNeedingUpdateAsync(
+                root,
+                new[] { userContentPath },
+                new Dictionary<string, string> { [userContentPath] = Hash("must preserve") });
+        }
+        catch (InvalidDataException)
+        {
+            userContentRejected = true;
+        }
+        Require(userContentRejected, $"User-managed content must remain outside official update ownership: {userContentPath}");
+    }
+
 
     var protectedRejected = false;
     try
