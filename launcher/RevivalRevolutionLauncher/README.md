@@ -14,13 +14,8 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 - Diagnóstico de dependências essenciais offline e componentes opcionais
   multiplayer; a lista identifica a bridge correta `MetalNetplayBridgeV8.dll`
   e os scripts de sessão.
-- Atualização do launcher por manifesto HTTPS, hash SHA-256 do pacote e hashes
-  SHA-256 por arquivo, com reparo seletivo de arquivos ausentes/divergentes,
-  staging, backup e rollback durante a aplicação.
 - Central ONLINE com matchmaking aleatório e salas privadas por código,
   usando a API Ranked e token no Gerenciador de Credenciais do Windows.
-- Instalação/reparo automático de pacotes do jogo permanece bloqueado até
-  autenticação dos ZIPs por hashes confiáveis publicados em canal independente.
 
 ## Build
 
@@ -51,18 +46,12 @@ Consulte [docs/RADMIN_VPN_SETUP.md](../../docs/RADMIN_VPN_SETUP.md) para
 instalação, teste de conectividade e execução do peer UDP direto. O anfitrião
 precisa permanecer ligado e conectado. Não abra portas no roteador.
 
-## Segurança e distribuição
+## Distribuição e instalação do jogo
 
-- O manifesto de atualização aponta para GitHub Releases e o pacote ZIP é
-  validado por SHA-256 antes da extração.
-- O hash detecta corrupção, mas manifesto e hash no mesmo canal não equivalem
-  a assinatura digital independente.
-- O pacote de atualização contém somente arquivos do launcher. Não incluir
-  executáveis, DLLs, assets ou dados proprietários do jogo.
-- A instalação/reparação da distribuição do jogo segue bloqueada enquanto não
-  houver hashes autenticados por canal independente.
-- O atualizador e o runtime precisam ser exercitados em Windows limpo antes
-  da publicação estável.
+- O launcher não possui atualizador automático, verificação de versões ou aplicação de pacotes.
+- O launcher não baixa, instala nem fornece links para baixar o jogo.
+- Para jogar, selecione a pasta de uma instalação existente que contenha `ufo.exe` e `ufo_Data/Managed`.
+- O runtime Python portátil necessário aos scripts auxiliares continua sendo preparado separadamente; isso não instala nem baixa o jogo.
 
 ## Estado multiplayer 0.8.1
 
@@ -78,16 +67,3 @@ ainda não é uma aba embutida na janela principal. Recursos sociais de perfil,
 amigos e leaderboard devem permanecer dentro do jogo quando houver um ponto
 de extensão técnico verificável.
 
-## Publicar uma atualização
-
-1. Concluir a validação de código e os testes de Windows limpo e duas máquinas.
-2. Integrar o commit aprovado à `main`; a branch de estabilização não é uma
-   release pública.
-3. Criar e enviar a tag `v0.8.1` sobre o commit já integrado à `main`.
-4. O workflow `.github/workflows/publish-launcher-release.yml` compila o
-   launcher self-contained Windows x64, gera o ZIP, calcula SHA-256 e publica
-   o ZIP e o manifesto como assets da GitHub Release.
-5. Não criar a tag estável enquanto os critérios de validação estiverem
-   pendentes.
-
-O launcher não redistribui o jogo nem substitui os scripts/bridges originais.
