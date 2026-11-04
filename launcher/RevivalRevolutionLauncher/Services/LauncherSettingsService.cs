@@ -35,10 +35,31 @@ public sealed class LauncherSettingsService
 
     public void Save(LauncherSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
         Directory.CreateDirectory(SettingsDirectory);
-        var temporary = SettingsPath + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, JsonOptions));
-        File.Move(temporary, SettingsPath, true);
+
+        // Use a unique temporary file in the same directory so concurrent writes
+        // cannot collide and the final rename stays on the same volume.
+        var temporary = SettingsPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                JsonSerializer.Serialize(stream, settings, JsonOptions);
+                stream.Flush(flushToDisk: true);
+            }
+
+            File.Move(temporary, SettingsPath, overwrite: true);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(temporary)) File.Delete(temporary);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
     }
 
     public string GetSettingsPath() => SettingsPath;
