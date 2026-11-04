@@ -111,9 +111,9 @@
                     <StackPanel Margin="5,5,5,24">
                         <TextBlock Text="REVIVAL" FontSize="27" FontWeight="Black"
                                    FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue"
-                                   Foreground="#F5F3F1" CharacterSpacing="95"/>
+                                   Foreground="#F5F3F1"/>
                         <TextBlock Text="REVOLUTION  /  COMMUNITY" FontSize="8" FontWeight="Bold"
-                                   Foreground="#E76A73" Margin="1,-2,0,0" CharacterSpacing="125"/>
+                                   Foreground="#E76A73" Margin="1,-2,0,0"/>
                         <Border Height="1" Background="#343B49" Margin="0,19,0,0"/>
                     </StackPanel>
 
@@ -121,19 +121,19 @@
                                   HorizontalScrollBarVisibility="Disabled">
                         <StackPanel>
                             <TextBlock Text="JOGAR" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
-                                       Margin="7,0,0,8" CharacterSpacing="150"/>
+                                       Margin="7,0,0,8"/>
                             <Button x:Name="OfflineNavButton" Style="{StaticResource NavButton}"
                                     Content="01   Modo offline" Click="Launch_Click" FontSize="13"/>
                             <Button x:Name="PrivateMatchNavButton" Style="{StaticResource NavButton}"
                                     Content="02   Sala por código" Click="PrivateMatch_Click" FontSize="13"/>
                             <Border Height="1" Background="#2D3542" Margin="5,17,5,16"/>
                             <TextBlock Text="COMUNIDADE" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
-                                       Margin="7,0,0,8" CharacterSpacing="150"/>
+                                       Margin="7,0,0,8"/>
                             <Button x:Name="ModListNavButton" Style="{StaticResource NavButton}"
                                     Content="03   Biblioteca de mods" Click="ModList_Click" FontSize="12"/>
                             <Border Height="1" Background="#2D3542" Margin="5,17,5,16"/>
                             <TextBlock Text="SISTEMA" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
-                                       Margin="7,0,0,8" CharacterSpacing="150"/>
+                                       Margin="7,0,0,8"/>
                             <Button x:Name="DiagnosticsNavButton" Style="{StaticResource NavButton}"
                                     Content="04   Diagnósticos" Click="Diagnostics_Click"/>
                             <Button x:Name="SettingsNavButton" Style="{StaticResource NavButton}"
@@ -146,8 +146,7 @@
                         <Button Content="ABRIR DISCORD" Click="Discord_Click" HorizontalContentAlignment="Center"
                                 Background="#222B39" BorderBrush="#3D4A5E" Margin="0"/>
                         <TextBlock Text="FEITO PARA A COMUNIDADE" FontSize="8" FontWeight="Bold"
-                                   Foreground="#667181" HorizontalAlignment="Center" Margin="0,13,0,0"
-                                   CharacterSpacing="90"/>
+                                   Foreground="#667181" HorizontalAlignment="Center" Margin="0,13,0,0"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -164,7 +163,7 @@
                                Margin="2,0,2,18">
                         <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
                             <TextBlock Text="CENTRAL DE OPERAÇÕES" FontSize="9" FontWeight="Bold"
-                                       Foreground="#E76A73" CharacterSpacing="165"/>
+                                       Foreground="#E76A73"/>
                             <TextBlock Text="Bem-vindo de volta." FontSize="22" FontWeight="SemiBold"
                                        Foreground="#F5F3F1" Margin="0,3,0,0"/>
                         </StackPanel>
@@ -179,8 +178,7 @@
                                 <TextBlock Text="METAL" FontSize="26" FontWeight="Black"
                                            FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue"
                                            HorizontalAlignment="Right"/>
-                                <TextBlock Text="REVOLUTION" FontSize="8" FontWeight="Bold"
-                                           CharacterSpacing="170" HorizontalAlignment="Right"
+                                <TextBlock Text="REVOLUTION" FontSize="8" FontWeight="Bold" HorizontalAlignment="Right"
                                            Foreground="#AAB2BF" Margin="0,-3,0,0"/>
                             </StackPanel>
                         </StackPanel>
@@ -206,7 +204,7 @@
                                         <Border Background="#3B20262F" BorderBrush="#67515A66"
                                                 BorderThickness="1" CornerRadius="3" Padding="8,4">
                                             <TextBlock Text="COMMUNITY BUILD" FontSize="8" FontWeight="Bold"
-                                                       Foreground="#D9DDE3" CharacterSpacing="90"/>
+                                                       Foreground="#D9DDE3"/>
                                         </Border>
                                         <TextBlock Text="  /  METAL REVOLUTION" FontSize="9" FontWeight="Bold"
                                                    Foreground="#9DA5B3" VerticalAlignment="Center"/>
@@ -228,7 +226,7 @@
                                             CornerRadius="8" Padding="15" Margin="0,0,7,0">
                                         <StackPanel>
                                             <TextBlock Text="01  /  EXPERIÊNCIA" FontSize="8" FontWeight="Bold"
-                                                       Foreground="#E76A73" CharacterSpacing="100"/>
+                                                       Foreground="#E76A73"/>
                                             <TextBlock Text="Modo offline" FontSize="18" FontWeight="SemiBold"
                                                        Margin="0,7,0,3"/>
                                             <TextBlock Text="Inicie o jogo usando a distribuição local já configurada."
@@ -240,7 +238,7 @@
                                             BorderThickness="1" CornerRadius="8" Padding="15" Margin="7,0,0,0">
                                         <StackPanel>
                                             <TextBlock Text="02  /  MULTIPLAYER" FontSize="8" FontWeight="Bold"
-                                                       Foreground="#E76A73" CharacterSpacing="100"/>
+                                                       Foreground="#E76A73"/>
                                             <TextBlock Text="Sala por código" FontSize="18" FontWeight="SemiBold"
                                                        Margin="0,7,0,3"/>
                                             <TextBlock Text="Crie um convite privado ou conecte-se usando o código de outro jogador."
@@ -253,7 +251,7 @@
                                 <DockPanel Grid.Row="2" LastChildFill="False">
                                     <TextBlock Text="SELECIONE SUA INSTALAÇÃO PARA COMEÇAR"
                                                FontSize="8" FontWeight="Bold" Foreground="#818C9C"
-                                               VerticalAlignment="Center" CharacterSpacing="85"/>
+                                               VerticalAlignment="Center"/>
                                     <TextBlock DockPanel.Dock="Right" Text="RR  /  08.1"
                                                FontSize="9" FontWeight="Bold" Foreground="#697586"
                                                VerticalAlignment="Center"/>
@@ -266,14 +264,14 @@
                                 CornerRadius="12" Padding="19">
                             <StackPanel>
                                 <TextBlock Text="STATUS DO SISTEMA" FontSize="9" FontWeight="Bold"
-                                           Foreground="#E76A73" CharacterSpacing="145"/>
+                                           Foreground="#E76A73"/>
                                 <TextBlock Text="Sua instalação" FontSize="20" FontWeight="SemiBold"
                                            Margin="0,5,0,15"/>
                                 <Border Background="#171C26" BorderBrush="#394252" BorderThickness="1"
                                         CornerRadius="7" Padding="12">
                                     <StackPanel>
                                         <TextBlock Text="ESTADO ATUAL" FontSize="8" FontWeight="Bold"
-                                                   Foreground="#828D9D" CharacterSpacing="100"/>
+                                                   Foreground="#828D9D"/>
                                         <TextBlock x:Name="DashboardLocalStatus" Text="NÃO CONFIGURADA"
                                                    FontSize="17" FontWeight="Bold" Foreground="#D4D9E0"
                                                    Margin="0,5,0,2"/>
@@ -292,7 +290,7 @@
                                         Margin="0,3,0,0"/>
                                 <Border Height="1" Background="#303846" Margin="0,16,0,13"/>
                                 <TextBlock Text="RECURSOS" FontSize="8" FontWeight="Bold"
-                                           Foreground="#828D9D" CharacterSpacing="130"/>
+                                           Foreground="#828D9D"/>
                                 <StackPanel Margin="0,9,0,0">
                                     <DockPanel Margin="0,4">
                                         <Ellipse Width="6" Height="6" Fill="#6BC58B" Margin="0,0,9,0"/>
@@ -328,7 +326,7 @@
                                 <StackPanel>
                                     <DockPanel Margin="0,0,0,8">
                                         <TextBlock Text="INSTALAÇÃO LOCAL" FontSize="8" FontWeight="Bold"
-                                                   Foreground="#E76A73" CharacterSpacing="115"/>
+                                                   Foreground="#E76A73"/>
                                         <Button Content="ALTERAR PASTA" Click="ChooseFolder_Click"
                                                 DockPanel.Dock="Right" FontSize="8" Padding="9,5"
                                                 Margin="0" Background="#242C38"/>
@@ -344,8 +342,7 @@
                                 <StackPanel>
                                     <DockPanel Margin="0,0,0,7">
                                         <TextBlock Text="REGISTRO DE ATIVIDADE" FontSize="8"
-                                                   FontWeight="Bold" Foreground="#E76A73"
-                                                   CharacterSpacing="115"/>
+                                                   FontWeight="Bold" Foreground="#E76A73"/>
                                         <TextBlock Text="LOCAL" DockPanel.Dock="Right" FontSize="8"
                                                    Foreground="#707C8D" FontWeight="Bold"/>
                                     </DockPanel>
@@ -361,7 +358,7 @@
                                 BorderThickness="1" CornerRadius="8" Padding="14">
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="SESSÃO LOCAL" FontSize="8" FontWeight="Bold"
-                                           Foreground="#8792A2" CharacterSpacing="120"/>
+                                           Foreground="#8792A2"/>
                                 <Border x:Name="GameStateBorder" Background="#555B66"
                                         CornerRadius="4" Padding="10,7" Margin="0,8,0,10">
                                     <TextBlock x:Name="GameStateLabel" Text="NENHUM" FontSize="11"
@@ -395,7 +392,7 @@
                             IsHitTestVisible="False">
                     <Ellipse Width="6" Height="6" Fill="#E34450" Margin="0,0,9,0"/>
                     <TextBlock Text="REVIVAL REVOLUTION" FontSize="9" FontWeight="Bold"
-                               Foreground="#D6DAE1" VerticalAlignment="Center" CharacterSpacing="100"/>
+                               Foreground="#D6DAE1" VerticalAlignment="Center"/>
                     <TextBlock Text="   /   COMMUNITY LAUNCHER" FontSize="8"
                                Foreground="#788393" VerticalAlignment="Center"/>
                 </StackPanel>
