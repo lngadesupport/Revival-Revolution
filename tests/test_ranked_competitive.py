@@ -23,10 +23,12 @@ class CompetitiveRatingTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_casual_queue_does_not_create_ranked_match(self):
-        self.assertIsNone(self.accounts.join_queue(self.one["player_id"], "sa-east", mode="casual"))
-        self.assertIsNone(self.accounts.join_queue(self.two["player_id"], "sa-east", mode="ranked"))
-        self.assertEqual(self.accounts.queue_status(self.one["player_id"])["mode"], "casual")
-        self.assertEqual(self.accounts.queue_status(self.two["player_id"])["mode"], "ranked")
+        casual = self.accounts.register("CASUAL-QUEUE-PLAYER")
+        ranked = self.accounts.register("RANKED-QUEUE-PLAYER")
+        self.assertIsNone(self.accounts.join_queue(casual["player_id"], "sa-east", mode="casual"))
+        self.assertIsNone(self.accounts.join_queue(ranked["player_id"], "sa-east", mode="ranked"))
+        self.assertEqual(self.accounts.queue_status(casual["player_id"])["mode"], "casual")
+        self.assertEqual(self.accounts.queue_status(ranked["player_id"])["mode"], "ranked")
 
     def test_elo_is_zero_sum_and_rewards_upset(self):
         one, two = calculate_elo(1000, 1400, 1.0)
