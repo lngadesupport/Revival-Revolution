@@ -81,6 +81,8 @@ Não altere rating com base apenas no resultado informado pelos clientes.
 
 ## Camada competitiva adicionada na rodada atual
 
+- Fila casual (`/v1/queue/join`) e fila Ranked (`/v1/ranked/queue/join`) separadas por modo e região; não há pareamento cruzado.
+- Partidas por código são marcadas `private`; a fila casual é `casual`; somente a fila `ranked` pode gerar ELO.
 - Temporada inicial `season-1`, com rating persistido por jogador.
 - ELO K=32, deltas zero-sum, estatísticas de vitórias/derrotas/empates e pico de rating.
 - Divisões Bronze, Prata, Ouro, Platina, Diamante e Mestre.
