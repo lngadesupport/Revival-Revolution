@@ -168,6 +168,7 @@ public sealed class LauncherSettingsWindow : Window
         _persistLogs = AddSwitchRow(app, "Salvar logs neste computador",
             "Mantém registros locais para facilitar diagnósticos.", current.PersistLogs);
         content.Children.Add(appCard);
+        app.Children.Add(new TextBlock { Text = "RADMIN VPN — IP avançado", Foreground = Brushes.White, Margin = new Thickness(0, 8, 0, 0) });
 
         var supportCard = MakeCard();
         var support = CardContent(supportCard);
