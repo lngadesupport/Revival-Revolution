@@ -156,6 +156,8 @@ class CompetitiveStore:
                     raise ValueError("match_not_found")
                 if match["status"] != "assigned":
                     raise ValueError("match_is_not_active")
+                if match["match_type"] != "ranked":
+                    raise ValueError("match_is_not_ranked")
                 one, two = match["player_one"], match["player_two"]
                 if not is_draw and winner_player_id not in (one, two):
                     raise ValueError("winner_does_not_belong_to_match")
