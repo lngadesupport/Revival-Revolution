@@ -34,6 +34,7 @@ public partial class OnlineMatchWindow : Window
     private bool _peerReady;
     private bool _closing;
     private bool _queueActive;
+    private string? _acceptingMatchId;
     private string _queueMode = "casual";
     private string _matchType = "private";
     private string _rankedProfileText = "";
@@ -474,6 +475,8 @@ public partial class OnlineMatchWindow : Window
     private void ShowMatch(JsonObject match)
     {
         _roomWaiting = false;
+        _queueActive = false;
+        CancelQueueButton.IsEnabled = false;
         _matchActive = true;
         _activeMatchId = match["match_id"]?.GetValue<string>();
         InvitePanel.Visibility = Visibility.Collapsed;
@@ -491,6 +494,7 @@ public partial class OnlineMatchWindow : Window
             !string.Equals(_activeMatchId, matchId, StringComparison.Ordinal)) return;
 
         _activeMatchId = matchId;
+        _matchType = match["match_type"]?.GetValue<string>() ?? "private";
         _matchStatus = match["status"]?.GetValue<string>() ?? "ready";
         _matchActive = _matchStatus is "assigned" or "ready";
         var opponent = match["opponent"] as JsonObject;
@@ -511,6 +515,16 @@ public partial class OnlineMatchWindow : Window
         var role = match["room_role"]?.GetValue<string>();
         var roomStatus = match["room_status"]?.GetValue<string>();
         var connectionCode = match["connection_code"]?.GetValue<string>();
+        if (_matchType is "ranked" or "casual")
+        {
+            role = match["player_slot"]?.ToString() == "0" ? "host" : "guest";
+            roomStatus = string.IsNullOrWhiteSpace(connectionCode) ? "matched" : "starting";
+            if (_matchStatus == "assigned" && _acceptingMatchId != matchId)
+            {
+                _acceptingMatchId = matchId;
+                _ = AcceptAssignedMatchAsync(_matchType, matchId);
+            }
+        }
         if (role == "guest")
         {
             OpponentRoleText.Text = "ANFITRIÃO";
@@ -600,7 +614,7 @@ public partial class OnlineMatchWindow : Window
                 JsonObject result;
                 try
                 {
-                    result = await _api.GetAsync("/v1/match", cancellationToken);
+                    result = await _api.GetAsync(MatchApiPrefix + "/match", cancellationToken);
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
@@ -656,7 +670,8 @@ public partial class OnlineMatchWindow : Window
         var codePublished = false;
         try
         {
-            await _api.PostAsync("/v1/rooms/start", new JsonObject(), cancellationToken: sessionToken);
+            if (_matchType == "private")
+                await _api.PostAsync("/v1/rooms/start", new JsonObject(), cancellationToken: sessionToken);
             await Dispatcher.InvokeAsync(() =>
             {
                 StartRoomButton.Content = "CONECTANDO...";
@@ -665,7 +680,10 @@ public partial class OnlineMatchWindow : Window
             });
 
             var connectionCode = await _gameSession.StartHostAsync(sessionToken);
-            await _api.PostAsync("/v1/rooms/connection-code", new JsonObject { ["code"] = connectionCode }, cancellationToken: sessionToken);
+            var publishPath = _matchType == "private"
+                ? "/v1/rooms/connection-code"
+                : MatchApiPrefix + "/match/connection-code";
+            await _api.PostAsync(publishPath, new JsonObject { ["code"] = connectionCode }, cancellationToken: sessionToken);
             codePublished = true;
             await Dispatcher.InvokeAsync(() =>
             {
@@ -691,8 +709,8 @@ public partial class OnlineMatchWindow : Window
             if (_closing) return;
             if (codePublished)
             {
-                try { await _api.PostAsync("/v1/match/decline", new JsonObject()); } catch { }
-                await Dispatcher.InvokeAsync(() => ResetToInvite("A conexão falhou. Crie uma nova sala. " + ex.Message));
+                try { await _api.PostAsync(MatchApiPrefix + "/match/decline", new JsonObject()); } catch { }
+                await Dispatcher.InvokeAsync(() => ResetToInvite("A conexão falhou. Tente novamente. " + ex.Message));
             }
             else
             {
@@ -738,9 +756,9 @@ public partial class OnlineMatchWindow : Window
         {
             _gameSession.Stop();
             if (_closing) return;
-            try { await _api.PostAsync("/v1/match/decline", new JsonObject()); } catch { }
+            try { await _api.PostAsync(MatchApiPrefix + "/match/decline", new JsonObject()); } catch { }
             await Dispatcher.InvokeAsync(() =>
-                ResetToInvite("A conexão do convidado falhou. A sala foi encerrada. " + ex.Message));
+                ResetToInvite("A conexão do convidado falhou. A partida foi encerrada. " + ex.Message));
         }
         finally
         {
@@ -758,8 +776,8 @@ public partial class OnlineMatchWindow : Window
         LeaveRoomButton.IsEnabled = false;
         try
         {
-            await _api.PostAsync("/v1/match/decline", new JsonObject());
-            ResetToInvite("Você saiu da sala. Já pode criar ou entrar em outro convite.");
+            await _api.PostAsync(MatchApiPrefix + "/match/decline", new JsonObject());
+            ResetToInvite("Você saiu da partida. Já pode buscar outra partida ou criar um convite.");
         }
         catch (Exception ex)
         {
@@ -792,6 +810,9 @@ public partial class OnlineMatchWindow : Window
         _matchActive = false;
         _activeMatchId = null;
         _matchStatus = null;
+        _matchType = "private";
+        _acceptingMatchId = null;
+        _queueActive = false;
         _opponentId = null;
         _guestSessionStarted = false;
         _hostSessionActive = false;
