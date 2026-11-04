@@ -37,6 +37,7 @@ public partial class OnlineMatchWindow : Window
             _api.Configure(endpoint, _token);
             ApplyProfile(await _api.GetAsync("/v1/me"));
             await RefreshRankedSummaryAsync();
+            await RefreshLeaderboardAsync();
             StatusText.Text = "Conta autenticada. Escolha uma modalidade de matchmaking.";
         }
         catch (Exception ex)
@@ -71,12 +72,14 @@ public partial class OnlineMatchWindow : Window
                 _api.Configure(endpoint, _token);
                 ApplyProfile(created);
                 await RefreshRankedSummaryAsync();
+                await RefreshLeaderboardAsync();
                 StatusText.Text = "Conta criada e credencial protegida no Gerenciador de Credenciais do Windows.";
             }
             else
             {
                 ApplyProfile(await _api.GetAsync("/v1/me"));
                 await RefreshRankedSummaryAsync();
+                await RefreshLeaderboardAsync();
                 StatusText.Text = "Sessão restaurada com segurança.";
             }
         }
@@ -127,12 +130,66 @@ public partial class OnlineMatchWindow : Window
         }
     }
 
+
+    private async void RefreshLeaderboard_Click(object sender, RoutedEventArgs e)
+        => await RefreshLeaderboardAsync();
+
+    private async Task RefreshLeaderboardAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_token)) return;
+        RefreshLeaderboardButton.IsEnabled = false;
+        LeaderboardStatusText.Text = "Carregando classificação da temporada...";
+        try
+        {
+            var response = await _api.GetAsync("/v1/ranked/leaderboard?limit=100");
+            var entries = response["entries"] as JsonArray;
+            var rows = new List<LeaderboardRow>();
+            if (entries is not null)
+            {
+                foreach (var item in entries)
+                {
+                    if (item is not JsonObject entry) continue;
+                    rows.Add(new LeaderboardRow
+                    {
+                        Position = entry["position"]?.ToString() ?? "—",
+                        Player = entry["display_name"]?.GetValue<string>() ?? "Jogador",
+                        Rating = entry["rating"]?.ToString() ?? "—",
+                        Division = entry["division"]?.GetValue<string>() ?? "—",
+                        Record = $"V {entry["wins"]?.ToString() ?? "0"}/D {entry["losses"]?.ToString() ?? "0"}/E {entry["draws"]?.ToString() ?? "0"}"
+                    });
+                }
+            }
+            LeaderboardList.ItemsSource = rows;
+            LeaderboardStatusText.Text = rows.Count == 0
+                ? "Ainda não há jogadores classificados nesta temporada."
+                : $"Temporada {response["season_id"]?.GetValue<string>() ?? "atual"} • {rows.Count} jogadores exibidos (máximo 100).";
+        }
+        catch (Exception ex)
+        {
+            LeaderboardStatusText.Text = "Não foi possível carregar o leaderboard: " + ex.Message;
+        }
+        finally
+        {
+            RefreshLeaderboardButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
+        }
+    }
+
+    private sealed class LeaderboardRow
+    {
+        public string Position { get; init; } = "—";
+        public string Player { get; init; } = "—";
+        public string Rating { get; init; } = "—";
+        public string Division { get; init; } = "—";
+        public string Record { get; init; } = "—";
+    }
+
     private void SetModeButtons(bool enabled)
     {
         SearchButton.IsEnabled = enabled && !_queued && !_roomWaiting;
         RankedSearchButton.IsEnabled = enabled && !_queued && !_roomWaiting;
         CreateRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
         JoinRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
+        RefreshLeaderboardButton.IsEnabled = enabled;
     }
 
     private async void Search_Click(object sender, RoutedEventArgs e)
