@@ -37,6 +37,31 @@ try
     await File.WriteAllTextAsync(Path.Combine(staging, "missing.txt"), "new file");
     LauncherUpdateService.VerifyStagedFiles(staging, new[] { "corrupt.txt", "missing.txt" }, hashes);
 
+    var applyMethod = typeof(LauncherUpdateService).GetMethod(
+        "CreateApplyScriptAsync",
+        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+    Require(applyMethod is not null, "The transactional update script builder is unavailable.");
+    var applyTask = (Task<string>)applyMethod!.Invoke(null, new object[]
+    {
+        root,
+        staging,
+        new[] { "corrupt.txt" },
+        new Dictionary<string, string> { ["corrupt.txt"] = Hash("expected") },
+        CancellationToken.None
+    })!;
+    var commandPath = await applyTask;
+    var applyScript = await File.ReadAllTextAsync(Path.Combine(root, "Launcher", "apply-update.ps1"));
+    var applyCommand = await File.ReadAllTextAsync(commandPath);
+    Require(applyScript.Contains("Get-FileHash", StringComparison.Ordinal) &&
+            applyScript.Contains(Hash("expected"), StringComparison.Ordinal) &&
+            applyScript.Contains("Staged file changed before copy", StringComparison.Ordinal),
+        "The apply script must reverify staged file hashes immediately before installation.");
+    Require(applyScript.Contains("Assert-NoReparsePath", StringComparison.Ordinal),
+        "The apply script must reject reparse points at apply time.");
+    Require(applyCommand.Contains("-File", StringComparison.Ordinal) &&
+            !applyCommand.Contains("-EncodedCommand", StringComparison.Ordinal),
+        "The updater must launch a script file rather than exceed the Windows command-line limit.");
+
     await File.WriteAllTextAsync(Path.Combine(staging, "corrupt.txt"), "tampered after download");
     var stagedTamperRejected = false;
     try
@@ -143,7 +168,7 @@ try
     }
     Require(nonRadminRejected, "The Radmin launcher must reject public/non-Radmin endpoints.");
 
-    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, staged per-file SHA-256 verification, tamper rejection, managed runtime updates, protected user configuration/game paths, and connection-code validation.");
+    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, staged and apply-time per-file SHA-256 verification, reparse-point protection, managed runtime updates, protected user configuration/game paths, and connection-code validation.");
 }
 finally
 {
