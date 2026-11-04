@@ -18,7 +18,6 @@ public partial class MainWindow : Window
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly DistributionLocator _distributionLocator = new();
     private string? _distributionRoot;
-    private readonly LauncherUpdateService _updates = new();
     private readonly LauncherSettingsService _settingsService = new();
     private LauncherSettings _settings = new();
     private string? _gameFolder;
@@ -372,7 +371,7 @@ public partial class MainWindow : Window
         {
             ("offline", OfflineNavButton),
             ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
-            ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton),
+            ("diagnostics", DiagnosticsNavButton),
             ("settings", SettingsNavButton)
         };
 
@@ -420,18 +419,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Install_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show(this,
-            "A instalação e o reparo automáticos estão temporariamente bloqueados por segurança. " +
-            "Os pacotes ZIP ainda não possuem hashes SHA-256 autenticados por um canal independente. " +
-            "Um manifesto de checksums dentro do próprio pacote não comprova sua origem. " +
-            "Nenhum arquivo será baixado, extraído ou sobrescrito. A inicialização de uma instalação existente continua disponível.",
-            "Instalação protegida", MessageBoxButton.OK, MessageBoxImage.Information);
-        Log("Instalação/reparo automático bloqueados até autenticação independente dos pacotes.");
-        FooterStatus.Text = "Instalação automática aguardando hashes confiáveis.";
-    }
-
     private async void Diagnostics_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("diagnostics");
@@ -445,145 +432,6 @@ public partial class MainWindow : Window
                 Log($"{(item.Optional ? "INFO" : item.Passed ? "OK" : "FALHA")} — {item.Name}: {item.Detail}");
             var required = items.Where(item => !item.Optional).ToArray();
             FooterStatus.Text = $"Diagnóstico: {required.Count(item => item.Passed)}/{required.Length} verificações essenciais aprovadas.";
-        });
-    }
-
-    private async void Window_Loaded(object sender, RoutedEventArgs e)
-    {
-        // A checagem automática não bloqueia a abertura caso o GitHub esteja indisponível.
-        try
-        {
-            if (_settings.CheckUpdatesOnStartup)
-                await CheckForUpdatesAsync(automatic: true);
-        }
-        catch (Exception ex)
-        {
-            Log("Não foi possível verificar atualizações automaticamente: " + ex.Message);
-        }
-    }
-
-    private async void Updates_Click(object sender, RoutedEventArgs e)
-    {
-        SetActiveNavigation("updates");
-        if (_busy) return;
-        try { await CheckForUpdatesAsync(automatic: false); }
-        catch (Exception ex) { Log("ERRO ao atualizar: " + ex.Message); FooterStatus.Text = "Falha ao verificar/aplicar atualização."; }
-    }
-
-    private void ShowUpdateProgress(string version, bool repair)
-    {
-        UpdateVersionText.Text = repair
-            ? $"Reparo seletivo dos arquivos do launcher — {version}"
-            : $"Versão {version} pronta para instalação";
-        UpdateStageText.Text = "Conectando ao servidor oficial...";
-        UpdateProgressDetail.Text = "Aguardando início do download...";
-        UpdatePercentText.Text = "—";
-        UpdateProgressBar.Value = 0;
-        UpdateProgressBar.IsIndeterminate = true;
-        UpdateOverlay.Visibility = Visibility.Visible;
-        UpdateOverlay.Opacity = 0;
-        var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
-            TimeSpan.FromMilliseconds(260))
-        {
-            EasingFunction = new System.Windows.Media.Animation.CubicEase
-            {
-                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
-            }
-        };
-        UpdateOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
-    }
-
-    private async Task CheckForUpdatesAsync(bool automatic)
-    {
-        await RunBusyAsync("Verificando atualizações...", async token =>
-        {
-            var update = await _updates.CheckAsync(_root, token);
-            if (update is null)
-            {
-                if (!automatic) Log("O launcher já está atualizado.");
-                return;
-            }
-
-            Log(update.IsRepair
-                ? $"Arquivos do launcher ausentes ou alterados; reparo seletivo da versão {update.Version} disponível."
-                : $"Nova versão disponível: {update.Version}");
-            if (string.IsNullOrWhiteSpace(update.PackageUrl) || update.Files.Count == 0)
-                throw new InvalidDataException("Manifesto remoto incompleto: packageUrl/files ausentes.");
-
-            var prompt = update.IsRepair
-                ? $"Foram encontrados {update.Files.Count} arquivo(s) do launcher ausentes ou com SHA-256 diferente.\n\nA versão instalada é {update.Version}. Somente os arquivos divergentes serão substituídos.\n\nDeseja reparar agora?"
-                : $"A versão {update.Version} está disponível.\n\n{update.ReleaseNotes}\n\nDeseja baixar e instalar agora?";
-            var choice = MessageBox.Show(this, prompt,
-                update.IsRepair ? "Reparo do launcher" : "Atualização disponível",
-                MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (choice != MessageBoxResult.Yes)
-            {
-                Log("Atualização adiada pelo usuário.");
-                return;
-            }
-
-            ShowUpdateProgress(update.Version, update.IsRepair);
-            string script;
-            try
-            {
-                var progress = new Progress<DownloadProgress>(p =>
-                {
-                    var received = p.BytesReceived / 1048576d;
-                    var total = p.TotalBytes is long bytes ? $" / {bytes / 1048576d:F1} MB" : "";
-                    var resumed = p.IsResuming ? " • retomada" : "";
-                    UpdateProgressDetail.Text = $"{p.FileName}: {received:F1} MB{total}{resumed}";
-                    if (p.Percent is double percent)
-                    {
-                        UpdateProgressBar.IsIndeterminate = false;
-                        UpdateProgressBar.Value = Math.Clamp(percent, 0, 100);
-                        UpdatePercentText.Text = $"{percent:F0}%";
-                    }
-                    else
-                    {
-                        UpdateProgressBar.IsIndeterminate = true;
-                        UpdatePercentText.Text = "—";
-                    }
-                });
-                var stageProgress = new Progress<UpdateOperationProgress>(stage =>
-                {
-                    UpdateStageText.Text = stage.Stage switch
-                    {
-                        "verify" => "Verificando integridade do pacote...",
-                        "extract" => "Preparando arquivos da atualização...",
-                        "finalize" => "Finalizando preparação...",
-                        _ => "Baixando pacote de atualização..."
-                    };
-                    UpdateProgressDetail.Text = stage.Detail;
-                    if (stage.Stage != "download")
-                    {
-                        UpdateProgressBar.IsIndeterminate = true;
-                        UpdatePercentText.Text = stage.Stage == "verify" ? "SHA-256" : "…";
-                    }
-                });
-
-                UpdateStageText.Text = "Baixando pacote de atualização...";
-                script = await _updates.DownloadAndStageAsync(_root, update, progress, token, stageProgress);
-                UpdateProgressBar.IsIndeterminate = false;
-                UpdateProgressBar.Value = 100;
-                UpdatePercentText.Text = "100%";
-                UpdateStageText.Text = "Download verificado e arquivos preparados.";
-                UpdateProgressDetail.Text = "SHA-256 validado • Preparação concluída";
-            }
-            catch
-            {
-                UpdateOverlay.Visibility = Visibility.Collapsed;
-                UpdateOverlay.Opacity = 0;
-                throw;
-            }
-
-            Log(update.IsRepair
-                ? $"Reparo seletivo de {update.Files.Count} arquivo(s) verificado e preparado."
-                : "Atualização verificada e preparada. O launcher será fechado para aplicar os arquivos.");
-            var apply = new ProcessStartInfo("cmd.exe") { WorkingDirectory = _root, UseShellExecute = false, CreateNoWindow = true };
-            apply.ArgumentList.Add("/c");
-            apply.ArgumentList.Add(script);
-            Process.Start(apply);
-            Close();
         });
     }
 
