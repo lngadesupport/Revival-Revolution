@@ -640,18 +640,9 @@ public partial class MainWindow : Window
         FooterStatus.Text = "PRIVATE MATCH — abrindo salas por código.";
         Log("Central Private Match aberta.");
         var configuredEndpoint = RankedApiClient.LoadEndpoint();
-        if (string.IsNullOrWhiteSpace(configuredEndpoint)) configuredEndpoint = RadminHostService.DefaultEndpoint;
-        var isConfiguredHost = RadminHostService.GetLocalRadminAddress(configuredEndpoint) is not null;
-        if (isConfiguredHost)
-        {
-            while (!_radminHostTaskReady && !_radminHostDisabled) await Task.Delay(200);
-            if (_radminHostDisabled)
-            {
-                MessageBox.Show(this, "O servidor privado não foi inicializado. Confira o log do launcher e autorize a configuração única do firewall do Windows.",
-                    "Servidor Radmin indisponível", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-        }
+        if (string.IsNullOrWhiteSpace(configuredEndpoint))
+            configuredEndpoint = RadminHostService.DefaultEndpoint;
+        var localHostAddress = RadminHostService.GetLocalRadminAddress(configuredEndpoint);
         var distributionRoot = _distributionRoot ?? _distributionLocator.Find(_root, _gameFolder);
         var python = _python.FindRuntime(_root);
         if (string.IsNullOrWhiteSpace(_gameFolder) || distributionRoot is null)
@@ -682,9 +673,14 @@ public partial class MainWindow : Window
         }
         try
         {
-            var endpoint = RankedApiClient.LoadEndpoint();
-            var hostAddress = string.IsNullOrWhiteSpace(endpoint) ? null : RadminHostService.GetLocalRadminAddress(endpoint);
-            await _radminHost.EnsureFirewallAsync(python, hostAddress, CancellationToken.None);
+            await _radminHost.EnsureFirewallAsync(python, localHostAddress, CancellationToken.None);
+            if (localHostAddress is not null)
+            {
+                FooterStatus.Text = "Iniciando servidor privado Radmin...";
+                await _radminHost.EnsureHostServerAsync(_root, python, localHostAddress, CancellationToken.None);
+                FooterStatus.Text = $"Servidor privado ativo em http://{localHostAddress}:8765";
+                Log($"Servidor Radmin pronto em http://{localHostAddress}:8765.");
+            }
         }
         catch (Exception ex)
         {
