@@ -59,7 +59,35 @@ try
     }
     Require(invalidHashRejected, "The integrity planner must reject malformed SHA-256 values.");
 
-    Console.WriteLine("Launcher integrity smoke tests passed: selective repair, intact-file preservation, protected game paths, and SHA-256 validation.");
+    var validRadminCode = "MR1-DLRDSEZCHYAACAQDAQCQMBYIBEFAWDANBYHZGMDC2A";
+    var decodedPeer = OnlineGameSessionService.DecodeRadminConnectionCode(validRadminCode);
+    Require(decodedPeer.Address.ToString() == "26.226.57.19" && decodedPeer.Port == 8766,
+        "The Radmin connection code decoder returned an unexpected endpoint.");
+
+    var corruptCodeRejected = false;
+    try
+    {
+        OnlineGameSessionService.DecodeRadminConnectionCode(validRadminCode[..^1] + "B");
+    }
+    catch (InvalidOperationException)
+    {
+        corruptCodeRejected = true;
+    }
+    Require(corruptCodeRejected, "The Radmin connection code decoder must reject a tampered checksum.");
+
+    var nonRadminCode = "MR1-ZMAHCCTJQ4AACAQDAQCQMBYIBEFAWDANBYH53IXNME";
+    var nonRadminRejected = false;
+    try
+    {
+        OnlineGameSessionService.DecodeRadminConnectionCode(nonRadminCode);
+    }
+    catch (InvalidOperationException)
+    {
+        nonRadminRejected = true;
+    }
+    Require(nonRadminRejected, "The Radmin launcher must reject public/non-Radmin endpoints.");
+
+    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, intact-file preservation, protected game paths, and SHA-256 validation.");
 }
 finally
 {
