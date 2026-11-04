@@ -17,12 +17,21 @@ class SelectionSync:
             self.atomic(self.root/'selection-lease.json',dict(session_id=self.bridge.session,target_pid=self.bridge.command['target_pid'] if self.bridge.command else int((self.root/'netplay-pid.txt').read_text())))
     def load_catalog(self):
         c=json.loads((self.root/'selection-catalog.json').read_text(encoding='utf-8-sig'))
-        if c.get('session_id')!=self.bridge.session or c.get('local_slot')!=self.slot or c.get('pid')!=self.bridge.command['target_pid']:raise RuntimeError('Selection catalog belongs to a different game/session')
+        if not isinstance(c,dict):
+            raise RuntimeError('Invalid selection catalog document')
+        if c.get('session_id')!=self.bridge.session or c.get('local_slot')!=self.slot or c.get('pid')!=self.bridge.command['target_pid']:
+            raise RuntimeError('Selection catalog belongs to a different game/session')
         characters=c.get('characters');stages=c.get('stages')
-        if not isinstance(characters,list) or not 1<=len(characters)<=128 or not isinstance(stages,list) or not 1<=len(stages)<=128:raise RuntimeError('Invalid selection catalog')
+        if not isinstance(characters,list) or not 1<=len(characters)<=128 or not isinstance(stages,list) or not 1<=len(stages)<=128:
+            raise RuntimeError('Invalid selection catalog')
         for item in characters:
-            if type(item.get('id')) is not int or not isinstance(item.get('outfits'),list) or not 1<=len(item['outfits'])<=128 or any(type(i) is not int for i in item['outfits']):raise RuntimeError('Invalid character/outfit catalog')
-        if any(type(s.get('id')) is not int for s in stages):raise RuntimeError('Invalid stage catalog')
+            if (not isinstance(item,dict) or type(item.get('id')) is not int
+                    or not isinstance(item.get('outfits'),list) or not 1<=len(item['outfits'])<=128
+                    or any(type(i) is not int for i in item['outfits'])
+                    or len(set(item['outfits']))!=len(item['outfits'])):
+                raise RuntimeError('Invalid character/outfit catalog')
+        if any(not isinstance(stage,dict) or type(stage.get('id')) is not int for stage in stages):
+            raise RuntimeError('Invalid stage catalog')
         self.characters={c['id']:c for c in characters};self.stages={s['id'] for s in stages}
         if len(self.characters)!=len(characters) or len(self.stages)!=len(stages):raise RuntimeError('Duplicate selection catalog IDs')
         self.catalog=c;self.catalog_hash=digest(canonical(dict(characters=sorted([(c['id'],c['outfits']) for c in characters]),stages=sorted(self.stages))))
@@ -37,21 +46,32 @@ class SelectionSync:
         try:r=json.loads((self.root/'selection-local.json').read_text(encoding='utf-8-sig'))
         except (OSError,ValueError):return
         if not isinstance(r,dict) or r.get('session_id')!=self.bridge.session or r.get('id')==self.last_request:return
-        self.last_request=r.get('id')
+        request_id=r.get('id')
+        if not isinstance(request_id,str) or not 1<=len(request_id)<=128:
+            raise RuntimeError('Invalid selection request identifier')
+        if request_id==self.last_request:return
+        self.last_request=request_id
         if self.locked:return
+        if 'ready' in r and type(r['ready']) is not bool:
+            raise RuntimeError('Invalid local selection readiness')
         choice=dict(character=r.get('character'),costume=r.get('costume'));self.validate_choice(choice)
         stage=r.get('stage') if self.slot==0 else -1
-        if self.slot==0 and (type(stage) is not int or stage not in self.stages):raise RuntimeError('Invalid host stage selection')
+        if self.slot==0 and (type(stage) is not int or stage not in self.stages):
+            raise RuntimeError('Invalid host stage selection')
         local=dict(choice=choice,stage=stage,ready=r.get('ready') is True)
         if local!=self.local:self.local=local;self.revision+=1
     def receive(self,wire):
         if not self.catalog or wire is None:return
-        if not isinstance(wire,dict) or wire.get('catalog')!=self.catalog_hash:raise RuntimeError('The peers have different character/outfit/stage catalogs')
+        if not isinstance(wire,dict) or wire.get('catalog')!=self.catalog_hash:
+            raise RuntimeError('The peers have different character/outfit/stage catalogs')
         rev=wire.get('revision')
-        if type(rev) is not int or not 0<=rev<2**31:raise RuntimeError('Invalid selection revision')
+        if type(rev) is not int or not 0<=rev<2**31:
+            raise RuntimeError('Invalid selection revision')
         if rev<self.remote_revision:return
-        owned=wire.get('owned');self.validate_choice(owned.get('choice') if isinstance(owned,dict) else None)
-        if set(owned)!= {'choice','stage','ready'} or type(owned['ready']) is not bool:raise RuntimeError('Invalid owned-slot readiness')
+        owned=wire.get('owned')
+        if not isinstance(owned,dict) or set(owned)!= {'choice','stage','ready'} or type(owned['ready']) is not bool:
+            raise RuntimeError('Invalid owned-slot readiness')
+        self.validate_choice(owned.get('choice'))
         if self.slot==0:
             if owned['stage']!=-1:raise RuntimeError('Guest attempted to choose the host stage')
         elif type(owned['stage']) is not int or owned['stage'] not in self.stages:raise RuntimeError('Invalid host stage')
