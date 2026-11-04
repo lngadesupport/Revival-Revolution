@@ -106,6 +106,8 @@ class RankedStore:
             room_columns = {row["name"] for row in db.execute("PRAGMA table_info(private_rooms)")}
             if "connection_code" not in room_columns:
                 db.execute("ALTER TABLE private_rooms ADD COLUMN connection_code TEXT")
+            if "match_type" not in room_columns:
+                db.execute("ALTER TABLE private_rooms ADD COLUMN match_type TEXT NOT NULL DEFAULT 'private'")
 
     @staticmethod
     def _token_hash(token: str) -> str:
@@ -232,8 +234,8 @@ class RankedStore:
         else:
             raise RuntimeError("could not allocate a unique matchmaking room")
         db.execute(
-            "INSERT INTO private_rooms(room_code,host_player,guest_player,region,status,match_id,created_at,expires_at) "
-            "VALUES(?,?,?,?,'matched',?,?,?)",
+            "INSERT INTO private_rooms(room_code,host_player,guest_player,region,status,match_id,created_at,expires_at,match_type) "
+            "VALUES(?,?,?,?,'matched',?,?,?,'random')",
             (code, host_player, guest_player, region, match_id, now, now + 7200),
         )
 
@@ -246,7 +248,7 @@ class RankedStore:
         opponent_id = row["player_two"] if own else row["player_one"]
         opponent = db.execute("SELECT display_name,rating FROM players WHERE player_id=?", (opponent_id,)).fetchone()
         room = db.execute(
-            "SELECT status,host_player,guest_player,connection_code FROM private_rooms WHERE match_id=?",
+            "SELECT status,host_player,guest_player,connection_code,match_type FROM private_rooms WHERE match_id=?",
             (match_id,),
         ).fetchone()
         return {
@@ -260,6 +262,7 @@ class RankedStore:
             "room_role": ("host" if room["host_player"] == player_id else "guest") if room else None,
             "room_status": room["status"] if room else None,
             "connection_code": room["connection_code"] if room else None,
+            "match_type": room["match_type"] if room else None,
         }
 
     @staticmethod
