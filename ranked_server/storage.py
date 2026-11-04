@@ -69,6 +69,7 @@ class RankedStore:
                     rating_two INTEGER NOT NULL,
                     region TEXT NOT NULL,
                     status TEXT NOT NULL DEFAULT 'assigned',
+                    match_type TEXT NOT NULL DEFAULT 'ranked',
                     created_at REAL NOT NULL,
                     CHECK(player_one <> player_two)
                 );
@@ -92,6 +93,9 @@ class RankedStore:
                 );
                 CREATE INDEX IF NOT EXISTS private_rooms_host_status ON private_rooms(host_player, status);
             """)
+            match_columns = {row["name"] for row in db.execute("PRAGMA table_info(matches)")}
+            if "match_type" not in match_columns:
+                db.execute("ALTER TABLE matches ADD COLUMN match_type TEXT NOT NULL DEFAULT 'ranked'")
 
     @staticmethod
     def _token_hash(token: str) -> str:
@@ -197,8 +201,8 @@ class RankedStore:
             second = db.execute("SELECT rating FROM players WHERE player_id=?", (second_id,)).fetchone()
             match_id = str(uuid.uuid4())
             db.execute(
-                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) VALUES(?,?,?,?,?,?,?,?)",
-                (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]), region, "assigned", now),
+                "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,match_type,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]), region, "assigned", "ranked", now),
             )
             db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
             return self._match_payload(db, match_id, player_id)
@@ -352,7 +356,7 @@ class RankedStore:
             db.execute(
                 "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at) VALUES(?,?,?,?,?,?,?,?)",
                 (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]),
-                 room["region"], "assigned", now),
+                 room["region"], "assigned", "private", now),
             )
             db.execute(
                 "UPDATE private_rooms SET guest_player=?,status='matched',match_id=? WHERE room_code=? AND status='waiting'",
