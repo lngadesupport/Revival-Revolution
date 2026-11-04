@@ -108,6 +108,8 @@ class RankedStore:
             match_columns = {row["name"] for row in db.execute("PRAGMA table_info(matches)")}
             if "match_type" not in match_columns:
                 db.execute("ALTER TABLE matches ADD COLUMN match_type TEXT NOT NULL DEFAULT 'casual'")
+            if "connection_code" not in match_columns:
+                db.execute("ALTER TABLE matches ADD COLUMN connection_code TEXT")
             db.execute("UPDATE matches SET match_type='private' WHERE match_id IN (SELECT match_id FROM private_rooms WHERE match_id IS NOT NULL)")
             queue_columns = {row["name"] for row in db.execute("PRAGMA table_info(queue)")}
             if "queue_mode" not in queue_columns:
@@ -245,6 +247,7 @@ class RankedStore:
         return {
             "match_id": row["match_id"], "status": row["status"], "region": row["region"],
             "match_type": row["match_type"],
+            "connection_code": (room["connection_code"] if room else row["connection_code"]),
             "player_slot": 0 if own else 1,
             "opponent": {"player_id": opponent_id, **dict(opponent)},
             "created_at": row["created_at"],
@@ -619,6 +622,45 @@ class RankedStore:
                 (code, room["room_code"]),
             )
             return {"match_id": room["match_id"], "status": "starting", "connection_code_published": True}
+
+    def publish_match_connection_code(self, player_id: str, code: str, mode: str = "casual") -> dict:
+        """Publish the host's Radmin MR1 code for a matchmaking-assigned match."""
+        if mode not in {"casual", "ranked"}:
+            raise ValueError("invalid match mode")
+        if not isinstance(code, str):
+            raise ValueError("connection code must be text")
+        code = code.strip().upper()
+        if len(code) != 46 or not code.startswith("MR1-") or any(
+            ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" for ch in code[4:]
+        ):
+            raise ValueError("invalid Radmin MR1 connection code")
+        try:
+            raw = base64.b32decode(code[4:] + "=" * ((-len(code[4:])) % 8))
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("invalid Radmin MR1 connection code") from exc
+        if len(raw) != 26 or zlib.crc32(raw[:-4]) != struct.unpack("!I", raw[-4:])[0]:
+            raise ValueError("Radmin MR1 connection code checksum failed")
+        address = ipaddress.IPv4Address(raw[:4])
+        port = struct.unpack("!H", raw[4:6])[0]
+        if address.packed[0] != 26 or port != 8766:
+            raise ValueError("connection code must point to the host Radmin address on UDP 8766")
+        with self.transaction() as db:
+            match = db.execute(
+                "SELECT * FROM matches WHERE player_one=? AND match_type=? AND status='ready' "
+                "ORDER BY created_at DESC LIMIT 1",
+                (player_id, mode),
+            ).fetchone()
+            if match is None:
+                raise ValueError("no accepted matchmaking session is available for this host")
+            if not match["accepted_one"] or not match["accepted_two"]:
+                raise ValueError("both players must accept before the host publishes a connection code")
+            if match["connection_code"] and match["connection_code"] != code:
+                raise ValueError("a connection code has already been published for this match")
+            db.execute(
+                "UPDATE matches SET connection_code=? WHERE match_id=? AND status='ready'",
+                (code, match["match_id"]),
+            )
+            return {"match_id": match["match_id"], "status": "ready", "connection_code_published": True}
 
     def cancel_private_room(self, player_id: str) -> bool:
         with self.transaction() as db:
