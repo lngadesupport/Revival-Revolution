@@ -214,8 +214,28 @@ class RankedStore:
                 "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
                 (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]), region, "assigned", now, now + 90),
             )
+            self._create_match_room(db, match_id, first_id, second_id, region, now)
             db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
             return self._match_payload(db, match_id, player_id)
+
+    @staticmethod
+    def _create_match_room(
+        db: sqlite3.Connection, match_id: str, host_player: str,
+        guest_player: str, region: str, now: float,
+    ) -> None:
+        """Create the Radmin P2P room backing a randomly paired match."""
+        alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+        for _ in range(20):
+            code = "".join(secrets.choice(alphabet) for _ in range(6))
+            if not db.execute("SELECT 1 FROM private_rooms WHERE room_code=?", (code,)).fetchone():
+                break
+        else:
+            raise RuntimeError("could not allocate a unique matchmaking room")
+        db.execute(
+            "INSERT INTO private_rooms(room_code,host_player,guest_player,region,status,match_id,created_at,expires_at) "
+            "VALUES(?,?,?,?,'matched',?,?,?)",
+            (code, host_player, guest_player, region, match_id, now, now + 7200),
+        )
 
     @staticmethod
     def _match_payload(db: sqlite3.Connection, match_id: str, player_id: str) -> dict | None:
@@ -343,6 +363,7 @@ class RankedStore:
                 "VALUES(?,?,?,?,?,?,?,?,?)",
                 (match_id, first_id, second_id, first_rating, second_rating, region, "assigned", now, now + 90),
             )
+            self._create_match_room(db, match_id, first_id, second_id, region, now)
             db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
             waiting = [
                 entry for entry in waiting
