@@ -344,6 +344,7 @@ public sealed class LauncherUpdateService
         EnsureSafeDestination(root, "Launcher/apply-update.cmd");
         EnsureSafeDirectoryPath(root, "Launcher/UpdateBackup");
         EnsureSafeDirectoryPath(root, "Launcher/Logs");
+        Directory.CreateDirectory(logs);
 
         var ps = new StringBuilder();
         ps.AppendLine("$ErrorActionPreference = 'Stop'");
@@ -382,6 +383,8 @@ public sealed class LauncherUpdateService
         ps.AppendLine("try {");
         ps.AppendLine("  Assert-NoReparsePath $root $root");
         ps.AppendLine("  Assert-NoReparsePath $stage $root");
+        ps.AppendLine("  Assert-NoReparsePath $backup $root");
+        ps.AppendLine("  Assert-NoReparsePath $log $root");
         ps.AppendLine("  if (-not (Test-Path -LiteralPath $stage -PathType Container)) { throw 'Update staging folder is missing.' }");
         ps.AppendLine("  foreach ($item in $items) {");
         ps.AppendLine("    Assert-NoReparsePath $item.Source $root");
