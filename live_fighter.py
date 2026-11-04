@@ -11,11 +11,26 @@ class LiveFighter:
         self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind(('127.0.0.1',0));self.sock.setblocking(False)
         self.key=secrets.token_bytes(16);self.endpoint=None;self.started=False;self.committed=False;self.loaded=None;self.action=None;self.test_id='';self.ready=False;self.state='idle';self.next_status=0;self.report=None;self.scripted=False
         self.finished=False;self.completion=None;self.result_candidate=None;self.result_since=0
+        self.report_stamp=None;self.last_report_seen=None
     def wire(self):return dict(ready=self.ready,test_id=self.test_id,loaded=self.loaded,committed=self.committed,scripted=self.scripted,completion=self.completion)
     def read_report(self,name):
         r=json.loads((self.root/name).read_text(encoding='utf-8-sig'))
-        if r.get('session_id')!=self.bridge.session or r.get('test_id')!=self.test_id:raise RuntimeError('Live fighter report belongs to another session')
+        if not isinstance(r,dict) or r.get('session_id')!=self.bridge.session or r.get('test_id')!=self.test_id:raise RuntimeError('Live fighter report belongs to another session')
         return r
+    def refresh_report(self):
+        path=self.root/'live-fighter.json'
+        try:
+            stat=path.stat()
+            stamp=(stat.st_mtime_ns,stat.st_size)
+            if stamp!=self.report_stamp:
+                report=self.read_report('live-fighter.json')
+                self.report=report;self.report_stamp=stamp;self.last_report_seen=time.monotonic()
+        except (OSError,ValueError):
+            # The bridge may replace the report while it is being read. Keep the
+            # last complete report, but never extend its heartbeat on a failed read.
+            pass
+        if self.last_report_seen is None or time.monotonic()-self.last_report_seen>5:
+            raise RuntimeError('Game live fighter heartbeat expired')
     def step(self,other):
         other=other or {}
         if not isinstance(other,dict):raise RuntimeError('Invalid live fighter setup')
@@ -41,7 +56,8 @@ class LiveFighter:
                     self.loaded=self.read_report('fighter-load.json');self.state='loaded'
                 else:
                     if reply!='live_started':raise RuntimeError('Live fighter start failed')
-                    report=self.read_report('live-fighter.json');self.report=report;port=report.get('port')
+                    report=self.read_report('live-fighter.json');self.report=report;self.report_stamp=None;self.last_report_seen=None
+                    self.refresh_report();report=self.report;port=report.get('port')
                     if type(port) is not int or not 1<=port<=65535:raise RuntimeError('Invalid game loopback endpoint')
                     self.endpoint=('127.0.0.1',port);self.started=True;self.state='synchronizing'
                 self.action=None
@@ -56,14 +72,12 @@ class LiveFighter:
                 config=json.dumps(dict(port=self.sock.getsockname()[1],key=self.key.hex(),scripted=self.scripted))
                 self.bridge.begin('live_start',test_id=self.test_id,fighter_json=config);self.action='start';self.state='starting'
         if self.started:
-            # Managed status writes allow concurrent readers. A reader can see a
-            # partial JSON document during replacement; retain the last good one.
-            try:self.report=self.read_report('live-fighter.json')
-            except (OSError,ValueError):pass
+            # Managed status writes can race with readers. Retain the last complete
+            # report, but expire it if no new complete heartbeat arrives for 5 seconds.
+            self.refresh_report()
             report=self.report
             self.state=report.get('state','synchronizing')
             if report.get('state')=='error':raise RuntimeError(report.get('error','Live fighter failure'))
-            if time.time()-(self.root/'live-fighter.json').stat().st_mtime>5:raise RuntimeError('Game live fighter heartbeat expired')
             match=report.get('match') or {}
             if match.get('state')==6:
                 candidate=dict(test_id=self.test_id,frame=report.get('frame'),round=match.get('round'),winner=match.get('winner'),checksum=match.get('checksum'))
