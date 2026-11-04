@@ -121,7 +121,10 @@ public sealed class LauncherSettingsWindow : Window
         DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);
 
-        var content = new StackPanel();
+        var generalTabContent = new StackPanel();
+        var networkTabContent = new StackPanel();
+        var dataTabContent = new StackPanel();
+        var supportTabContent = new StackPanel();
 
         var accountCard = MakeCard();
         var account = CardContent(accountCard);
@@ -160,7 +163,7 @@ public sealed class LauncherSettingsWindow : Window
         Grid.SetColumn(openData, 2);
         accountRow.Children.Add(openData);
         account.Children.Add(accountRow);
-        content.Children.Add(accountCard);
+        dataTabContent.Children.Add(accountCard);
 
         var appCard = MakeCard();
         var app = CardContent(appCard);
@@ -170,14 +173,34 @@ public sealed class LauncherSettingsWindow : Window
         AddRowDivider(app);
         _persistLogs = AddSwitchRow(app, "Salvar logs neste computador",
             "Mantém registros locais para facilitar diagnósticos.", current.PersistLogs);
-        app.Children.Add(new TextBlock { Text = "RADMIN VPN — IP avançado", Foreground = Brushes.White, Margin = new Thickness(0, 8, 0, 0) });
-        _customRadminIpEnabled = new CheckBox { Content = "Desbloquear IP manual do servidor Radmin", IsChecked = current.UseCustomRadminIp, Foreground = Brushes.White, Margin = new Thickness(0, 10, 0, 6) };
-        _customRadminIp = new TextBox { Text = current.CustomRadminIp, IsEnabled = current.UseCustomRadminIp, Height = 34, Padding = new Thickness(8), ToolTip = "IPv4 Radmin 26.x.x.x" };
+        generalTabContent.Children.Add(appCard);
+
+        var networkCard = MakeCard();
+        var network = CardContent(networkCard);
+        AddCardHeading(network, "RADMIN VPN", "Conexão avançada com a rede privada");
+        network.Children.Add(new TextBlock
+        {
+            Text = "Por padrão, o launcher usa o endpoint Radmin configurado. Altere somente se o anfitrião fornecer outro IPv4 da faixa 26.x.x.x.",
+            FontSize = 10, Foreground = Brush(MutedColor), TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 10, 0, 12)
+        });
+        _customRadminIpEnabled = new CheckBox
+        {
+            Content = "Desbloquear endereço manual do servidor",
+            IsChecked = current.UseCustomRadminIp, Foreground = Brushes.White,
+            Margin = new Thickness(0, 4, 0, 8)
+        };
+        _customRadminIp = new TextBox
+        {
+            Text = current.CustomRadminIp, IsEnabled = current.UseCustomRadminIp,
+            Height = 38, Padding = new Thickness(10, 8, 10, 8),
+            ToolTip = "IPv4 da rede Radmin: 26.x.x.x"
+        };
         _customRadminIpEnabled.Checked += (_, _) => _customRadminIp.IsEnabled = true;
         _customRadminIpEnabled.Unchecked += (_, _) => _customRadminIp.IsEnabled = false;
-        app.Children.Add(_customRadminIpEnabled);
-        app.Children.Add(_customRadminIp);
-        content.Children.Add(appCard);
+        network.Children.Add(_customRadminIpEnabled);
+        network.Children.Add(_customRadminIp);
+        networkTabContent.Children.Add(networkCard);
 
         var supportCard = MakeCard();
         var support = CardContent(supportCard);
@@ -220,17 +243,37 @@ public sealed class LauncherSettingsWindow : Window
             FontSize = 10,
             Foreground = Brush(MutedColor)
         });
-        content.Children.Add(supportCard);
+        supportTabContent.Children.Add(supportCard);
 
-        var scroll = new ScrollViewer
+        var tabs = new TabControl
         {
-            Content = content,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Background = Brushes.Transparent,
-            CanContentScroll = true
+            Background = Brush(BackgroundColor),
+            BorderBrush = Brush(BorderColor),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(12),
+            ItemContainerStyle = CreateTabItemStyle()
         };
-        root.Children.Add(scroll);
+        tabs.Items.Add(new TabItem
+        {
+            Header = "GERAL",
+            Content = CreateTabScrollViewer(generalTabContent)
+        });
+        tabs.Items.Add(new TabItem
+        {
+            Header = "REDE",
+            Content = CreateTabScrollViewer(networkTabContent)
+        });
+        tabs.Items.Add(new TabItem
+        {
+            Header = "DADOS",
+            Content = CreateTabScrollViewer(dataTabContent)
+        });
+        tabs.Items.Add(new TabItem
+        {
+            Header = "SUPORTE",
+            Content = CreateTabScrollViewer(supportTabContent)
+        });
+        root.Children.Add(tabs);
         Content = root;
 
         PreviewKeyDown += (_, e) =>
@@ -262,6 +305,49 @@ public sealed class LauncherSettingsWindow : Window
         UseCustomRadminIp = current.UseCustomRadminIp,
         CustomRadminIp = current.CustomRadminIp
     };
+
+    private static ScrollViewer CreateTabScrollViewer(UIElement content) => new()
+    {
+        Content = content,
+        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        Background = Brushes.Transparent,
+        CanContentScroll = true
+    };
+
+    private static Style CreateTabItemStyle()
+    {
+        var style = new Style(typeof(TabItem));
+        style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        style.Setters.Add(new Setter(Control.BackgroundProperty, Brush(SurfaceRaisedColor)));
+        style.Setters.Add(new Setter(Control.BorderBrushProperty, Brush(BorderColor)));
+        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+        style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(14, 9, 14, 9)));
+        style.Setters.Add(new Setter(Control.MarginProperty, new Thickness(0, 0, 8, 10)));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, 10d));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Bold));
+
+        var border = new FrameworkElementFactory(typeof(Border));
+        border.SetBinding(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+        border.SetBinding(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+        border.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+        border.SetValue(Border.PaddingProperty, new Thickness(14, 9, 14, 9));
+
+        var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+        presenter.SetValue(ContentPresenter.ContentSourceProperty, "Header");
+        presenter.SetValue(UIElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        presenter.SetValue(UIElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+        border.AppendChild(presenter);
+
+        var template = new ControlTemplate(typeof(TabItem)) { VisualTree = border };
+        var selected = new Trigger { Property = TabItem.IsSelectedProperty, Value = true };
+        selected.Setters.Add(new Setter(Control.BackgroundProperty, Brush(AccentColor)));
+        selected.Setters.Add(new Setter(Control.BorderBrushProperty, Brush(Color.FromRgb(245, 104, 114))));
+        template.Triggers.Add(selected);
+        style.Setters.Add(new Setter(Control.TemplateProperty, template));
+        return style;
+    }
 
     private static Border MakeCard()
     {
