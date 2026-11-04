@@ -77,7 +77,9 @@ em `http://IP-RADMIN:8765`. O banco SQLite fica em
 
 - Todos os jogadores devem estar conectados à mesma rede Radmin e apontar o
   launcher para o IP Radmin do computador que está hospedando a API.
-- TCP 8765 é usado pela API; UDP 8766 fica reservado para o transporte P2P.
+- TCP 8765 é usado pela API; o transporte `peer_session.py` usa UDP 8766,
+  vincula o socket ao IP Radmin local e rejeita endpoints que não estejam na
+  faixa 26.x.x.x. Códigos MR2/AutoPunch não são aceitos.
 - O launcher aceita HTTP somente para endereços IPv4 da faixa virtual 26.0.0.0/8
   ou localhost. HTTP em endereços públicos continua bloqueado; fora da VPN,
   use HTTPS.
