@@ -27,7 +27,7 @@ public sealed class LauncherSettings
     public string VideoResolution { get; set; } = "Padrão do jogo";
     public string GraphicsPreset { get; set; } = "Padrão do jogo";
     public int FpsLimit { get; set; } = 60;
-    public bool VideoFullscreen { get; set; }
+    public bool VideoFullscreen { get; set; } = true;
     public bool VideoVSync { get; set; } = true;
     public bool VideoShowFps { get; set; }
 
