@@ -1,7 +1,9 @@
 import json
+import os
 import threading
 import tempfile
 import unittest
+from unittest.mock import patch
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -25,11 +27,13 @@ class RankedApiTests(unittest.TestCase):
         self.thread.join(timeout=2)
         self.temp.cleanup()
 
-    def request(self, method, path, payload=None, token=None):
+    def request(self, method, path, payload=None, token=None, authority=None):
         data = None if payload is None else json.dumps(payload).encode()
         headers = {"Content-Type": "application/json"}
         if token:
             headers["Authorization"] = "Bearer " + token
+        if authority:
+            headers["X-Ranked-Authority"] = authority
         req = urllib.request.Request(self.base + path, data=data, headers=headers, method=method)
         try:
             with urllib.request.urlopen(req, timeout=3) as response:
@@ -63,6 +67,50 @@ class RankedApiTests(unittest.TestCase):
         status, body = self.request("POST", "/v1/queue/join", {"region": "sa-east"}, two["token"])
         self.assertEqual(status, 201)
         self.assertEqual(body["match"]["opponent"]["display_name"], "PC-ONE")
+
+    def test_ranked_queue_and_authoritative_result_update_rating(self):
+        one = self.register("RANKED-API-ONE")
+        two = self.register("RANKED-API-TWO")
+        status, _ = self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, one["token"])
+        self.assertEqual(status, 202)
+        status, match = self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, two["token"])
+        self.assertEqual(status, 201)
+        match_id = match["match"]["match_id"]
+        status, summary = self.request("GET", "/v1/ranked/me", token=one["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(summary["division"], "Bronze")
+        with patch.dict(os.environ, {"RANKED_RESULT_SECRET": "test-authority-secret"}):
+            status, _ = self.request(
+                "POST", f"/internal/v1/matches/{match_id}/result",
+                {"winner_player_id": one["player_id"], "authority_event_id": "api-test-event"},
+                token=one["token"],
+            )
+            self.assertEqual(status, 403)
+            status, result = self.request(
+                "POST", f"/internal/v1/matches/{match_id}/result",
+                {"winner_player_id": one["player_id"], "authority_event_id": "api-test-event"},
+                authority="test-authority-secret",
+            )
+            self.assertEqual(status, 200)
+            self.assertFalse(result["result"]["already_recorded"])
+        status, summary = self.request("GET", "/v1/ranked/me", token=one["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(summary["wins"], 1)
+        self.assertGreater(summary["rating"], 1000)
+
+    def test_private_room_result_is_not_ranked(self):
+        host = self.register("PRIVATE-API-HOST")
+        guest = self.register("PRIVATE-API-GUEST")
+        _, room = self.request("POST", "/v1/rooms/create", {"region": "sa-east"}, host["token"])
+        _, match = self.request("POST", "/v1/rooms/join", {"code": room["room"]["room_code"]}, guest["token"])
+        with patch.dict(os.environ, {"RANKED_RESULT_SECRET": "test-authority-secret"}):
+            status, body = self.request(
+                "POST", f"/internal/v1/matches/{match['match']['match_id']}/result",
+                {"winner_player_id": host["player_id"], "authority_event_id": "private-api-event"},
+                authority="test-authority-secret",
+            )
+        self.assertEqual(status, 400)
+        self.assertEqual(body["message"], "match_is_not_ranked")
 
     def test_invalid_registration_is_rejected(self):
         status, _ = self.request("POST", "/v1/register", {"display_name": ""})
