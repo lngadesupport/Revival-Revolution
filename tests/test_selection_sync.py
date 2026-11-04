@@ -90,6 +90,87 @@ class SelectionSyncValidationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "character/outfit catalog"):
                 sync.load_catalog()
 
+    def load_catalog(self, catalog):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "selection-catalog.json").write_text(json.dumps({
+                "session_id": "session-1", "local_slot": 0, "pid": 123,
+                **catalog,
+            }), encoding="utf-8")
+            sync = SelectionSync.__new__(SelectionSync)
+            sync.root = root
+            sync.bridge = SimpleNamespace(session="session-1", command={"target_pid": 123})
+            sync.slot = 0
+            sync.load_catalog()
+            return sync.catalog_hash, sync
+
+    def test_catalog_supports_rosters_larger_than_legacy_limit(self):
+        characters = [{"id": index, "name": f"Fighter {index}", "outfits": [0, 1]}
+                      for index in range(129)]
+        catalog_hash, sync = self.load_catalog({
+            "characters": characters,
+            "stages": [{"id": 3}],
+        })
+        self.assertEqual(len(sync.characters), 129)
+        self.assertEqual(len(catalog_hash), 64)
+
+    def test_content_fingerprint_rejects_same_roster_with_different_asset_pack(self):
+        from selection_sync import catalog_fingerprint, normalize_compatibility
+
+        characters = [{"id": 7, "outfits": [0, 1]}]
+        stages = {3}
+        first = normalize_compatibility({
+            "game_build": "pc-1.0",
+            "content_revision": "mobile-port-4",
+            "content_hash": "a" * 64,
+            "asset_pack_hash": "b" * 64,
+            "bridge_protocol": 2,
+        })
+        second = normalize_compatibility({
+            "game_build": "pc-1.0",
+            "content_revision": "mobile-port-5",
+            "content_hash": "c" * 64,
+            "asset_pack_hash": "d" * 64,
+            "bridge_protocol": 2,
+        })
+        self.assertNotEqual(
+            catalog_fingerprint(characters, stages, first),
+            catalog_fingerprint(characters, stages, second),
+        )
+
+    def test_legacy_catalog_gets_stable_default_compatibility_profile(self):
+        from selection_sync import normalize_compatibility
+
+        self.assertEqual(normalize_compatibility(None), {
+            "game_build": "",
+            "content_revision": "",
+            "content_hash": "",
+            "asset_pack_hash": "",
+            "bridge_protocol": 1,
+        })
+
+    def test_rejects_invalid_content_hash_and_bridge_protocol(self):
+        from selection_sync import normalize_compatibility
+
+        with self.assertRaisesRegex(RuntimeError, "compatibility hash"):
+            normalize_compatibility({"content_hash": "not-a-sha256"})
+        with self.assertRaisesRegex(RuntimeError, "bridge protocol"):
+            normalize_compatibility({"bridge_protocol": True})
+
+    def test_rejects_unbounded_catalog_and_invalid_character_ids(self):
+        from selection_sync import MAX_CHARACTERS
+
+        with self.assertRaisesRegex(RuntimeError, "selection catalog"):
+            self.load_catalog({
+                "characters": [{"id": index, "outfits": [0]} for index in range(MAX_CHARACTERS + 1)],
+                "stages": [{"id": 1}],
+            })
+        with self.assertRaisesRegex(RuntimeError, "character/outfit"):
+            self.load_catalog({
+                "characters": [{"id": -1, "outfits": [0]}],
+                "stages": [{"id": 1}],
+            })
+
     def test_rejects_duplicate_outfit_ids(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
