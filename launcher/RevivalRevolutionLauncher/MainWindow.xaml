@@ -89,8 +89,7 @@
                     BorderThickness="1" CornerRadius="16" Padding="16">
                 <DockPanel LastChildFill="True">
                     <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,5">
-                        <Button Content="LINK DISCORD" Click="Discord_Click" HorizontalContentAlignment="Center"
-                                Background="#55202B43" Margin="0,0,0,4"/>
+                        
                         <TextBlock Text="REVIVAL REVOLUTION" FontSize="9" Foreground="#AEB2C2"
                                    HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
@@ -99,7 +98,7 @@
                                    Margin="8,4,0,16"/>
                         <Button x:Name="OfflineNavButton" Content="OFFLINE" Click="Launch_Click" FontSize="22" Padding="13,13"/>
                         <Button x:Name="PrivateMatchNavButton" Content="PRIVATE MATCH" Click="PrivateMatch_Click" FontSize="16" Padding="13,13"/>
-                        <Button x:Name="ModListNavButton" Content="MOD LIST" Click="ModList_Click" FontSize="22" Padding="13,13"/>
+                        <Button x:Name="RadminNavButton" Content="REDE RADMIN" Click="RadminNetwork_Click" FontSize="22" Padding="13,13"/>
                         <Separator Background="#55FFFFFF" Margin="4,20,4,14"/>
                         <Button x:Name="DiagnosticsNavButton" Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="11"/>
                         <Button x:Name="UpdatesNavButton" Content="ATUALIZAÇÕES" Click="Updates_Click" FontSize="11"/>
@@ -198,7 +197,7 @@
                             <Separator Background="#55FFFFFF" Margin="2,12"/>
                             <TextBlock Text="RECURSOS" FontFamily="Segoe UI" FontSize="9"
                                        FontWeight="Bold" Foreground="#AEB2C2" Margin="0,4,0,6"/>
-                            <TextBlock Text="• Offline disponível&#xA;• Private Match por convite&#xA;• Catálogo de mods pendente"
+                            <TextBlock Text="• Offline disponível&#xA;• Private Match por convite&#xA;• Rede Radmin • UDP 8766"
                                        FontFamily="Segoe UI" FontSize="10" Foreground="#C8C6D2"
                                        TextWrapping="Wrap" LineHeight="19"/>
                         </StackPanel>
@@ -263,7 +262,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"
                             IsHitTestVisible="False">
                     <Ellipse Width="7" Height="7" Fill="#D52D3B" Margin="0,0,9,0"/>
-                    <TextBlock Text="REVIVAL REVOLUTION  /  COMMUNITY LAUNCHER" FontFamily="Segoe UI" FontSize="9"
+                    <TextBlock Text="REVIVAL REVOLUTION  /  GAME LAUNCHER" FontFamily="Segoe UI" FontSize="9"
                                FontWeight="Bold" Foreground="#D9D8E2" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
