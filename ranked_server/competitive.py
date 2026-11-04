@@ -261,11 +261,17 @@ class CompetitiveStore:
         limit = max(1, min(int(limit), 100))
         with self._connect() as db:
             rows = db.execute("""
-                SELECT p.player_id,p.display_name,s.rating,s.wins,s.losses,s.draws,
-                       s.games_played,s.peak_rating
-                FROM ranked_player_stats s JOIN players p USING(player_id)
-                WHERE s.season_id=?
-                ORDER BY s.rating DESC,s.wins DESC,s.games_played ASC,p.player_id ASC
+                SELECT p.player_id,p.display_name,
+                       COALESCE(s.rating,p.rating) AS rating,
+                       COALESCE(s.wins,0) AS wins,
+                       COALESCE(s.losses,0) AS losses,
+                       COALESCE(s.draws,0) AS draws,
+                       COALESCE(s.games_played,0) AS games_played,
+                       COALESCE(s.peak_rating,p.rating) AS peak_rating
+                FROM players p
+                LEFT JOIN ranked_player_stats s
+                  ON s.player_id=p.player_id AND s.season_id=?
+                ORDER BY rating DESC,wins DESC,games_played ASC,p.player_id ASC
                 LIMIT ?
             """, (SEASON_ID, limit)).fetchall()
             return [{
