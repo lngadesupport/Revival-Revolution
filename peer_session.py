@@ -67,13 +67,26 @@ def decode_connection_code(code):
         if not relay[1] or ip.is_multicast or ip.is_unspecified or int(ip)==0xffffffff:raise ValueError('Invalid AutoPunch relay endpoint')
     return (address,port),raw[6:22],relay
 
-def atomic_json(path,value):
-    tmp=path.with_name(path.name+'.'+str(os.getpid())+'.tmp')
-    tmp.write_text(json.dumps(value,indent=2),encoding='utf-8')
-    try:os.replace(tmp,path)
+def atomic_text(path,value,encoding='utf-8'):
+    path=pathlib.Path(path)
+    tmp=path.with_name(path.name+'.'+str(os.getpid())+'.'+secrets.token_hex(4)+'.tmp')
+    try:
+        tmp.write_text(value,encoding=encoding)
+        os.replace(tmp,path)
     except PermissionError:
         try:tmp.unlink()
         except OSError:pass
+        # A reader may temporarily hold the destination without delete sharing.
+        # Keep the previous complete file and retry on the next status tick.
+        return False
+    except OSError:
+        try:tmp.unlink()
+        except OSError:pass
+        raise
+    return True
+
+def atomic_json(path,value):
+    return atomic_text(path,json.dumps(value,indent=2),encoding='utf-8')
 
 class GameBridge:
     def __init__(self,root,slot,session):self.root=root;self.slot=slot;self.session=session;self.command=None
@@ -143,9 +156,8 @@ class Session:
         if self.native or self.metrics:summary+='Rollback frames: '+str(data.get('rollback_advances',0))+'; desyncs: '+str(data.get('desyncs',0))+'. '
         summary+='\n'+data['message']
         # Readers may briefly hold a file open without delete sharing.
-        for name,text in [('peer-summary.txt',summary),('peer-code.txt',self.code if self.phase not in ('closed','error') else '')]:
-            try:(self.root/name).write_text(text,encoding='utf-8')
-            except PermissionError:pass
+        atomic_text(self.root/'peer-summary.txt',summary)
+        atomic_text(self.root/'peer-code.txt',self.code if self.phase not in ('closed','error') else '')
     def send(self,kind,payload=None):
         if self.peer is None:return
         self.seq+=1
