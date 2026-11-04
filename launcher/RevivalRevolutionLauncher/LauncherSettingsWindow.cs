@@ -224,8 +224,8 @@ public sealed class LauncherSettingsWindow : Window
     {
         var panel = NewPanel();
         AddSectionTitle(panel, "VÍDEO E GRÁFICOS");
-        AddText(panel, "Preferências preparadas para o próximo patch. A lista será conectada apenas às opções que forem confirmadas nos arquivos/configuração do jogo.", 11);
-        AddNotice(panel, "ALTERAÇÕES GRÁFICAS AINDA NÃO SÃO APLICADAS AO EXECUTÁVEL", true);
+        AddText(panel, "Resolução e tela cheia são aplicadas na inicialização pelos argumentos documentados do Unity. Qualidade gráfica, V-Sync e FPS continuam em investigação.", 11);
+        AddNotice(panel, "RESOLUÇÃO E TELA CHEIA ATIVAS • QUALIDADE, V-SYNC E FPS PENDENTES", true);
         var inspect = MakeButton("ANALISAR CONFIGURAÇÃO DA INSTALAÇÃO", false);
         inspect.HorizontalAlignment = HorizontalAlignment.Left;
         inspect.Margin = new Thickness(0, 0, 0, 10);
@@ -260,13 +260,14 @@ public sealed class LauncherSettingsWindow : Window
         panel.Children.Add(inspect);
 
         _resolution = AddCombo(panel, "Resolução", current.VideoResolution, "Padrão do jogo", "1280 × 720", "1600 × 900", "1920 × 1080", "2560 × 1440", "3840 × 2160");
+        AddText(panel, "A resolução selecionada é enviada ao ufo.exe na próxima inicialização.", 10, muted: true);
         _graphicsPreset = AddCombo(panel, "Qualidade gráfica", current.GraphicsPreset, "Padrão do jogo", "Baixa", "Média", "Alta", "Personalizada");
         _fpsLimit = AddCombo(panel, "Limite de FPS", current.FpsLimit.ToString(), "60", "75", "90", "120", "144", "165", "180", "200", "240");
-        _fullscreen = AddOption(panel, "Tela cheia", "Preferência salva; aplicação depende do suporte do jogo.", current.VideoFullscreen);
+        _fullscreen = AddOption(panel, "Tela cheia", "Aplicada ao iniciar o jogo pelo argumento oficial -screen-fullscreen.", current.VideoFullscreen);
         _vSync = AddOption(panel, "Sincronização vertical (V-Sync)", "Preferência salva; aplicação depende do suporte do jogo.", current.VideoVSync);
         _showFps = AddOption(panel, "Exibir contador de FPS", "Não cria overlay nesta etapa.", current.VideoShowFps);
         AddSectionTitle(panel, "OBSERVAÇÃO SOBRE FPS");
-        AddText(panel, "O limite de 60 a 240 FPS aparece como opção de configuração, mas não altera o jogo até identificarmos um mecanismo compatível com a versão instalada. Não será instalado mod, patch binário ou injetor de FPS sem validação.", 11);
+        AddText(panel, "O limite de 60 a 240 FPS ainda é apenas uma preferência salva. A documentação do Unity não oferece um argumento de inicialização equivalente para limitar FPS; precisamos identificar uma opção real do jogo ou do patch. Não será instalado mod, patch binário ou injetor sem validação.", 11);
         return MakeTab("VÍDEO E GRÁFICOS", panel);
     }
 
