@@ -91,13 +91,32 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <StackPanel HorizontalAlignment="Center" Margin="0,4,0,22">
+                    <StackPanel HorizontalAlignment="Center" Margin="0,4,0,14">
                         <TextBlock Text="ENCONTRE SEU OPONENTE" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         <TextBlock Text="CRIAR CONVITE" FontSize="29" FontWeight="Black" HorizontalAlignment="Center" Margin="0,4,0,3"/>
                         <TextBlock Text="Gere um código exclusivo e envie ao jogador que deseja enfrentar." Foreground="{StaticResource Muted}" FontSize="12" HorizontalAlignment="Center"/>
                     </StackPanel>
-                    <Border Grid.Row="1" Background="#66161A2A" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                    <Border Grid.Row="1" Background="#66101420" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="12" Padding="14" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="MATCHMAKING • SA-EAST / RADMIN VPN" Foreground="{StaticResource Accent}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <Grid Margin="0,8,0,4">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Button x:Name="CasualSearchButton" Content="BUSCA CASUAL" Click="QueueSearch_Click" Tag="casual" IsEnabled="False" Background="#76202A40"/>
+                                <Button x:Name="RankedSearchButton" Grid.Column="1" Content="BUSCA RANQUEADA" Click="QueueSearch_Click" Tag="ranked" IsEnabled="False" Margin="8,5,0,5" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
+                                <Button x:Name="CancelQueueButton" Grid.Column="2" Content="CANCELAR" Click="CancelQueue_Click" IsEnabled="False" Margin="8,5,0,5" Padding="10,8"/>
+                            </Grid>
+                            <TextBlock x:Name="QueueStateText" Text="Escolha busca casual ou ranqueada. Os jogadores precisam estar na mesma rede Radmin." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap"/>
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Button x:Name="LeaderboardRefreshButton" Content="ATUALIZAR LEADERBOARD" Click="LeaderboardRefresh_Click" IsEnabled="False" Padding="10,7" Margin="0,0,10,0"/>
+                                <TextBlock x:Name="LeaderboardStatusText" Grid.Column="1" Text="Classificação da temporada ainda não carregada." Foreground="{StaticResource Muted}" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            </Grid>
+                            <ListBox x:Name="LeaderboardList" Height="76" Margin="0,6,0,0" Background="#55080A13" Foreground="White" BorderBrush="#44FFFFFF" FontSize="10" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="2" Background="#66161A2A" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="SEU CÓDIGO DE CONVITE" Foreground="{StaticResource Muted}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBox x:Name="RoomCodeDisplayBox" IsReadOnly="True" Text="------" FontSize="30" FontWeight="Black" HorizontalContentAlignment="Center" TextAlignment="Center" Margin="0,10,0,8" Padding="12"/>
@@ -109,13 +128,13 @@
                             <Button x:Name="CancelRoomButton" Content="CANCELAR CONVITE" Click="CancelRoom_Click" IsEnabled="False" Visibility="Collapsed" HorizontalAlignment="Center" Background="Transparent" BorderThickness="0" Padding="10,4"/>
                         </StackPanel>
                     </Border>
-                    <Grid Grid.Row="2" Margin="0,0,0,14">
+                    <Grid Grid.Row="3" Margin="0,0,0,14">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <Border Height="1" Background="#55FFFFFF" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="OU ENTRE COM UM CÓDIGO" Foreground="{StaticResource Muted}" FontSize="10" FontWeight="Bold" Margin="14,0"/>
                         <Border Grid.Column="2" Height="1" Background="#55FFFFFF" VerticalAlignment="Center"/>
                     </Grid>
-                    <Grid Grid.Row="3">
+                    <Grid Grid.Row="4">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
                         <TextBox x:Name="RoomCodeBox" MaxLength="8" CharacterCasing="Upper" TextAlignment="Center" FontSize="20" FontWeight="Bold" VerticalContentAlignment="Center" ToolTip="Código de 6 caracteres"/>
                         <Button x:Name="JoinRoomButton" Grid.Column="1" Content="ENTRAR NA SALA" Click="JoinRoom_Click" IsEnabled="False" Margin="10,5,0,5" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
