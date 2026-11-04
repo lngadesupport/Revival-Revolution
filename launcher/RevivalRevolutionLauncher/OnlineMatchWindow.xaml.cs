@@ -322,7 +322,7 @@ public partial class OnlineMatchWindow : Window
         MatchTitleText.Text = opponent;
         MatchDetailText.Text = $"Adversário: {opponent}\nRating: {rating}\nSua posição: Player {(slot == "0" ? "1" : slot == "1" ? "2" : slot)}\nPartida: {matchId}";
         if (_queueMode == "ranked") RankedQueueDetailText.Text = "O servidor atribuiu seu adversário para uma partida ranqueada.";
-        else QueueDetailText.Text = "O servidor atribuiu seu adversário para uma partida casual.";
+        else QueueDetailText.Text = "O servidor atribuiu seu adversário para uma partida não ranqueada.";
         StatusText.Text = "Matchmaking concluído. A sessão P2P ainda não foi iniciada: falta emitir e validar o ticket de conexão.";
     }
 
