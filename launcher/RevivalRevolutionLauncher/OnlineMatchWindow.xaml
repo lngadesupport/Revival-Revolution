@@ -116,8 +116,12 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="REDE PRIVADA" Foreground="{StaticResource Muted}"
                                FontSize="8" FontWeight="Bold"/>
-                    <TextBlock x:Name="NetworkStateText" Text="Radmin VPN  /  verificando servidor..." FontSize="11"
-                               FontWeight="SemiBold" Margin="0,3,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <Ellipse x:Name="NetworkStateDot" Width="7" Height="7" Fill="#D6A45B"
+                                 Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="NetworkStateText" Text="Radmin VPN  /  verificando servidor..."
+                                   FontSize="11" FontWeight="SemiBold"/>
+                    </StackPanel>
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="NICKNAME" Foreground="{StaticResource Muted}"
                            FontSize="8" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -200,7 +204,7 @@
                     <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,15">
                         <TextBlock Text="CÓDIGO DE CONVITE" Foreground="{StaticResource Muted}"
                                    FontSize="8" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <TextBox x:Name="RoomCodeBox" MaxLength="6" CharacterCasing="Upper" TextChanged="RoomCodeBox_TextChanged"
+                        <TextBox x:Name="RoomCodeBox" MaxLength="6" CharacterCasing="Upper" TextChanged="RoomCodeBox_TextChanged" KeyDown="RoomCodeBox_KeyDown"
                                  TextAlignment="Center" FontSize="24" FontWeight="Bold"
                                  VerticalContentAlignment="Center" Padding="14,13"
                                  ToolTip="Código de 6 caracteres"/>
