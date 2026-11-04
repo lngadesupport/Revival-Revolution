@@ -306,6 +306,12 @@ public partial class OnlineMatchWindow : Window
                 return;
             }
             await _api.PostAsync(prefix + "/queue/leave", new JsonObject());
+            var afterLeave = await _api.GetAsync(prefix + "/match");
+            if (afterLeave["match"] is JsonObject matchedDuringCancel)
+            {
+                ShowMatch(matchedDuringCancel);
+                return;
+            }
             _queueActive = false;
             QueueStateText.Text = "Busca cancelada.";
         }
