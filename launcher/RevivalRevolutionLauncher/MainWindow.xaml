@@ -108,7 +108,7 @@
                 </DockPanel>
             </Border>
 
-            <Grid Grid.Column="1" Margin="22,0,0,0">
+            <Grid x:Name="DashboardPage" Grid.Column="1" Margin="22,0,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -245,6 +245,7 @@
                     </StackPanel>
                 </Grid>
             </Grid>
+            <ContentControl x:Name="PrivateMatchHost" Grid.Column="1" Margin="22,0,0,0" Visibility="Collapsed"/>
         </Grid>
 
         <TextBlock x:Name="FooterStatus" Text="Selecione a pasta do jogo para começar."
