@@ -130,7 +130,7 @@
                             <TextBlock Text="COMUNIDADE" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
                             <Button x:Name="ModListNavButton" Style="{StaticResource NavButton}"
-                                    Content="03   Biblioteca de mods" Click="ModList_Click" FontSize="12"/>
+                                    Content="03   Biblioteca de mods  /  EM BREVE" Click="ModList_Click" FontSize="12"/>
                             <Border Height="1" Background="#2D3542" Margin="5,17,5,16"/>
                             <TextBlock Text="SISTEMA" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
@@ -252,7 +252,7 @@
                                     <TextBlock Text="SELECIONE SUA INSTALAÇÃO PARA COMEÇAR"
                                                FontSize="8" FontWeight="Bold" Foreground="#818C9C"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock DockPanel.Dock="Right" Text="RR  /  08.1"
+                                    <TextBlock DockPanel.Dock="Right" Text="COMMUNITY EDITION"
                                                FontSize="9" FontWeight="Bold" Foreground="#697586"
                                                VerticalAlignment="Center"/>
                                 </DockPanel>
