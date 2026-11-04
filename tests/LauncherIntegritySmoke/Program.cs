@@ -61,6 +61,32 @@ try
     }
     Require(stagedMissingRejected, "The staging verifier must reject missing extracted files.");
 
+    var managedRuntime = await LauncherUpdateService.FindFilesNeedingUpdateAsync(
+        root,
+        new[] { "offline_launcher.py", "inject_offline.py", "inject_overlay.py" },
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["offline_launcher.py"] = Hash("offline"),
+            ["inject_offline.py"] = Hash("inject"),
+            ["inject_overlay.py"] = Hash("overlay")
+        });
+    Require(managedRuntime.Count == 3,
+        "Official launcher runtime scripts must remain eligible for versioned updates.");
+
+    var localConfigRejected = false;
+    try
+    {
+        await LauncherUpdateService.FindFilesNeedingUpdateAsync(
+            root,
+            new[] { "launcher-config.json" },
+            new Dictionary<string, string> { ["launcher-config.json"] = Hash("config") });
+    }
+    catch (InvalidDataException)
+    {
+        localConfigRejected = true;
+    }
+    Require(localConfigRejected, "User-specific launcher configuration must remain protected.");
+
     var protectedRejected = false;
     try
     {
@@ -117,7 +143,7 @@ try
     }
     Require(nonRadminRejected, "The Radmin launcher must reject public/non-Radmin endpoints.");
 
-    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, staged per-file SHA-256 verification, tamper rejection, protected game paths, and connection-code validation.");
+    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, staged per-file SHA-256 verification, tamper rejection, managed runtime updates, protected user configuration/game paths, and connection-code validation.");
 }
 finally
 {
