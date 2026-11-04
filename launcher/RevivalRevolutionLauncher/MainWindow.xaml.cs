@@ -29,6 +29,8 @@ public partial class MainWindow : Window
     private bool _radminHostFirewallReady;
     private bool _radminHostTaskReady;
     private bool _radminHostDisabled;
+    private DateTime _radminHostRetryAtUtc;
+    private string _radminHostLastError = string.Empty;
     private bool _gameRunning;
     private bool _launchPending;
     private DateTime _launchRequestedAt;
@@ -59,7 +61,8 @@ public partial class MainWindow : Window
 
     private async void RadminHostTimer_Tick(object? sender, EventArgs e)
     {
-        if (_radminHostStarting || _radminHostDisabled || _radminHostTaskReady) return;
+        if (_radminHostStarting || _radminHostDisabled || _radminHostTaskReady ||
+            DateTime.UtcNow < _radminHostRetryAtUtc) return;
         var endpoint = RankedApiClient.LoadEndpoint();
         if (string.IsNullOrWhiteSpace(endpoint)) endpoint = RadminHostService.DefaultEndpoint;
         var hostAddress = RadminHostService.GetLocalRadminAddress(endpoint);
@@ -91,9 +94,25 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _radminHostDisabled = true;
-            FooterStatus.Text = "Não foi possível iniciar o servidor Radmin automaticamente.";
-            Log("ERRO ao iniciar o servidor Radmin em segundo plano: " + ex.Message);
+            var authorizationCancelled =
+                ex.InnerException is System.ComponentModel.Win32Exception win32 &&
+                win32.NativeErrorCode == 1223;
+            if (authorizationCancelled)
+            {
+                // Do not repeatedly display UAC after the user explicitly declined it.
+                _radminHostDisabled = true;
+                FooterStatus.Text = "Autorização de rede cancelada. Reabra o launcher após permitir a configuração do Firewall.";
+            }
+            else
+            {
+                _radminHostRetryAtUtc = DateTime.UtcNow.AddSeconds(30);
+                FooterStatus.Text = "Falha temporária ao iniciar o servidor Radmin. Nova tentativa automática em 30 segundos.";
+                if (!string.Equals(_radminHostLastError, ex.Message, StringComparison.Ordinal))
+                {
+                    Log("AVISO: falha temporária no servidor Radmin; haverá nova tentativa automática: " + ex.Message);
+                    _radminHostLastError = ex.Message;
+                }
+            }
         }
         finally
         {
