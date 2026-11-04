@@ -409,7 +409,7 @@ public partial class MainWindow : Window
         var buttons = new (string Key, System.Windows.Controls.Button Button)[]
         {
             ("offline", OfflineNavButton),
-            ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
+            ("private", PrivateMatchNavButton), ("network", RadminNavButton),
             ("diagnostics", DiagnosticsNavButton), ("updates", UpdatesNavButton),
             ("settings", SettingsNavButton)
         };
@@ -744,16 +744,23 @@ public partial class MainWindow : Window
         RefreshGameState();
     }
 
-    private void ModList_Click(object sender, RoutedEventArgs e)
+    private void RadminNetwork_Click(object sender, RoutedEventArgs e)
     {
-        SetActiveNavigation("mods");
-        FooterStatus.Text = "MOD LIST — catálogo ainda não integrado.";
-        MessageBox.Show(this,
-            "A lista de mods será integrada em uma etapa própria. Por enquanto, o launcher não altera nem instala mods.",
-            "Mod List", MessageBoxButton.OK, MessageBoxImage.Information);
-        Log("Mod List selecionada; catálogo ainda não integrado.");
+        SetActiveNavigation("network");
+        var connected = RadminHostService.HasRadminAddress();
+        var endpoint = RankedApiClient.LoadEndpoint();
+        if (string.IsNullOrWhiteSpace(endpoint)) endpoint = RadminHostService.DefaultEndpoint;
+        var localHost = RadminHostService.GetLocalRadminAddress(endpoint);
+        var message = connected
+            ? localHost is null
+                ? "Radmin VPN conectada. Este PC participa como jogador; o servidor da sala fica no anfitrião."
+                : $"Radmin VPN conectada. Este PC pode hospedar salas em {localHost}:8765."
+            : "Radmin VPN desconectada. Conecte-se à mesma rede Radmin dos outros jogadores.";
+        FooterStatus.Text = message;
+        Log(message);
+        MessageBox.Show(this, message, "Rede Radmin", MessageBoxButton.OK,
+            connected ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
-
 
     private void WindowChrome_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
