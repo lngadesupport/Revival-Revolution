@@ -45,12 +45,6 @@
             </Setter>
         </Style>
         <Style TargetType="TextBox">
-            <Style.Triggers>
-                <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="#F5F3F1"/>
-                    <Setter Property="BorderThickness" Value="2"/>
-                </Trigger>
-            </Style.Triggers>
             <Setter Property="Background" Value="#151A23"/>
             <Setter Property="Foreground" Value="#F5F3F1"/>
             <Setter Property="BorderBrush" Value="#3D4756"/>
@@ -59,6 +53,12 @@
             <Setter Property="CaretBrush" Value="White"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#F5F3F1"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
