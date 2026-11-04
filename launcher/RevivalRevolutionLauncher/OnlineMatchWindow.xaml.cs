@@ -313,7 +313,7 @@ public partial class OnlineMatchWindow : Window
         CancelRoomButton.IsEnabled = false;
         SetModeButtons(false);
         if (_queueMode == "ranked") RankedQueueStateText.Text = "PARTIDA RANQUEADA ENCONTRADA";
-        else QueueStateText.Text = "PARTIDA CASUAL ENCONTRADA";
+        else QueueStateText.Text = "PARTIDA NÃO RANQUEADA ENCONTRADA";
         RoomStateText.Text = "Partida privada atribuída.";
         var opponent = match["opponent"]?["display_name"]?.GetValue<string>() ?? "Adversário";
         var rating = match["opponent"]?["rating"]?.ToString() ?? "—";
