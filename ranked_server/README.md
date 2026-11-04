@@ -38,10 +38,12 @@ este servidor HTTP de desenvolvimento diretamente à internet.
   bloquear remove a amizade e impede novas solicitações entre as contas.
 - `POST /v1/presence/heartbeat` — confirma atividade autenticada.
 - `GET /v1/leaderboard?limit=100` — classificação por rating atual, com indicador de foto e estado online.
-- `POST /v1/queue/join` — JSON `{"region":"sa-east"}`.
-- `GET /v1/queue` — posição/estado da fila.
-- `POST /v1/queue/leave` — sai da fila.
-- `GET /v1/match` — partida atualmente atribuída.
+- `POST /v1/queue/join` — entra na fila casual; JSON `{"region":"sa-east"}`.
+- `GET /v1/queue` — posição/estado da fila casual ou ranqueada atual.
+- `POST /v1/queue/leave` — sai da fila ativa.
+- `GET /v1/match` — partida casual atualmente atribuída.
+- `POST /v1/ranked/queue/join` — entra na fila Ranked separada, pareada por rating.
+- `GET /v1/ranked/queue` e `GET /v1/ranked/match` — estado da fila e partida Ranked.
 - `POST /v1/rooms/create` — cria uma sala privada com código aleatório de 6 caracteres; expira em 15 minutos.
 - `POST /v1/rooms/join` — JSON `{"code":"ABC234"}`; valida o código, limita tentativas a 20 por minuto por conta e atribui a mesma partida aos dois jogadores.
 - `GET /v1/rooms/current` — estado da sala criada pelo jogador anfitrião e partida quando o convidado entra.
@@ -71,6 +73,7 @@ sociais.
 
 - `GET /v1/ranked/me` — rating, divisão, vitórias, derrotas, empates, partidas e histórico recente da conta autenticada.
 - `GET /v1/ranked/leaderboard?limit=100` — classificação da temporada ativa.
+- Salas privadas por código permanecem `private`, e a fila casual permanece `casual`; nenhuma das duas altera ELO.
 - `POST /internal/v1/matches/{match_id}/result` — endpoint interno para autoridade confiável registrar vencedor ou empate. Exige o cabeçalho `X-Ranked-Authority` com o segredo configurado em `RANKED_RESULT_SECRET`. O endpoint retorna 503 quando o segredo não está configurado e nunca aceita o bearer token do jogador como autoridade.
 - O ledger aplica ELO K=32, atualiza os dois ratings em uma transação SQLite, mantém deltas zero-sum, estatísticas, pico de rating e histórico.
 - Reenvios do mesmo resultado são idempotentes: uma partida só altera rating uma vez. Resultados de partidas inexistentes, encerradas ou com vencedor fora do confronto são rejeitados.
