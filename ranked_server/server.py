@@ -124,14 +124,17 @@ def make_handler(store: RankedStore):
         def do_POST(self):
             path = urlparse(self.path).path
             try:
-                body = self._body()
-                if path.startswith("/internal/v1/matches/") and path.endswith("/result"):
+                is_internal_result = path.startswith("/internal/v1/matches/") and path.endswith("/result")
+                if is_internal_result:
+                    # Authenticate the authority before reading/parsing an untrusted body.
                     authority_secret = os.environ.get("RANKED_RESULT_SECRET", "")
                     if not authority_secret:
                         return self._json(503, {"error": "result_authority_not_configured"})
                     supplied = self.headers.get("X-Ranked-Authority", "")
                     if not hmac.compare_digest(supplied, authority_secret):
                         return self._json(403, {"error": "result_authority_forbidden"})
+                body = self._body()
+                if is_internal_result:
                     match_id = path[len("/internal/v1/matches/"):-len("/result")].strip("/")
                     if not match_id or "/" in match_id:
                         return self._json(404, {"error": "not_found"})
