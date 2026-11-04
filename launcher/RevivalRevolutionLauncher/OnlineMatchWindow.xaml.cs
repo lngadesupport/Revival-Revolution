@@ -49,7 +49,9 @@ public partial class OnlineMatchWindow : UserControl
         try
         {
             StatusText.Text = "Aguardando o servidor privado Radmin...";
+            NetworkStateText.Text = "Radmin VPN  /  verificando servidor...";
             await _radminHost.WaitForServerAsync(new Uri(RankedEndpoint).Host, _sessionCancellation.Token);
+            NetworkStateText.Text = "Radmin VPN  /  servidor alcançável";
             await RestoreSessionAsync();
         }
         catch (OperationCanceledException)
@@ -57,6 +59,7 @@ public partial class OnlineMatchWindow : UserControl
         }
         catch (Exception ex)
         {
+            NetworkStateText.Text = "Radmin VPN  /  servidor indisponível";
             StatusText.Text = "Servidor privado indisponível: " + ex.Message;
             SetModeButtons(false);
         }
@@ -149,8 +152,34 @@ public partial class OnlineMatchWindow : UserControl
     private void SetModeButtons(bool enabled)
     {
         CreateRoomButton.IsEnabled = enabled && !_roomWaiting && !_matchActive;
-        JoinRoomButton.IsEnabled = enabled && !_roomWaiting && !_matchActive;
         RoomCodeBox.IsEnabled = enabled && !_roomWaiting && !_matchActive;
+        UpdateJoinRoomButtonState();
+    }
+
+    private void UpdateJoinRoomButtonState()
+    {
+        var code = RoomCodeBox.Text.Trim();
+        JoinRoomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token) &&
+            !_roomWaiting && !_matchActive && RoomCodeBox.IsEnabled &&
+            code.Length == 6 && code.All(char.IsAsciiLetterOrDigit);
+    }
+
+    private void RoomCodeBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var normalized = new string(RoomCodeBox.Text
+            .Where(char.IsAsciiLetterOrDigit)
+            .Take(6)
+            .ToArray())
+            .ToUpperInvariant();
+
+        if (!string.Equals(RoomCodeBox.Text, normalized, StringComparison.Ordinal))
+        {
+            var caret = Math.Min(normalized.Length, RoomCodeBox.CaretIndex);
+            RoomCodeBox.Text = normalized;
+            RoomCodeBox.CaretIndex = caret;
+        }
+
+        UpdateJoinRoomButtonState();
     }
 
     private async Task<bool> RestoreActiveMatchAsync()
@@ -269,9 +298,9 @@ public partial class OnlineMatchWindow : UserControl
     {
         if (string.IsNullOrWhiteSpace(_token) || _roomWaiting || _matchActive) return;
         var code = RoomCodeBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(code))
+        if (code.Length != 6 || !code.All(char.IsAsciiLetterOrDigit))
         {
-            StatusText.Text = "Digite o código de seis caracteres recebido do anfitrião.";
+            StatusText.Text = "O código deve conter exatamente seis letras ou números.";
             return;
         }
 
@@ -286,7 +315,7 @@ public partial class OnlineMatchWindow : UserControl
         catch (Exception ex)
         {
             StatusText.Text = "Não foi possível entrar na sala: " + ex.Message;
-            JoinRoomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
+            UpdateJoinRoomButtonState();
         }
     }
 
@@ -599,7 +628,12 @@ public partial class OnlineMatchWindow : UserControl
         catch (Exception ex)
         {
             StatusText.Text = "Falha ao cancelar o convite: " + ex.Message;
-            if (_roomWaiting) _polling = new CancellationTokenSource();
+            if (_roomWaiting)
+            {
+                _polling?.Dispose();
+                _polling = new CancellationTokenSource();
+                _ = PollRoomAsync(_polling.Token);
+            }
         }
     }
 
