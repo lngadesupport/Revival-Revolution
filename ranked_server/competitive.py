@@ -146,8 +146,22 @@ class CompetitiveStore:
                     "SELECT * FROM ranked_results WHERE match_id=?", (match_id,)
                 ).fetchone()
                 if previous:
+                    same_submission = (
+                        previous["authority_event_id"] == authority_event_id.strip()
+                        and previous["is_draw"] == int(is_draw)
+                        and previous["winner_player_id"] == winner_player_id
+                    )
+                    if not same_submission:
+                        raise ValueError("match_result_conflict")
                     db.commit()
                     return self._result_payload(previous, already_recorded=True)
+
+                reused_event = db.execute(
+                    "SELECT match_id FROM ranked_results WHERE authority_event_id=? LIMIT 1",
+                    (authority_event_id.strip(),),
+                ).fetchone()
+                if reused_event is not None and reused_event["match_id"] != match_id:
+                    raise ValueError("authority_event_already_used")
 
                 match = db.execute(
                     "SELECT * FROM matches WHERE match_id=?", (match_id,)
