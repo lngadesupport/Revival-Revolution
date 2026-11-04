@@ -158,7 +158,7 @@ public partial class OnlineMatchWindow : Window
             else
             {
                 QueueStateText.Text = "PROCURANDO ADVERSÁRIO";
-                QueueDetailText.Text = "Fila casual ativa. Encontre outro jogador para uma partida sem alteração de ELO.";
+                QueueDetailText.Text = "Fila não ranqueada ativa. Encontre outro jogador sem alterar seu rating.";
                 CancelButton.IsEnabled = true;
             }
             _polling = new CancellationTokenSource();
