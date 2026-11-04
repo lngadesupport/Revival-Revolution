@@ -339,11 +339,12 @@ public sealed class LauncherSettingsWindow : Window
             Height = 25,
             IsChecked = isChecked,
             Focusable = true,
-            AutomationProperties = { Name = title, HelpText = description },
             Cursor = System.Windows.Input.Cursors.Hand,
             VerticalAlignment = VerticalAlignment.Center,
             Template = CreateSwitchTemplate()
         };
+        System.Windows.Automation.AutomationProperties.SetName(toggle, title);
+        System.Windows.Automation.AutomationProperties.SetHelpText(toggle, description);
         Grid.SetColumn(toggle, 1);
         row.Children.Add(toggle);
         parent.Children.Add(row);
