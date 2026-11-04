@@ -38,13 +38,12 @@ A distribuição original inclui scripts Python, bridges gerenciadas e nativas, 
 
 ## Experiência da interface
 
-- A navegação principal agrupa as áreas em Jogar, Comunidade e Sistema.
-- Atalhos: Ctrl+1 (modo offline), Ctrl+2 (sala por código), Ctrl+3 (diagnósticos), Ctrl+4 (configurações) e Ctrl+5 (comunidade); Esc retorna da sala ao dashboard.
+- A navegação principal mantém apenas JOGAR (modo offline e sala por código) e SISTEMA (diagnósticos e configurações). O launcher não inclui loja, biblioteca de mods nem central social.
+- Atalhos: Ctrl+1 (modo offline), Ctrl+2 (sala por código), Ctrl+3 (diagnósticos), Ctrl+4 (configurações); Esc retorna da sala ao dashboard.
 - As configurações oferecem abas Geral, Interface, Rede, Dados e Suporte, com confirmação de inicialização, redução de movimento, logs locais e validação em tempo real do endpoint Radmin manual.
 - O diagnóstico distingue dependências essenciais das opcionais, apresenta avisos não bloqueantes e permite filtrar e copiar o relatório.
-- A central de comunidade possui subabas Visão geral, Biblioteca e Conteúdo local; a biblioteca permanece informativa até existir catálogo e fluxo de compatibilidade verificados.
 - A sala privada apresenta um indicador visual de disponibilidade do servidor, valida códigos de convite com seis caracteres localmente e permite enviar o código com Enter.
-- A biblioteca de mods é apenas uma área sinalizada como em desenvolvimento; não instala nem modifica conteúdo.
+- O escopo da interface é restrito às funções necessárias para jogar e manter o launcher; não há loja, conteúdo social, catálogo de mods ou links promocionais.
 
 ## Limitações conhecidas
 
