@@ -1,4 +1,6 @@
+import os
 import unittest
+from unittest.mock import patch
 
 import peer_session
 
@@ -27,6 +29,15 @@ class PeerConnectionCodeTests(unittest.TestCase):
     def test_peer_transport_uses_reserved_radmin_udp_port(self):
         import inspect
         self.assertEqual(inspect.signature(peer_session.Session).parameters["port"].default, 8766)
+
+    def test_radmin_adapter_can_be_supplied_by_host_bootstrap(self):
+        with patch.dict(os.environ, {"REVIVAL_RADMIN_IP": "26.40.50.60"}):
+            self.assertEqual(peer_session.find_radmin_ipv4(), "26.40.50.60")
+
+    def test_invalid_bootstrap_radmin_address_is_rejected(self):
+        with patch.dict(os.environ, {"REVIVAL_RADMIN_IP": "192.168.1.10"}):
+            with self.assertRaisesRegex(ValueError, "Radmin VPN"):
+                peer_session.find_radmin_ipv4()
 
     def test_public_ipv4_connection_codes_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "Radmin"):
