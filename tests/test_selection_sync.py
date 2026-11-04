@@ -116,6 +116,20 @@ class SelectionSyncValidationTests(unittest.TestCase):
         self.assertEqual(len(sync.characters), 129)
         self.assertEqual(len(catalog_hash), 64)
 
+    def test_outfit_ids_are_treated_as_ids_not_roster_positions(self):
+        sync = self.make_sync()
+        sync.characters[7]["outfits"] = [10, 20, 30]
+        sync.validate_choice({"character": 7, "costume": 20})
+        with self.assertRaisesRegex(RuntimeError, "Unknown character or outfit"):
+            sync.validate_choice({"character": 7, "costume": 1})
+
+    def test_default_selection_uses_first_actual_outfit_id(self):
+        _, sync = self.load_catalog({
+            "characters": [{"id": 7, "name": "Ported Fighter", "outfits": [10, 20]}],
+            "stages": [{"id": 3}],
+        })
+        self.assertEqual(sync.local["choice"], {"character": 7, "costume": 10})
+
     def test_content_fingerprint_rejects_same_roster_with_different_asset_pack(self):
         from selection_sync import catalog_fingerprint, normalize_compatibility
 
