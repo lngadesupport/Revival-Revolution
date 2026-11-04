@@ -73,11 +73,22 @@ Este MVP ainda não é uma temporada competitiva pública:
 - cadastro aberto, sem recuperação/anti-smurf/limites de criação;
 - sem aceitação de partida, lease de reconexão ou administração;
 - sem ticket de sessão P2P;
-- sem aplicação de ELO/vitória/derrota;
+- ledger de ELO, divisões e histórico implementado no backend; aplicação de resultados reais ainda bloqueada até integrar uma autoridade confiável;
 - sem integração visual dentro do jogo/Community Panel;
 - sem validação autoritativa do resultado.
 
 Não altere rating com base apenas no resultado informado pelos clientes.
+
+## Camada competitiva adicionada na rodada atual
+
+- Temporada inicial `season-1`, com rating persistido por jogador.
+- ELO K=32, deltas zero-sum, estatísticas de vitórias/derrotas/empates e pico de rating.
+- Divisões Bronze, Prata, Ouro, Platina, Diamante e Mestre.
+- Histórico de partidas e leaderboard sazonal por `/v1/ranked/me` e `/v1/ranked/leaderboard`.
+- Endpoint interno de resultado protegido por `RANKED_RESULT_SECRET`, sem aceitar tokens bearer de jogadores; gravação transacional e idempotente.
+- O launcher consulta o resumo Ranked e exibe divisão, rating e campanha no perfil.
+
+**Não ativar o registro de resultados ainda:** o segredo deve permanecer somente no servidor e não deve ser distribuído aos jogadores. A API ainda não recebe uma prova confiável da bridge de que o resultado foi produzido por uma partida íntegra. O endpoint interno é uma fronteira de segurança para integração futura, não um mecanismo anti-cheat pronto.
 
 ## Próximas etapas
 
