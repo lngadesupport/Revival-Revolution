@@ -13,6 +13,7 @@ public partial class OnlineMatchWindow : Window
     private string? _token;
     private string? _playerId;
     private bool _queued;
+    private string _queueMode = "casual";
     private bool _roomWaiting;
     private string _ratingText = "—";
     private string _rankedDetails = "";
@@ -129,6 +130,7 @@ public partial class OnlineMatchWindow : Window
     private void SetModeButtons(bool enabled)
     {
         SearchButton.IsEnabled = enabled && !_queued && !_roomWaiting;
+        RankedSearchButton.IsEnabled = enabled && !_queued && !_roomWaiting;
         CreateRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
         JoinRoomButton.IsEnabled = enabled && !_queued && !_roomWaiting;
     }
@@ -136,17 +138,29 @@ public partial class OnlineMatchWindow : Window
     private async void Search_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(_token) || _roomWaiting) return;
+        _queueMode = (sender as FrameworkElement)?.Tag?.ToString() == "ranked" ? "ranked" : "casual";
         SearchButton.IsEnabled = false;
+        RankedSearchButton.IsEnabled = false;
         CreateRoomButton.IsEnabled = false;
         JoinRoomButton.IsEnabled = false;
         try
         {
-            var response = await _api.PostAsync("/v1/queue/join", new JsonObject { ["region"] = "sa-east" });
+            var queueEndpoint = _queueMode == "ranked" ? "/v1/ranked/queue/join" : "/v1/queue/join";
+            var response = await _api.PostAsync(queueEndpoint, new JsonObject { ["region"] = "sa-east" });
             if (response["match"] is JsonObject immediate) { ShowMatch(immediate); return; }
             _queued = true;
-            QueueStateText.Text = "PROCURANDO ADVERSÁRIO";
-            QueueDetailText.Text = "Você entrou na fila South America. O servidor está procurando alguém com rating compatível.";
-            CancelButton.IsEnabled = true;
+            if (_queueMode == "ranked")
+            {
+                RankedQueueStateText.Text = "PROCURANDO ADVERSÁRIO";
+                RankedQueueDetailText.Text = "Fila ranqueada ativa. O servidor está buscando um adversário com rating compatível.";
+                RankedCancelButton.IsEnabled = true;
+            }
+            else
+            {
+                QueueStateText.Text = "PROCURANDO ADVERSÁRIO";
+                QueueDetailText.Text = "Fila casual ativa. Encontre outro jogador para uma partida sem alteração de ELO.";
+                CancelButton.IsEnabled = true;
+            }
             _polling = new CancellationTokenSource();
             _ = PollQueueAsync(_polling.Token);
         }
@@ -163,19 +177,22 @@ public partial class OnlineMatchWindow : Window
         {
             while (!cancellationToken.IsCancellationRequested && _queued)
             {
-                var matchResult = await _api.GetAsync("/v1/match", cancellationToken);
+                var queuePrefix = _queueMode == "ranked" ? "/v1/ranked" : "/v1";
+                var matchResult = await _api.GetAsync($"{queuePrefix}/match", cancellationToken);
                 if (matchResult["match"] is JsonObject match)
                 {
                     await Dispatcher.InvokeAsync(() => ShowMatch(match));
                     return;
                 }
-                var queue = await _api.GetAsync("/v1/queue", cancellationToken);
+                var queue = await _api.GetAsync($"{queuePrefix}/queue", cancellationToken);
                 await Dispatcher.InvokeAsync(() =>
                 {
                     var position = queue["position"]?.ToString() ?? "—";
-                    QueueDetailText.Text = queue["queued"]?.GetValue<bool>() == true
+                    var detail = queue["queued"]?.GetValue<bool>() == true
                         ? $"Fila ativa • posição {position} • aguardando adversário."
                         : "O servidor não informa uma posição ativa na fila.";
+                    if (_queueMode == "ranked") RankedQueueDetailText.Text = detail;
+                    else QueueDetailText.Text = detail;
                 });
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
@@ -188,6 +205,7 @@ public partial class OnlineMatchWindow : Window
                 _queued = false;
                 StatusText.Text = "A consulta da fila falhou: " + ex.Message;
                 CancelButton.IsEnabled = false;
+                RankedCancelButton.IsEnabled = false;
                 SetModeButtons(!string.IsNullOrWhiteSpace(_token));
             });
         }
@@ -291,9 +309,11 @@ public partial class OnlineMatchWindow : Window
         _roomWaiting = false;
         _polling?.Cancel();
         CancelButton.IsEnabled = false;
+        RankedCancelButton.IsEnabled = false;
         CancelRoomButton.IsEnabled = false;
         SetModeButtons(false);
-        QueueStateText.Text = "PARTIDA ENCONTRADA";
+        if (_queueMode == "ranked") RankedQueueStateText.Text = "PARTIDA RANQUEADA ENCONTRADA";
+        else QueueStateText.Text = "PARTIDA CASUAL ENCONTRADA";
         RoomStateText.Text = "Partida privada atribuída.";
         var opponent = match["opponent"]?["display_name"]?.GetValue<string>() ?? "Adversário";
         var rating = match["opponent"]?["rating"]?.ToString() ?? "—";
@@ -301,7 +321,8 @@ public partial class OnlineMatchWindow : Window
         var slot = match["player_slot"]?.ToString() ?? "—";
         MatchTitleText.Text = opponent;
         MatchDetailText.Text = $"Adversário: {opponent}\nRating: {rating}\nSua posição: Player {(slot == "0" ? "1" : slot == "1" ? "2" : slot)}\nPartida: {matchId}";
-        QueueDetailText.Text = "O servidor atribuiu seu adversário.";
+        if (_queueMode == "ranked") RankedQueueDetailText.Text = "O servidor atribuiu seu adversário para uma partida ranqueada.";
+        else QueueDetailText.Text = "O servidor atribuiu seu adversário para uma partida casual.";
         StatusText.Text = "Matchmaking concluído. A sessão P2P ainda não foi iniciada: falta emitir e validar o ticket de conexão.";
     }
 
@@ -312,14 +333,23 @@ public partial class OnlineMatchWindow : Window
         {
             await _api.PostAsync("/v1/queue/leave", new JsonObject());
             _queued = false;
-            QueueStateText.Text = "BUSCA CANCELADA";
-            QueueDetailText.Text = "Você saiu da fila.";
+            if (_queueMode == "ranked")
+            {
+                RankedQueueStateText.Text = "BUSCA RANQUEADA CANCELADA";
+                RankedQueueDetailText.Text = "Você saiu da fila ranqueada.";
+            }
+            else
+            {
+                QueueStateText.Text = "BUSCA CANCELADA";
+                QueueDetailText.Text = "Você saiu da fila casual.";
+            }
             StatusText.Text = "Busca cancelada.";
         }
         catch (Exception ex) { StatusText.Text = "Falha ao cancelar a busca: " + ex.Message; }
         finally
         {
             CancelButton.IsEnabled = false;
+            RankedCancelButton.IsEnabled = false;
             SetModeButtons(!string.IsNullOrWhiteSpace(_token));
         }
     }
