@@ -76,11 +76,31 @@
                                                    Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </Border>
-                                <Button x:Name="SearchButton" Content="BUSCAR ADVERSÁRIO" Click="Search_Click" IsEnabled="False"
+                                <Button x:Name="SearchButton" Content="BUSCAR PARTIDA CASUAL" Tag="casual" Click="Search_Click" IsEnabled="False"
                                         Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="16,14" FontSize="16"
                                         HorizontalContentAlignment="Center"/>
                                 <Button x:Name="CancelButton" Content="CANCELAR BUSCA" Click="Cancel_Click" IsEnabled="False"
                                         HorizontalContentAlignment="Center"/>
+                            </StackPanel>
+                        </TabItem>
+                        <TabItem Header="RANQUEADO">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Fila competitiva" FontSize="23" FontWeight="Black" Margin="0,8,0,2"/>
+                                <TextBlock Text="Região: South America (sa-east) • Pareamento por rating"
+                                           Foreground="#C5C4D2" FontSize="12"/>
+                                <Border Background="#66161A2A" CornerRadius="8" Padding="14" Margin="0,18,0,12">
+                                    <StackPanel>
+                                        <TextBlock x:Name="RankedQueueStateText" Text="Pronto para buscar" FontSize="18" FontWeight="Bold"/>
+                                        <TextBlock x:Name="RankedQueueDetailText" Text="Entre na fila ranqueada para disputar rating e divisão."
+                                                   Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Button x:Name="RankedSearchButton" Content="BUSCAR PARTIDA RANQUEADA" Tag="ranked"
+                                        Click="Search_Click" IsEnabled="False" Background="#C52B1F30"
+                                        BorderBrush="#FFFF6671" Padding="16,14" FontSize="16"
+                                        HorizontalContentAlignment="Center"/>
+                                <Button x:Name="RankedCancelButton" Content="CANCELAR BUSCA RANQUEADA"
+                                        Click="Cancel_Click" IsEnabled="False" HorizontalContentAlignment="Center"/>
                             </StackPanel>
                         </TabItem>
                         <TabItem Header="POR CÓDIGO">
