@@ -402,16 +402,20 @@ class RankedStore:
                 result = db.execute("DELETE FROM queue WHERE player_id=? AND queue_mode=?", (player_id, mode))
             return result.rowcount > 0
 
-    def queue_status(self, player_id: str, mode: str = "casual") -> dict:
-        if mode not in {"casual", "ranked"}:
+    def queue_status(self, player_id: str, mode: str | None = None) -> dict:
+        if mode is not None and mode not in {"casual", "ranked"}:
             raise ValueError("invalid queue mode")
         with self.transaction() as db:
             self._expire_matches(db, self.clock())
-            row = db.execute("SELECT region,joined_at FROM queue WHERE player_id=? AND queue_mode=?", (player_id, mode)).fetchone()
+            if mode is None:
+                row = db.execute("SELECT region,joined_at,queue_mode FROM queue WHERE player_id=?", (player_id,)).fetchone()
+            else:
+                row = db.execute("SELECT region,joined_at,queue_mode FROM queue WHERE player_id=? AND queue_mode=?", (player_id, mode)).fetchone()
             if not row:
                 return {"queued": False}
+            mode = row["queue_mode"]
             self._match_queued_in_region(db, row["region"], self.clock(), mode=mode)
-            row = db.execute("SELECT region,joined_at FROM queue WHERE player_id=? AND queue_mode=?", (player_id, mode)).fetchone()
+            row = db.execute("SELECT region,joined_at,queue_mode FROM queue WHERE player_id=? AND queue_mode=?", (player_id, mode)).fetchone()
             if not row:
                 return {"queued": False}
             position = db.execute(
