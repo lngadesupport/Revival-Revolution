@@ -21,7 +21,8 @@ The current offline bootstrap starts `ufo.exe` directly with fullscreen argument
 - The repository does not currently include authoritative character-intro dialogue/transcripts and timestamps for the target game patch. Do not fabricate translations or subtitle timings.
 - Controller dead-zone/sensitivity changes must not be presented as functional until an input path actually consumes and applies them in-game.
 - FPS options must not be presented as effective until a supported game config/API mechanism is identified and verified against the target patch.
-- The user must provide the target patch/game files or a reproducible version/build identifier before patch-specific compatibility and subtitle validation.
+- The launcher now performs version-agnostic installation inspection: it detects the executable/data folder and reads product/file version metadata when present. Unknown versions are reported, not rejected.
+- The launcher should open with the currently installed game without requiring the future patch. Patch-specific subtitle data, content mappings, and verified graphics controls remain gated until the patch is available.
 
 ## Validation
 
