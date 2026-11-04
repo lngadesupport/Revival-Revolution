@@ -65,3 +65,17 @@ sociais.
   no jogo nem um ponto de extensão seguro.
 - Deploy público exige TLS, firewall, backups, monitoramento e política de
   privacidade/retenção.
+
+
+## Camada competitiva — primeira implementação
+
+- `GET /v1/ranked/me` — rating, divisão, vitórias, derrotas, empates, partidas e histórico recente da conta autenticada.
+- `GET /v1/ranked/leaderboard?limit=100` — classificação da temporada ativa.
+- `POST /internal/v1/matches/{match_id}/result` — endpoint interno para autoridade confiável registrar vencedor ou empate. Exige o cabeçalho `X-Ranked-Authority` com o segredo configurado em `RANKED_RESULT_SECRET`. O endpoint retorna 503 quando o segredo não está configurado e nunca aceita o bearer token do jogador como autoridade.
+- O ledger aplica ELO K=32, atualiza os dois ratings em uma transação SQLite, mantém deltas zero-sum, estatísticas, pico de rating e histórico.
+- Reenvios do mesmo resultado são idempotentes: uma partida só altera rating uma vez. Resultados de partidas inexistentes, encerradas ou com vencedor fora do confronto são rejeitados.
+- Divisões atuais: Bronze (abaixo de 1200), Prata (1200), Ouro (1400), Platina (1600), Diamante (1800) e Mestre (2000).
+
+**Limite competitivo importante:** esta rodada cria o ledger e a fronteira de confiança da API, mas ainda não existe uma autoridade de jogo dedicada que comprove o vencedor da luta. Portanto, não configure nem distribua `RANKED_RESULT_SECRET` ao launcher ou aos jogadores. Sem integração com uma autoridade confiável da bridge/partida, os resultados não devem ser enviados e o modo não deve ser anunciado como Ranked competitivo ativo. O endpoint interno é infraestrutura para essa integração, não prova de que o jogo já valida resultados contra clientes modificados.
+
+O servidor de desenvolvimento continua devendo ser executado atrás de TLS em produção. A migração das tabelas competitivas é aditiva e preserva contas e ratings existentes.
