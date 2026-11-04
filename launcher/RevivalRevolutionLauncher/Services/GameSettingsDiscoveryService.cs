@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using Microsoft.Win32;
 
 namespace RevivalRevolution.Services;
@@ -94,11 +95,11 @@ public sealed class GameSettingsDiscoveryService
             var product = CleanRegistrySegment(metadata.ProductName);
             if (!string.IsNullOrWhiteSpace(company) && !string.IsNullOrWhiteSpace(product))
             {
-                var registryPath = $@"Software\\{company}\\{product}";
+                var registryPath = $@"Software\{company}\{product}";
                 using var key = Registry.CurrentUser.OpenSubKey(registryPath, writable: false);
                 if (key is not null)
                 {
-                    registryLocations.Add(@"HKCU\\" + registryPath);
+                    registryLocations.Add(@"HKCU\" + registryPath);
                     foreach (var valueName in key.GetValueNames())
                         if (RelevantTokens.Any(token => valueName.Contains(token, StringComparison.OrdinalIgnoreCase)))
                             keys.Add(valueName);
