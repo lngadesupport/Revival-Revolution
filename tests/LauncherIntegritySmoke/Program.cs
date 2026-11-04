@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using RevivalRevolution.Services;
 
 static string Hash(string value) =>
@@ -9,6 +10,23 @@ static void Require(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
 }
+
+var legacySettings = JsonSerializer.Deserialize<LauncherSettings>("{\"PlayerName\":\"LegacyPlayer\",\"PlayerTag\":\"OLD\"}");
+Require(legacySettings is not null, "Legacy launcher settings must deserialize.");
+Require(legacySettings!.PlayerName == "LegacyPlayer", "Legacy player profile was not preserved.");
+Require(legacySettings.FpsLimit == 60 && legacySettings.ControllerLeftDeadZone == 8,
+    "New 0.8.4 settings must receive defaults when loading an older settings file.");
+var currentSettings = new LauncherSettings
+{
+    FpsLimit = 144,
+    ControllerLeftDeadZone = 12,
+    SubtitlesEnabled = false,
+    AudioMusicVolume = 65
+};
+var roundTrip = JsonSerializer.Deserialize<LauncherSettings>(JsonSerializer.Serialize(currentSettings));
+Require(roundTrip is not null && roundTrip.FpsLimit == 144 &&
+    roundTrip.ControllerLeftDeadZone == 12 && !roundTrip.SubtitlesEnabled &&
+    roundTrip.AudioMusicVolume == 65, "0.8.4 settings did not survive JSON round-trip.");
 
 var root = Path.Combine(Path.GetTempPath(), "RevivalLauncherIntegrity-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -59,7 +77,7 @@ try
     }
     Require(invalidHashRejected, "The integrity planner must reject malformed SHA-256 values.");
 
-    Console.WriteLine("Launcher integrity smoke tests passed: selective repair, intact-file preservation, protected game paths, and SHA-256 validation.");
+    Console.WriteLine("Launcher smoke tests passed: legacy settings compatibility, settings JSON round-trip, selective repair, intact-file preservation, protected game paths, and SHA-256 validation.");
 }
 finally
 {
