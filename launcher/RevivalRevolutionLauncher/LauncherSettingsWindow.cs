@@ -118,7 +118,8 @@ public sealed class LauncherSettingsWindow : Window
 
         var content = new StackPanel();
 
-        var account = MakeCard();
+        var accountCard = MakeCard();
+        var account = CardContent(accountCard);
         AddCardHeading(account, "ACCOUNT", "Seu perfil local do launcher");
         var profileGrid = new Grid { Margin = new Thickness(0, 14, 0, 0) };
         profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -134,9 +135,10 @@ public sealed class LauncherSettingsWindow : Window
             FontSize = 10,
             Foreground = Brush(MutedColor)
         });
-        content.Children.Add(account);
+        content.Children.Add(accountCard);
 
-        var app = MakeCard();
+        var appCard = MakeCard();
+        var app = CardContent(appCard);
         AddCardHeading(app, "APP SETTINGS", "Comportamento do launcher");
         _startupUpdates = AddSwitchRow(app, "Verificar atualizações ao abrir",
             "Consulta a versão oficial quando o launcher inicia.", current.CheckUpdatesOnStartup);
@@ -146,9 +148,10 @@ public sealed class LauncherSettingsWindow : Window
         AddRowDivider(app);
         _persistLogs = AddSwitchRow(app, "Salvar logs neste computador",
             "Mantém registros locais para facilitar diagnósticos.", current.PersistLogs);
-        content.Children.Add(app);
+        content.Children.Add(appCard);
 
-        var support = MakeCard();
+        var supportCard = MakeCard();
+        var support = CardContent(supportCard);
         AddCardHeading(support, "SUPPORT", "Instalação, arquivos e ajuda");
         AddInfoRow(support, "Pasta do jogo", string.IsNullOrWhiteSpace(gameFolder)
             ? "Nenhuma pasta selecionada." : gameFolder);
@@ -180,7 +183,7 @@ public sealed class LauncherSettingsWindow : Window
             FontSize = 10,
             Foreground = Brush(MutedColor)
         });
-        content.Children.Add(support);
+        content.Children.Add(supportCard);
 
         var scroll = new ScrollViewer
         {
@@ -227,7 +230,6 @@ public sealed class LauncherSettingsWindow : Window
             Text = title,
             FontSize = 11,
             FontWeight = FontWeights.Bold,
-            CharacterSpacing = 1.2,
             Foreground = Brush(Color.FromRgb(255, 111, 122))
         });
         parent.Children.Add(new TextBlock
