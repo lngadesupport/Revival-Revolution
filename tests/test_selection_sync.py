@@ -101,6 +101,8 @@ class SelectionSyncValidationTests(unittest.TestCase):
             sync.root = root
             sync.bridge = SimpleNamespace(session="session-1", command={"target_pid": 123})
             sync.slot = 0
+            sync.revision = 0
+            sync.state = "opening"
             sync.load_catalog()
             return sync.catalog_hash, sync
 
