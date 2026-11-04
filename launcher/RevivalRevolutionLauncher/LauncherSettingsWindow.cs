@@ -19,6 +19,8 @@ public sealed class LauncherSettingsWindow : Window
     private readonly ToggleButton _startupUpdates = null!;
     private readonly ToggleButton _confirmLaunch = null!;
     private readonly ToggleButton _persistLogs = null!;
+    private readonly CheckBox _customRadminIpEnabled = null!;
+    private readonly TextBox _customRadminIp = null!;
 
     public LauncherSettings Result { get; private set; }
 
