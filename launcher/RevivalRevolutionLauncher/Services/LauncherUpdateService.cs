@@ -35,8 +35,7 @@ public sealed class LauncherUpdateService
     private static readonly HashSet<string> ProtectedFiles = new(StringComparer.OrdinalIgnoreCase)
     {
         "launcher-update.json", "launcher-config.json", "python-runtime.txt", "autopunch-config.json",
-        "Launcher/apply-update.cmd", "offline_launcher.py", "inject_offline.py", "inject_overlay.py", "MetalNetplayBridge.cs",
-        "MetalOfflineBridgeImGui.cs", "SHA256SUMS.json"
+        "Launcher/apply-update.cmd", "MetalNetplayBridge.cs", "MetalOfflineBridgeImGui.cs", "SHA256SUMS.json"
     };
 
     public async Task<LauncherUpdateInfo?> CheckAsync(string root, CancellationToken token = default)
