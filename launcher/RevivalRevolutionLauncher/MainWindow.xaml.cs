@@ -53,6 +53,18 @@ public partial class MainWindow : Window
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
     {
+        if (_settings.ReduceMotion)
+        {
+            MainContent.Opacity = 1;
+            WindowChrome.Opacity = 1;
+            HeaderPanel.Opacity = 1;
+            SidebarPanel.Opacity = 1;
+            HeroPanel.Opacity = 1;
+            QuickAccessPanel.Opacity = 1;
+            BottomPanel.Opacity = 1;
+            return;
+        }
+
         // Staggered entrance: soft fade plus a short upward settle, with no impact on launch logic.
         AnimateEntrance(MainContent, 0, 420, 10);
         AnimateEntrance(WindowChrome, 45, 360, 4);
@@ -345,8 +357,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private static void FadeStateChange(UIElement element)
+    private void FadeStateChange(UIElement element)
     {
+        if (_settings.ReduceMotion)
+        {
+            element.Opacity = 1;
+            return;
+        }
+
         var animation = new System.Windows.Media.Animation.DoubleAnimation(0.55, 1,
             TimeSpan.FromMilliseconds(220))
         {
