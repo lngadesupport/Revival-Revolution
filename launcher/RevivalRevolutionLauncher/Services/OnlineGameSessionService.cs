@@ -227,6 +227,7 @@ public sealed class OnlineGameSessionService : IDisposable
 
         start.RedirectStandardOutput = true;
         start.RedirectStandardError = true;
+        RotatePeerLog();
 
         var process = new Process { StartInfo = start, EnableRaisingEvents = true };
         process.OutputDataReceived += (_, args) =>
@@ -256,6 +257,18 @@ public sealed class OnlineGameSessionService : IDisposable
     }
 
     private string PeerLogPath => Path.Combine(_distributionRoot, "peer-session.log");
+
+    private void RotatePeerLog()
+    {
+        try
+        {
+            var info = new FileInfo(PeerLogPath);
+            if (info.Exists && info.Length > 1024 * 1024)
+                File.Move(PeerLogPath, PeerLogPath + ".1", overwrite: true);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
 
     private void AppendPeerLog(string level, string message)
     {
