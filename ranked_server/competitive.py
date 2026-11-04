@@ -168,7 +168,7 @@ class CompetitiveStore:
                 ).fetchone()
                 if match is None:
                     raise ValueError("match_not_found")
-                if match["status"] != "assigned":
+                if match["status"] not in ("assigned", "ready"):
                     raise ValueError("match_is_not_active")
                 if match["match_type"] != "ranked":
                     raise ValueError("match_is_not_ranked")
