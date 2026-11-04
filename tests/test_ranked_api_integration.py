@@ -94,6 +94,9 @@ class RankedApiIntegrationTests(unittest.TestCase):
         self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, one["token"])
         _, result = self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, two["token"])
         match_id = result["match"]["match_id"]
+        self.assertEqual(self.request("POST", "/v1/ranked/match/accept", {}, one["token"])[0], 200)
+        self.assertEqual(self.request("POST", "/v1/ranked/match/accept", {}, two["token"])[0], 200)
+        self.assertEqual(self.request("GET", "/v1/ranked/match", token=one["token"])[1]["match"]["status"], "ready")
         with patch.dict(os.environ, {"RANKED_RESULT_SECRET": ""}):
             status, body = self.request("POST", f"/internal/v1/matches/{match_id}/result")
             self.assertEqual(status, 503)
