@@ -127,7 +127,7 @@
                            FontSize="8" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <Grid Grid.Column="2">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <TextBox x:Name="NicknameBox" MaxLength="32" VerticalContentAlignment="Center"
+                    <TextBox x:Name="NicknameBox" MaxLength="32" ToolTip="Nickname usado ao criar sua conta. Depois do cadastro, a edição depende de suporte da API." VerticalContentAlignment="Center"
                              FontSize="11" Padding="9,7"/>
                     <Button x:Name="ConnectButton" Grid.Column="1" Content="CONECTAR"
                             Click="Connect_Click" Padding="11,7" Margin="7,0,0,0" FontSize="9"/>
