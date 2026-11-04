@@ -480,7 +480,7 @@ public partial class OnlineMatchWindow : Window
                 StatusText.Text = "Abrindo ufo.exe diretamente, sem chamar o configurador externo.";
             });
 
-            var connectionCode = await _gameSession.StartHostAsync(sessionToken);
+            var connectionCode = await _gameSession.StartHostAsync(sessionToken, new Uri(RankedEndpoint).Host);
             await _api.PostAsync("/v1/rooms/connection-code", new JsonObject { ["code"] = connectionCode }, cancellationToken: sessionToken);
             codePublished = true;
             await Dispatcher.InvokeAsync(() =>
