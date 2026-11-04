@@ -460,8 +460,13 @@ public partial class MainWindow : Window
 
         try
         {
+            var hadCustomRadminIp = _settings.UseCustomRadminIp;
             _settingsService.Save(window.Result);
             _settings = window.Result;
+            if (_settings.UseCustomRadminIp)
+                RankedApiClient.SaveEndpoint($"http://{_settings.CustomRadminIp}:8765");
+            else if (hadCustomRadminIp)
+                RankedApiClient.SaveEndpoint(RadminHostService.DefaultEndpoint);
             Log("Configurações salvas.");
             FooterStatus.Text = "Configurações atualizadas.";
         }
