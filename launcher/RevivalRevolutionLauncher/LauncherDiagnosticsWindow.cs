@@ -123,7 +123,7 @@ public sealed class LauncherDiagnosticsWindow : Window
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var hint = new TextBlock
         {
-            Text = "Itens opcionais ausentes não bloqueiam o modo offline.",
+            Text = "Opcionais não bloqueiam o modo offline. Caminhos pessoais são ocultados ao copiar o relatório.",
             Foreground = Brush(MutedColor),
             FontSize = 10,
             VerticalAlignment = VerticalAlignment.Center
@@ -320,14 +320,26 @@ public sealed class LauncherDiagnosticsWindow : Window
 
     private void CopyReport()
     {
+        var required = _items.Where(item => !item.Optional).ToArray();
+        var optional = _items.Where(item => item.Optional).ToArray();
+        var version = typeof(LauncherDiagnosticsWindow).Assembly.GetName().Version;
         var lines = new List<string>
         {
             "Revival Revolution — Relatório de diagnóstico",
+            $"Versão: {(version is null ? "desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}")}",
             $"Data local: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+            $"Verificações essenciais: {required.Count(item => item.Passed)}/{required.Length} aprovadas",
+            $"Componentes opcionais disponíveis: {optional.Count(item => item.Passed)}/{optional.Length}",
+            "Privacidade: caminhos sob o perfil do Windows são substituídos por %USERPROFILE%.",
             ""
         };
         lines.AddRange(_items.Select(item =>
-            $"[{(item.Optional ? "OPCIONAL" : item.Passed ? "APROVADO" : "FALHA")}] {item.Name}{Environment.NewLine}  {item.Detail}"));
+        {
+            var severity = item.Optional
+                ? item.Passed ? "OPCIONAL" : "AVISO"
+                : item.Passed ? "APROVADO" : "FALHA";
+            return $"[{severity}] {item.Name}{Environment.NewLine}  {SanitizeReportDetail(item.Detail)}";
+        }));
         try
         {
             Clipboard.SetText(string.Join(Environment.NewLine, lines));
@@ -339,6 +351,13 @@ public sealed class LauncherDiagnosticsWindow : Window
             MessageBox.Show(this, "Não foi possível copiar o relatório: " + ex.Message,
                 "Diagnóstico", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    private static string SanitizeReportDetail(string detail)
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(profile)) return detail;
+        return detail.Replace(profile, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase);
     }
 
     private void OpenLogs()
