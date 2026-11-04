@@ -19,8 +19,6 @@ public partial class OnlineMatchWindow : Window
     private readonly RankedCredentialStore _credentials = new();
     private readonly RadminHostService _radminHost = new();
     private readonly OnlineGameSessionService _gameSession;
-    private readonly string _distributionRoot;
-    private readonly string _pythonExe;
     private readonly CancellationTokenSource _sessionCancellation = new();
     private CancellationTokenSource? _roomSessionCancellation;
     private CancellationTokenSource? _polling;
@@ -45,9 +43,7 @@ public partial class OnlineMatchWindow : Window
     public OnlineMatchWindow(string distributionRoot, string gameFolder, string pythonExe)
     {
         InitializeComponent();
-        _distributionRoot = Path.GetFullPath(distributionRoot);
-        _pythonExe = Path.GetFullPath(pythonExe);
-        _gameSession = new OnlineGameSessionService(_distributionRoot, gameFolder, _pythonExe);
+        _gameSession = new OnlineGameSessionService(distributionRoot, gameFolder, pythonExe);
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -55,19 +51,8 @@ public partial class OnlineMatchWindow : Window
         _api.Configure(RankedEndpoint, null);
         try
         {
-            var serverAddress = new Uri(RankedEndpoint).Host;
-            var localServerAddress = RadminHostService.GetLocalRadminAddress(RankedEndpoint);
-            if (localServerAddress is not null)
-            {
-                StatusText.Text = "Preparando o host local da API pela Radmin...";
-                await _radminHost.EnsureFirewallAsync(_pythonExe, localServerAddress, _sessionCancellation.Token);
-                await _radminHost.EnsureHostServerAsync(_distributionRoot, _pythonExe, localServerAddress, _sessionCancellation.Token);
-            }
-            else
-            {
-                StatusText.Text = "Aguardando o servidor privado Radmin...";
-                await _radminHost.WaitForServerAsync(serverAddress, _sessionCancellation.Token);
-            }
+            StatusText.Text = "Aguardando o servidor privado Radmin...";
+            await _radminHost.WaitForServerAsync(new Uri(RankedEndpoint).Host, _sessionCancellation.Token);
             await RestoreSessionAsync();
         }
         catch (OperationCanceledException)
