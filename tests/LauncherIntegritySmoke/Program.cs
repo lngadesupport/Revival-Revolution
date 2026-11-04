@@ -192,6 +192,7 @@ try
     }
     Require(nonRadminRejected, "The Radmin launcher must reject public/non-Radmin endpoints.");
 
+    Require(!new LauncherSettings().UseCustomRadminIp, "Manual Radmin IP must be locked by default.");
     var settingsRoot = Path.Combine(root, "settings-test");
     var settingsService = new LauncherSettingsService(settingsRoot);
     settingsService.Save(new LauncherSettings
@@ -200,13 +201,23 @@ try
         PlayerTag = new string('T', 20),
         CheckUpdatesOnStartup = false,
         ConfirmBeforeLaunch = true,
-        PersistLogs = false
+        PersistLogs = false,
+        UseCustomRadminIp = true,
+        CustomRadminIp = "26.226.57.19"
     });
     var savedSettings = settingsService.Load();
     Require(savedSettings.PlayerName.Length == 24 && savedSettings.PlayerTag.Length == 12,
         "Legacy profile fields must be trimmed and bounded during persistence.");
     Require(!savedSettings.CheckUpdatesOnStartup && savedSettings.ConfirmBeforeLaunch && !savedSettings.PersistLogs,
         "Launcher preferences did not survive a save/load round trip.");
+    Require(savedSettings.UseCustomRadminIp && savedSettings.CustomRadminIp == "26.226.57.19",
+        "Manual Radmin IP preferences did not survive a save/load round trip.");
+    Require(RankedApiClient.ValidateEndpoint("http://26.226.57.19:8765").Contains("26.226.57.19"),
+        "A valid Radmin endpoint was rejected.");
+    var publicHttpRejected = false;
+    try { RankedApiClient.ValidateEndpoint("http://8.8.8.8:8765"); }
+    catch (InvalidOperationException) { publicHttpRejected = true; }
+    Require(publicHttpRejected, "Manual Radmin endpoint validation must reject public HTTP addresses.");
 
     await File.WriteAllTextAsync(settingsService.GetSettingsPath(), "{ invalid json");
     var recoveredSettings = settingsService.Load();
