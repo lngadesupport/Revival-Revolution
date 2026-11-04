@@ -715,9 +715,9 @@ public partial class MainWindow : Window
 
     private void OpenGameFolder_Click(object sender, RoutedEventArgs e)
     {
-        if (!IsValidFolder(_gameFolder))
+        if (string.IsNullOrWhiteSpace(_gameFolder) || !Directory.Exists(_gameFolder))
         {
-            FooterStatus.Text = "Selecione uma instalação válida antes de abrir a pasta.";
+            FooterStatus.Text = "Selecione uma pasta de instalação existente antes de abrir o conteúdo local.";
             return;
         }
 
