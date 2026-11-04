@@ -20,7 +20,7 @@ A distribuição original inclui scripts Python, bridges gerenciadas e nativas, 
 
 - `MainWindow.xaml`: shell WPF, identidade visual, navegação lateral e dashboard.
 - `MainWindow.xaml.cs`: coordenação de eventos, atalhos, estado ocupado e transições.
-- `OnlineMatchWindow.xaml` / `.xaml.cs`: sala privada embutida, perfil, convite e estado de confronto.
+- `OnlineMatchWindow.xaml` / `.xaml.cs`: matchmaking aleatório pela Radmin, sala por código, perfil, aceite bilateral e ciclo de conexão P2P.
 - `LauncherSettingsWindow.cs`: preferências organizadas por abas (Geral, Interface, Rede, Dados e Suporte).
 - `LauncherDiagnosticsWindow.cs`: resultados de integridade com filtros, resumo e exportação de relatório.
 - `DownloadService`: downloads HTTPS retomáveis com validação de redirecionamento.
@@ -38,15 +38,15 @@ A distribuição original inclui scripts Python, bridges gerenciadas e nativas, 
 
 ## Experiência da interface
 
-- A navegação principal mantém apenas JOGAR (modo offline e sala por código) e SISTEMA (diagnósticos e configurações). O launcher não inclui loja, biblioteca de mods nem central social.
+- A navegação principal mantém apenas JOGAR (modo offline, matchmaking Radmin e sala por código) e SISTEMA (diagnósticos e configurações). O launcher não inclui loja, biblioteca de mods nem central social.
 - Atalhos: Ctrl+1 (modo offline), Ctrl+2 (sala por código), Ctrl+3 (diagnósticos), Ctrl+4 (configurações); Esc retorna da sala ao dashboard.
 - As configurações oferecem abas Geral, Interface, Rede, Dados e Suporte, com confirmação de inicialização, redução de movimento, logs locais e validação em tempo real do endpoint Radmin manual.
 - O diagnóstico distingue dependências essenciais das opcionais, apresenta avisos não bloqueantes e permite filtrar e copiar o relatório.
-- A sala privada apresenta um indicador visual de disponibilidade do servidor, valida códigos de convite com seis caracteres localmente e permite enviar o código com Enter.
+- A tela ONLINE permite buscar adversários aleatórios na fila regional Radmin, acompanhar posição/cancelar a busca ou usar códigos de convite de seis caracteres. O pareamento cria uma sala Radmin P2P; ambos aceitam automaticamente e o anfitrião aleatório inicia o jogo automaticamente após o aceite bilateral.
 - O escopo da interface é restrito às funções necessárias para jogar e manter o launcher; não há loja, conteúdo social, catálogo de mods ou links promocionais.
 
 ## Limitações conhecidas
 
 - A compatibilidade depende da build do jogo, das bridges e dos arquivos da distribuição.
-- O multiplayer/rollback é experimental; testes em dois PCs e diferentes redes ainda são necessários.
+- O matchmaking só reúne jogadores conectados à mesma rede Radmin e ao mesmo servidor Ranked hospedado nela; não existe matchmaking global pela internet. O transporte UDP/rollback continua experimental e requer teste real em dois PCs, incluindo handshake, bridge, desconexão e reentrada.
 - O runtime embeddable pode depender do Visual C++ Redistributable x64 na máquina de destino.
