@@ -286,6 +286,8 @@ class RankedStore:
             self._expire_matches(db, now)
             if mode is None:
                 row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            elif mode == "casual":
+                row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND (match_type='casual' OR match_type='private') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
             else:
                 row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND match_type=? AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (mode, player_id, player_id)).fetchone()
             if row is None: raise ValueError("no active match to decline")
