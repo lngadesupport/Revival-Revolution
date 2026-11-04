@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly PythonRuntimeService _python = new();
     private readonly RadminHostService _radminHost = new();
     private readonly GameLaunchService _gameLaunch = new();
+    private readonly GameCompatibilityService _gameCompatibility = new();
     private readonly LauncherDiagnosticService _diagnostics = new();
     private readonly DistributionLocator _distributionLocator = new();
     private string? _distributionRoot;
@@ -319,6 +320,10 @@ public partial class MainWindow : Window
 
     private void RefreshGameState()
     {
+        var compatibility = _gameCompatibility.Inspect(_gameFolder);
+        DashboardBuildStatus.Text = compatibility.IsDetected
+            ? $"Jogo detectado • {compatibility.VersionLabel} • {compatibility.Detail}"
+            : compatibility.Detail;
         var valid = IsValidFolder(_gameFolder);
         _gameRunning = valid && IsGameRunning();
 
