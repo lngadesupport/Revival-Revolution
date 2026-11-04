@@ -20,7 +20,7 @@
 ## Estrutura
 
 - `launcher/RevivalRevolutionLauncher/` — projeto C# / WPF (.NET 8).
-- `launcher/RevivalRevolutionLauncher/Services/` — serviços de download, extração segura, configuração, runtime, inicialização e diagnóstico.
+- `launcher/RevivalRevolutionLauncher/Services/` — serviços de preparação do runtime Python, extração segura, configuração, inicialização e diagnóstico. O download do runtime auxiliar não inclui arquivos do jogo.
 - `launcher/RevivalRevolutionLauncher/Properties/PublishProfiles/` — perfil de publicação Windows x64 self-contained.
 - `docs/` — documentação técnica e avisos de compatibilidade.
 
