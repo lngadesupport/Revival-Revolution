@@ -80,9 +80,20 @@ public sealed class OnlineGameSessionService : IDisposable
             {
                 using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(statusPath, cancellationToken));
                 var root = json.RootElement;
-                if (root.TryGetProperty("state", out var state) && state.GetString() == "error")
-                    throw new InvalidOperationException(root.TryGetProperty("message", out var message)
-                        ? message.GetString() ?? "erro sem detalhes" : "erro sem detalhes");
+                if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+                {
+                    await Task.Delay(300, cancellationToken);
+                    continue;
+                }
+                if (root.TryGetProperty("state", out var state) &&
+                    state.ValueKind == System.Text.Json.JsonValueKind.String &&
+                    state.GetString() == "error")
+                {
+                    var detail = root.TryGetProperty("message", out var message) &&
+                                 message.ValueKind == System.Text.Json.JsonValueKind.String
+                        ? message.GetString() : null;
+                    throw new InvalidOperationException(detail ?? "A sessão P2P foi encerrada por um erro sem detalhes.");
+                }
                 var connected = ReadBoolean(root, "peer_connected");
                 var localReady = ReadBoolean(root, "local_vs_ready");
                 var remoteReady = ReadBoolean(root, "remote_vs_ready");
@@ -90,7 +101,6 @@ public sealed class OnlineGameSessionService : IDisposable
             }
             catch (System.Text.Json.JsonException) { }
             catch (IOException) { }
-            catch (InvalidOperationException) { }
             await Task.Delay(300, cancellationToken);
         }
         throw new TimeoutException("A sessão não concluiu o handshake UDP e a entrada VS no tempo limite. Confira peer-status.json e peer-summary.txt.");
