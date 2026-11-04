@@ -246,7 +246,35 @@ public sealed class LauncherSettingsWindow : Window
                     "Analógico direito X/Y: " + item.RightStickX + "% / " + item.RightStickY + "%"));
         };
         Closed += (_, _) => controllerTimer.Stop();
+        var vibrationTestButton = MakeButton("TESTAR VIBRAÇÃO", false);
+        vibrationTestButton.HorizontalAlignment = HorizontalAlignment.Left;
+        vibrationTestButton.Margin = new Thickness(0, 0, 0, 8);
+        vibrationTestButton.Click += async (_, _) =>
+        {
+            if (_controllerVibration.IsChecked != true)
+            {
+                MessageBox.Show(this, "Ative Permitir vibração antes do teste.", "Vibração desativada",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var first = controllerService.ReadConnected().FirstOrDefault();
+            if (first is null)
+            {
+                MessageBox.Show(this, "Nenhum controle XInput foi detectado.", "Controle não encontrado",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            if (!controllerService.TrySetVibration(first.UserIndex, 18000, 18000))
+            {
+                MessageBox.Show(this, "Este controle não confirmou suporte à vibração XInput.", "Vibração indisponível",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            try { await Task.Delay(350); }
+            finally { controllerService.TrySetVibration(first.UserIndex, 0, 0); }
+        };
         panel.Children.Add(controllerButton);
+        panel.Children.Add(vibrationTestButton);
         panel.Children.Add(controllerOutput);
         AddSectionTitle(panel, "ZONAS MORTAS");
         _leftDeadZone = AddSlider(panel, "Dead zone do analógico esquerdo", current.ControllerLeftDeadZone, 0, 50, "%");
