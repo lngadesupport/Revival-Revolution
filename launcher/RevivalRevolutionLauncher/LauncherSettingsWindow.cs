@@ -290,7 +290,7 @@ public sealed class LauncherSettingsWindow : Window
         AddSectionTitle(panel, "INVERSÃO E VIBRAÇÃO");
         _invertHorizontal = AddOption(panel, "Inverter eixo horizontal", "", current.ControllerInvertHorizontal);
         _invertVertical = AddOption(panel, "Inverter eixo vertical", "", current.ControllerInvertVertical);
-        _controllerVibration = AddOption(panel, "Permitir vibração", "Será aplicada somente se o jogo/dispositivo oferecer suporte.", current.ControllerVibration);
+        _controllerVibration = AddOption(panel, "Permitir vibração", "Habilita o teste manual de vibração XInput nesta aba; ainda não altera a vibração durante a partida.", current.ControllerVibration);
         return MakeTab("CONTROLE", panel);
     }
 
