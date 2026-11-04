@@ -83,7 +83,8 @@ public sealed class LauncherUpdateService
             return path;
         }).ToArray();
 
-        if (files.Length == 0 || files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Length)
+        if (files.Length == 0 || files.Length > MaxEntries ||
+            files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Length)
             throw new InvalidDataException("A lista de arquivos da atualização está vazia ou contém duplicatas.");
 
         var hashesElement = data.GetProperty("fileHashes");
@@ -175,6 +176,10 @@ public sealed class LauncherUpdateService
         var zip = Path.Combine(downloadsDirectory, "launcher-update.zip");
         stageProgress?.Report(new("download", "Baixando pacote oficial do GitHub..."));
         await Downloads.DownloadAsync(packageUri.ToString(), zip, progress, token, TrustedReleaseHosts);
+
+        var packageLength = new FileInfo(zip).Length;
+        if (packageLength <= 0 || packageLength > MaxPackageBytes)
+            throw new InvalidDataException("O pacote de atualização está vazio ou excede o limite de 2 GiB.");
 
         stageProgress?.Report(new("verify", "Conferindo a integridade SHA-256 do pacote..."));
         await VerifyPackageHashAsync(zip, update.Sha256, token);
@@ -310,6 +315,7 @@ public sealed class LauncherUpdateService
                 expectedHash.Length != 64 || !expectedHash.All(Uri.IsHexDigit))
                 throw new InvalidDataException($"Hash SHA-256 ausente ou inválido: {relative}");
 
+            EnsureSafeDestination(root, relative);
             var target = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
             if (!target.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Arquivo fora da staging: {relative}");
