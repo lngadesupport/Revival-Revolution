@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using Microsoft.Win32;
 
 namespace RevivalRevolution.Services;
 
@@ -108,10 +109,10 @@ public sealed class RadminHostService
     public async Task EnsureHostServerAsync(string root, string pythonExe, string hostAddress,
         CancellationToken token)
     {
-        // Register the persistent task even when an older manually-started API is already healthy.
+        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("A integração automática Radmin exige Windows.");
         var module = Path.Combine(root, "ranked_server", "host_agent.py");
         if (!File.Exists(module))
-            throw new FileNotFoundException("O agente automático do servidor não foi incluído na distribuição.", module);
+            throw new FileNotFoundException("O agente do servidor não foi incluído na distribuição.", module);
 
         var dataRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -120,45 +121,47 @@ public sealed class RadminHostService
         var database = Path.Combine(dataRoot, "ranked.sqlite3");
         var pythonw = Path.Combine(Path.GetDirectoryName(pythonExe)!, "pythonw.exe");
         var executable = File.Exists(pythonw) ? pythonw : pythonExe;
-        var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value
-            ?? throw new InvalidOperationException("Não foi possível identificar o usuário Windows para instalar a inicialização automática.");
-        var arguments = $"-m ranked_server.host_agent --host {hostAddress} --port {ServerPort} --database \"{database}\" --root \"{root}\"";
-        static string Xml(string value) => System.Security.SecurityElement.Escape(value) ?? string.Empty;
-        var taskXml = $"""
-            <?xml version="1.0" encoding="UTF-16"?>
-            <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-              <RegistrationInfo><Description>Inicia e monitora automaticamente a API privada do Revival Revolution quando a interface Radmin VPN estiver disponível.</Description></RegistrationInfo>
-              <Triggers><LogonTrigger><Enabled>true</Enabled></LogonTrigger></Triggers>
-              <Principals><Principal id="Author"><UserId>{Xml(sid)}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
-              <Settings>
-                <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-                <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-                <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-                <StartWhenAvailable>true</StartWhenAvailable>
-                <Enabled>true</Enabled>
-                <Hidden>true</Hidden>
-                <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-              </Settings>
-              <Actions Context="Author"><Exec><Command>{Xml(executable)}</Command><Arguments>{Xml(arguments)}</Arguments><WorkingDirectory>{Xml(root)}</WorkingDirectory></Exec></Actions>
-            </Task>
-            """.TrimStart();
-        var taskFile = Path.Combine(dataRoot, "host-agent-task.xml");
-        await File.WriteAllTextAsync(taskFile, taskXml, Encoding.Unicode, token);
-
-        var query = await RunTaskSchedulerAsync(new[] { "/Query", "/TN", "Revival Revolution Ranked Host" }, token);
-        var taskCreated = query.ExitCode != 0;
-        if (taskCreated)
+        var arguments = new[]
         {
-            var create = await RunTaskSchedulerAsync(new[] { "/Create", "/TN", "Revival Revolution Ranked Host", "/XML", taskFile, "/F" }, token);
-            if (create.ExitCode != 0)
-                throw new InvalidOperationException("O Windows não conseguiu registrar a inicialização automática do servidor: " + create.Output.Trim());
+            "-m", "ranked_server.host_agent", "--host", hostAddress,
+            "--port", ServerPort.ToString(), "--database", database, "--root", root
+        };
+
+        // HKCU Run is per-user and does not require elevation. Task Scheduler /Create
+        // was failing with ERROR_ACCESS_DENIED for standard Windows accounts.
+        try
+        {
+            using var runKey = Registry.CurrentUser.CreateSubKey(@"Software\\Microsoft\\Windows\\CurrentVersion\\Run", writable: true);
+            if (runKey is not null)
+            {
+                var commandLine = QuoteWindowsArgument(executable) + " " +
+                    string.Join(" ", arguments.Select(QuoteWindowsArgument));
+                runKey.SetValue("RevivalRevolutionRankedHost", commandLine, RegistryValueKind.String);
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // The host can still run for this session; persistent logon startup is optional.
+        }
+        catch (System.Security.SecurityException)
+        {
+            // The host can still run for this session; persistent logon startup is optional.
         }
 
-        if (!taskCreated && await IsHealthyAsync(hostAddress, token)) return;
-
-        var run = await RunTaskSchedulerAsync(new[] { "/Run", "/TN", "Revival Revolution Ranked Host" }, token);
-        if (run.ExitCode != 0)
-            throw new InvalidOperationException("O Windows não conseguiu iniciar o agente automático Radmin: " + run.Output.Trim());
+        if (!await IsHealthyAsync(hostAddress, token))
+        {
+            var start = new ProcessStartInfo(executable)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                WorkingDirectory = root
+            };
+            foreach (var argument in arguments) start.ArgumentList.Add(argument);
+            var process = Process.Start(start)
+                ?? throw new InvalidOperationException("Não foi possível iniciar o agente privado Radmin.");
+            process.Dispose();
+        }
 
         for (var attempt = 0; attempt < 35; attempt++)
         {
@@ -169,23 +172,8 @@ public sealed class RadminHostService
         throw new InvalidOperationException("A API Ranked não respondeu em 35 segundos. Consulte os logs em " + dataRoot);
     }
 
-    private static async Task<(int ExitCode, string Output)> RunTaskSchedulerAsync(
-        IEnumerable<string> arguments, CancellationToken token)
-    {
-        var start = new ProcessStartInfo("schtasks.exe")
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        foreach (var argument in arguments) start.ArgumentList.Add(argument);
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Não foi possível acessar o Agendador de Tarefas do Windows.");
-        var outputTask = process.StandardOutput.ReadToEndAsync(token);
-        var errorTask = process.StandardError.ReadToEndAsync(token);
-        await process.WaitForExitAsync(token);
-        return (process.ExitCode, (await outputTask) + (await errorTask));
-    }
+    private static string QuoteWindowsArgument(string value) =>
+        "\"" + value.Replace("\"", "\\\"") + "\"";
 
     public async Task WaitForServerAsync(string hostAddress, CancellationToken token)
     {

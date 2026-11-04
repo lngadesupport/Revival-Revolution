@@ -71,7 +71,7 @@ jobs:
           $exePath = Join-Path $publish "RevivalRevolution.exe"
           if (!(Test-Path $exePath)) { throw "Launcher executable missing from publish output." }
           $fileVersion = (Get-Item $exePath).VersionInfo.FileVersion
-          if ($fileVersion -ne "0.8.1.0") { throw "Expected launcher FileVersion 0.8.1.0, got $fileVersion." }
+          if ($fileVersion -ne "0.8.3.0") { throw "Expected launcher FileVersion 0.8.3.0, got $fileVersion." }
           $configPath = Join-Path $publish "launcher-update.json"
           if (!(Test-Path $configPath)) { throw "Updater configuration missing from publish output." }
           foreach ($asset in @(
