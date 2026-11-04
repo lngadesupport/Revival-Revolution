@@ -6,7 +6,6 @@ public sealed class LauncherSettings
 {
     public string PlayerName { get; set; } = "";
     public string PlayerTag { get; set; } = "";
-    public bool CheckUpdatesOnStartup { get; set; } = true;
     public bool ConfirmBeforeLaunch { get; set; } = false;
     public bool PersistLogs { get; set; } = true;
     public bool UseCustomRadminIp { get; set; } = false;
@@ -95,7 +94,6 @@ public sealed class LauncherSettingsService
         // no longer exposes them.
         PlayerName = BoundedText(settings.PlayerName, 24),
         PlayerTag = BoundedText(settings.PlayerTag, 12),
-        CheckUpdatesOnStartup = settings.CheckUpdatesOnStartup,
         ConfirmBeforeLaunch = settings.ConfirmBeforeLaunch,
         PersistLogs = settings.PersistLogs,
         UseCustomRadminIp = settings.UseCustomRadminIp,
