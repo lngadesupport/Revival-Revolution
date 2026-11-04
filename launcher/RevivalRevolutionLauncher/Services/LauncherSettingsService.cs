@@ -7,6 +7,7 @@ public sealed class LauncherSettings
     public string PlayerName { get; set; } = "";
     public string PlayerTag { get; set; } = "";
     public bool ConfirmBeforeLaunch { get; set; } = false;
+    public bool ReduceMotion { get; set; } = false;
     public bool PersistLogs { get; set; } = true;
     public bool UseCustomRadminIp { get; set; } = false;
     public string CustomRadminIp { get; set; } = "";
@@ -95,6 +96,7 @@ public sealed class LauncherSettingsService
         PlayerName = BoundedText(settings.PlayerName, 24),
         PlayerTag = BoundedText(settings.PlayerTag, 12),
         ConfirmBeforeLaunch = settings.ConfirmBeforeLaunch,
+        ReduceMotion = settings.ReduceMotion,
         PersistLogs = settings.PersistLogs,
         UseCustomRadminIp = settings.UseCustomRadminIp,
         CustomRadminIp = BoundedText(settings.CustomRadminIp, 15)
