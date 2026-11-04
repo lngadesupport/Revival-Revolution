@@ -41,6 +41,10 @@
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#3A252D"/>
                                 <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#E34450"/>
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#FFFFFF"/>
+                                <Setter TargetName="ButtonBorder" Property="BorderThickness" Value="2"/>
+                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.42"/>
                             </Trigger>
@@ -130,7 +134,7 @@
                             <TextBlock Text="COMUNIDADE" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
                             <Button x:Name="ModListNavButton" Style="{StaticResource NavButton}"
-                                    Content="03   Biblioteca de mods" Click="ModList_Click" FontSize="12"/>
+                                    Content="03   Comunidade" Click="ModList_Click" FontSize="12"/>
                             <Border Height="1" Background="#2D3542" Margin="5,17,5,16"/>
                             <TextBlock Text="SISTEMA" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
@@ -369,6 +373,140 @@
                                         HorizontalContentAlignment="Center" Margin="0"/>
                             </StackPanel>
                         </Border>
+                    </Grid>
+                </Grid>
+                <Grid x:Name="CommunityPage" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="3,0,3,18" LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="COMUNIDADE  /  CONTEÚDO LOCAL" FontSize="9" FontWeight="Bold"
+                                       Foreground="#E76A73"/>
+                            <TextBlock Text="Feito para jogar junto." FontSize="28" FontWeight="SemiBold"
+                                       Margin="0,3,0,2"/>
+                            <TextBlock Text="Acesse os canais da comunidade e acompanhe a evolução do conteúdo."
+                                       Foreground="#AAB2BF" FontSize="11"/>
+                        </StackPanel>
+                        <Button DockPanel.Dock="Right" Content="ABRIR DISCORD" Click="Discord_Click"
+                                VerticalAlignment="Center" Background="#303947" BorderBrush="#596578"
+                                Padding="16,12" Margin="16,0,0,0"/>
+                    </DockPanel>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,14">
+                        <Button x:Name="CommunityOverviewTab" Content="VISÃO GERAL" Click="CommunityOverview_Click"
+                                Padding="14,9" Margin="0,0,7,0"/>
+                        <Button x:Name="CommunityLibraryTab" Content="BIBLIOTECA" Click="CommunityLibrary_Click"
+                                Padding="14,9" Margin="0,0,7,0" Background="Transparent"/>
+                        <Button x:Name="CommunityLocalTab" Content="CONTEÚDO LOCAL" Click="CommunityLocal_Click"
+                                Padding="14,9" Margin="0" Background="Transparent"/>
+                    </StackPanel>
+                    <Grid Grid.Row="2">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="CommunityOverviewPanel">
+                                <Border Background="#E10D111A" BorderBrush="#414A59" BorderThickness="1"
+                                        CornerRadius="12" Padding="26" Margin="0,0,0,13">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="01  /  ENCONTRE A COMUNIDADE" FontSize="8"
+                                                       FontWeight="Bold" Foreground="#E76A73"/>
+                                            <TextBlock Text="A comunidade é parte do jogo." FontSize="25"
+                                                       FontWeight="Bold" Margin="0,7,0,4"/>
+                                            <TextBlock Text="Entre no Discord para encontrar outros jogadores, acompanhar novidades e receber suporte comunitário."
+                                                       FontSize="11" Foreground="#AAB2BF" TextWrapping="Wrap"
+                                                       MaxWidth="620" LineHeight="18"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Background="#252D39" BorderBrush="#596578"
+                                                BorderThickness="1" CornerRadius="10" Padding="18"
+                                                VerticalAlignment="Center" Margin="18,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="REVIVAL" FontSize="22" FontWeight="Black"
+                                                           FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue"
+                                                           HorizontalAlignment="Center"/>
+                                                <TextBlock Text="COMMUNITY" FontSize="8" FontWeight="Bold"
+                                                           Foreground="#E76A73" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Border Background="#D10D111A" BorderBrush="#394252" BorderThickness="1"
+                                            CornerRadius="10" Padding="20" Margin="0,0,7,0">
+                                        <StackPanel>
+                                            <TextBlock Text="CANAIS OFICIAIS" FontSize="8" FontWeight="Bold"
+                                                       Foreground="#E76A73"/>
+                                            <TextBlock Text="Discord da comunidade" FontSize="17" FontWeight="SemiBold"
+                                                       Margin="0,6,0,4"/>
+                                            <TextBlock Text="Canal para interação, ajuda e novidades do projeto."
+                                                       Foreground="#AAB2BF" FontSize="10" TextWrapping="Wrap"/>
+                                            <Button Content="ACESSAR DISCORD" Click="Discord_Click"
+                                                    HorizontalContentAlignment="Center" Margin="0,14,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Background="#D10D111A" BorderBrush="#394252"
+                                            BorderThickness="1" CornerRadius="10" Padding="20" Margin="7,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="PROJETO" FontSize="8" FontWeight="Bold"
+                                                       Foreground="#E76A73"/>
+                                            <TextBlock Text="Desenvolvimento transparente" FontSize="17"
+                                                       FontWeight="SemiBold" Margin="0,6,0,4"/>
+                                            <TextBlock Text="Acompanhe o código, as melhorias e as limitações conhecidas no repositório."
+                                                       Foreground="#AAB2BF" FontSize="10" TextWrapping="Wrap"/>
+                                            <Button Content="ABRIR REPOSITÓRIO" Click="Repository_Click"
+                                                    HorizontalContentAlignment="Center" Margin="0,14,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel x:Name="CommunityLibraryPanel" Visibility="Collapsed">
+                                <Border Background="#E10D111A" BorderBrush="#414A59" BorderThickness="1"
+                                        CornerRadius="12" Padding="26">
+                                    <StackPanel>
+                                        <TextBlock Text="02  /  BIBLIOTECA DE MODS" FontSize="8" FontWeight="Bold"
+                                                   Foreground="#D6A45B"/>
+                                        <TextBlock Text="Integração em desenvolvimento" FontSize="25"
+                                                   FontWeight="Bold" Margin="0,7,0,5"/>
+                                        <TextBlock Text="O launcher ainda não possui um catálogo confiável, verificação de compatibilidade ou instalador de mods. Por segurança, esta área não instala, atualiza, remove nem modifica arquivos do jogo."
+                                                   FontSize="11" Foreground="#AAB2BF" TextWrapping="Wrap"
+                                                   MaxWidth="760" LineHeight="19"/>
+                                        <Border Background="#2A2118" BorderBrush="#725735" BorderThickness="1"
+                                                CornerRadius="7" Padding="13" Margin="0,18,0,0">
+                                            <TextBlock Text="IMPORTANTE  /  Mods, ports, perfis e backups continuam sob controle do usuário. Nenhum conteúdo será alterado por esta versão do launcher."
+                                                       Foreground="#E6C28D" FontSize="10" TextWrapping="Wrap"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel x:Name="CommunityLocalPanel" Visibility="Collapsed">
+                                <Border Background="#E10D111A" BorderBrush="#414A59" BorderThickness="1"
+                                        CornerRadius="12" Padding="24">
+                                    <StackPanel>
+                                        <TextBlock Text="03  /  CONTEÚDO LOCAL" FontSize="8" FontWeight="Bold"
+                                                   Foreground="#E76A73"/>
+                                        <TextBlock Text="Seus arquivos permanecem seus." FontSize="25"
+                                                   FontWeight="Bold" Margin="0,7,0,5"/>
+                                        <TextBlock Text="O launcher não gerencia mods nem conteúdo personalizado. Você pode abrir a pasta da instalação para administrar seus próprios arquivos."
+                                                   FontSize="11" Foreground="#AAB2BF" TextWrapping="Wrap"
+                                                   MaxWidth="760" LineHeight="19"/>
+                                        <DockPanel Margin="0,18,0,0" LastChildFill="False">
+                                            <TextBlock x:Name="CommunityGamePath" Text="Nenhuma instalação selecionada."
+                                                       Foreground="#9DA5B3" FontSize="10"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       MaxWidth="600"/>
+                                            <Button Content="ABRIR PASTA DO JOGO" Click="OpenGameFolder_Click"
+                                                    DockPanel.Dock="Right" Margin="14,0,0,0"
+                                                    HorizontalContentAlignment="Center"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
                     </Grid>
                 </Grid>
                 <ContentControl x:Name="PrivateMatchHost" Visibility="Collapsed"/>
