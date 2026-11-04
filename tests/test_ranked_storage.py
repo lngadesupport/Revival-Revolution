@@ -30,6 +30,25 @@ class RankedStoreTests(unittest.TestCase):
         self.assertEqual(match["opponent"]["player_id"], self.one["player_id"])
         self.assertIsNotNone(self.store.current_match(self.one["player_id"]))
 
+    def test_random_match_creates_radmin_room_and_assigns_host_guest(self):
+        self.store.join_queue(self.one["player_id"], "sa-east")
+        self.store.join_queue(self.two["player_id"], "sa-east")
+
+        first = self.store.current_match(self.one["player_id"])
+        second = self.store.current_match(self.two["player_id"])
+        self.assertEqual(first["match_id"], second["match_id"])
+        self.assertIn(first["room_role"], ("host", "guest"))
+        self.assertIn(second["room_role"], ("host", "guest"))
+        self.assertNotEqual(first["room_role"], second["room_role"])
+        self.assertEqual(first["room_status"], "matched")
+        self.assertEqual(second["room_status"], "matched")
+
+        self.store.accept_match(self.one["player_id"])
+        ready = self.store.accept_match(self.two["player_id"])
+        self.assertEqual(ready["status"], "ready")
+        host_id = self.one["player_id"] if first["room_role"] == "host" else self.two["player_id"]
+        self.assertEqual(self.store.start_private_room(host_id)["status"], "starting")
+
     def test_longest_wait_expands_rating_window_for_new_arrival(self):
         with self.store.transaction() as db:
             db.execute("UPDATE players SET rating=1000 WHERE player_id=?", (self.one["player_id"],))
