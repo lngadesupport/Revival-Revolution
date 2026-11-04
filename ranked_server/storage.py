@@ -387,9 +387,11 @@ class RankedStore:
                 self._match_queued_in_region(db, queued["region"], now, mode=mode)
             row = db.execute("""
                 SELECT match_id FROM matches
-                WHERE status IN ('assigned','ready') AND match_type=? AND (player_one=? OR player_two=?)
+                WHERE status IN ('assigned','ready')
+                  AND (match_type=? OR (?='casual' AND match_type='private'))
+                  AND (player_one=? OR player_two=?)
                 ORDER BY created_at DESC LIMIT 1
-            """, (mode, player_id, player_id)).fetchone()
+            """, (mode, mode, player_id, player_id)).fetchone()
             return self._match_payload(db, row["match_id"], player_id) if row else None
 
     def leave_queue(self, player_id: str, mode: str | None = None) -> bool:
@@ -416,7 +418,7 @@ class RankedStore:
                 "SELECT COUNT(*) FROM queue WHERE region=? AND queue_mode=? AND (joined_at<? OR (joined_at=? AND player_id<=?))",
                 (row["region"], mode, row["joined_at"], row["joined_at"], player_id),
             ).fetchone()[0]
-            return {"queued": True, "region": row["region"], "joined_at": row["joined_at"], "position": position}
+            return {"queued": True, "mode": mode, "region": row["region"], "joined_at": row["joined_at"], "position": position}
 
 
     @staticmethod
