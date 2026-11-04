@@ -39,7 +39,7 @@ A distribuição original inclui scripts Python, bridges gerenciadas e nativas, 
 ## Experiência da interface
 
 - A navegação principal mantém apenas JOGAR (modo offline, matchmaking Radmin e sala por código) e SISTEMA (diagnósticos e configurações). O launcher não inclui loja, biblioteca de mods nem central social.
-- Atalhos: Ctrl+1 (modo offline), Ctrl+2 (sala por código), Ctrl+3 (diagnósticos), Ctrl+4 (configurações); Esc retorna da sala ao dashboard.
+- Atalhos: Ctrl+1 (modo offline), Ctrl+2 (jogo online), Ctrl+3 (diagnósticos), Ctrl+4 (configurações); Esc retorna da sala ao dashboard.
 - As configurações oferecem abas Geral, Interface, Rede, Dados e Suporte, com confirmação de inicialização, redução de movimento, logs locais e validação em tempo real do endpoint Radmin manual.
 - O diagnóstico distingue dependências essenciais das opcionais, apresenta avisos não bloqueantes e permite filtrar e copiar o relatório.
 - A tela ONLINE permite buscar adversários aleatórios na fila regional Radmin, acompanhar posição/cancelar a busca ou usar códigos de convite de seis caracteres. O pareamento cria uma sala Radmin P2P; ambos aceitam automaticamente e o anfitrião aleatório inicia o jogo automaticamente após o aceite bilateral.
