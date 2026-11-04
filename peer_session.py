@@ -91,17 +91,32 @@ def atomic_json(path,value):
 class GameBridge:
     def __init__(self,root,slot,session):self.root=root;self.slot=slot;self.session=session;self.command=None
     def begin(self,action,**extra):
-        pid=int((self.root/'netplay-pid.txt').read_text().strip())
+        try:
+            pid=int((self.root/'netplay-pid.txt').read_text().strip())
+        except (OSError,ValueError) as exc:
+            raise RuntimeError('Game process identity is unavailable; relaunch the game through the launcher') from exc
+        if pid<=0:raise RuntimeError('Game process identity is invalid')
         self.command=dict(id=uuid.uuid4().hex,action=action,session_id=self.session,target_pid=pid,protocol=1,slot=self.slot,frames=8)
         self.command.update(extra)
-        atomic_json(self.root/'game-command.json',self.command);self.deadline=time.monotonic()+(120 if action in ('live_local_test','peer_prepare') else 65 if action=='fighter_test_load' else 60 if action=='open_local_vs' else 18)
+        if not atomic_json(self.root/'game-command.json',self.command):
+            raise RuntimeError('Game bridge command is temporarily locked; retry the action')
+        self.deadline=time.monotonic()+(120 if action in ('live_local_test','peer_prepare') else 65 if action=='fighter_test_load' else 60 if action=='open_local_vs' else 18)
     def poll(self):
         if time.monotonic()>self.deadline:raise RuntimeError('Game bridge timed out; return to the main menu and attach the launcher')
         try:r=json.loads((self.root/'game-response.json').read_text())
         except (OSError,ValueError):return None
-        if r.get('id')!=self.command['id'] or r.get('pid')!=self.command['target_pid'] or r.get('state') in ('opening_vs','selection_applying','selection_waiting','fighter_loading','fighter_capturing','live_trial_running'):return None
-        if r.get('state') not in ('peer_prepared','vs_ready','selection_ready','selection_previewed','selection_applied','selection_ended','fighter_loaded','fighter_captured','fighter_replayed','fighter_replay_failed','live_started','live_trial_passed','live_trial_failed'):raise RuntimeError(r.get('message','Game bridge rejected the session'))
-        return r['state']
+        if not isinstance(r,dict):return None
+        if (r.get('id')!=self.command['id'] or type(r.get('pid')) is not int
+                or r.get('pid')!=self.command['target_pid']):
+            return None
+        state=r.get('state')
+        if state in ('opening_vs','selection_applying','selection_waiting','fighter_loading','fighter_capturing','live_trial_running'):
+            return None
+        if state not in ('peer_prepared','vs_ready','selection_ready','selection_previewed','selection_applied','selection_ended','fighter_loaded','fighter_captured','fighter_replayed','fighter_replay_failed','live_started','live_trial_passed','live_trial_failed'):
+            message=r.get('message')
+            if not isinstance(message,str) or not message.strip():message='Game bridge rejected the session'
+            raise RuntimeError(message[:1024])
+        return state
 
 class Session:
     def __init__(self,root,mode,code='',bind='0.0.0.0',port=0,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True,skip_native_preflight=False,setup_timeout=90):
