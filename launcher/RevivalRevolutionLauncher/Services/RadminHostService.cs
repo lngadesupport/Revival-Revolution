@@ -55,7 +55,7 @@ public sealed class RadminHostService
         }
         if (missingUdp)
         {
-            commands.AppendLine($"New-NetFirewallRule -DisplayName '{UdpRule}' -Direction Inbound -Action Allow -Enabled True -Profile Any -Protocol UDP -Program '{python}' -RemoteAddress '26.0.0.0/8' | Out-Null");
+            commands.AppendLine($"New-NetFirewallRule -DisplayName '{UdpRule}' -Direction Inbound -Action Allow -Enabled True -Profile Any -Protocol UDP -Program '{python}' -LocalPort {PeerPort} -RemoteAddress '26.0.0.0/8' | Out-Null");
         }
 
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes("$ErrorActionPreference='Stop'\n" + commands));
