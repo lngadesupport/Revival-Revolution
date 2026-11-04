@@ -256,7 +256,6 @@ class RankedStore:
             "opponent_accepted": bool(row["accepted_two"] if own else row["accepted_one"]),
             "room_role": ("host" if room["host_player"] == player_id else "guest") if room else None,
             "room_status": room["status"] if room else None,
-            "connection_code": room["connection_code"] if room else None,
         }
 
     @staticmethod
