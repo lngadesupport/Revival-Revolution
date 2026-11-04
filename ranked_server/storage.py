@@ -96,6 +96,7 @@ class RankedStore:
             match_columns = {row["name"] for row in db.execute("PRAGMA table_info(matches)")}
             if "match_type" not in match_columns:
                 db.execute("ALTER TABLE matches ADD COLUMN match_type TEXT NOT NULL DEFAULT 'ranked'")
+            db.execute("UPDATE matches SET match_type='private' WHERE match_id IN (SELECT match_id FROM private_rooms WHERE match_id IS NOT NULL)")
 
     @staticmethod
     def _token_hash(token: str) -> str:
