@@ -135,7 +135,7 @@
                             <Button x:Name="OfflineNavButton" Style="{StaticResource NavButton}"
                                     Content="01   Modo offline" Click="Launch_Click" FontSize="13" ToolTip="Atalho: Ctrl+1" AutomationProperties.Name="Iniciar modo offline"/>
                             <Button x:Name="PrivateMatchNavButton" Style="{StaticResource NavButton}"
-                                    Content="02   Sala por código" Click="PrivateMatch_Click" FontSize="13" ToolTip="Atalho: Ctrl+2" AutomationProperties.Name="Abrir sala por código"/>
+                                    Content="02   Jogo online" Click="PrivateMatch_Click" FontSize="13" ToolTip="Atalho: Ctrl+2" AutomationProperties.Name="Abrir jogo online"/>
                             <TextBlock Text="SISTEMA" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
                             <Button x:Name="DiagnosticsNavButton" Style="{StaticResource NavButton}"
@@ -241,7 +241,7 @@
                                         <StackPanel>
                                             <TextBlock Text="02  /  MULTIPLAYER" FontSize="8" FontWeight="Bold"
                                                        Foreground="#E76A73"/>
-                                            <TextBlock Text="Sala por código" FontSize="18" FontWeight="SemiBold"
+                                            <TextBlock Text="Jogo online" FontSize="18" FontWeight="SemiBold"
                                                        Margin="0,7,0,3"/>
                                             <TextBlock Text="Crie um convite privado ou conecte-se usando o código de outro jogador."
                                                        FontSize="10" Foreground="#AAB2BF" TextWrapping="Wrap"
