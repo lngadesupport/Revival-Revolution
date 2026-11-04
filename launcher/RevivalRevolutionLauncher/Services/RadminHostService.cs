@@ -173,7 +173,7 @@ public sealed class RadminHostService
     }
 
     private static string QuoteWindowsArgument(string value) =>
-        "\\"" + value.Replace("\\", "\\\\").Replace("\\"", "\\\\\\"") + "\\"";
+        "\"" + value.Replace("\"", "\\\"") + "\"";
 
     public async Task WaitForServerAsync(string hostAddress, CancellationToken token)
     {
