@@ -21,13 +21,25 @@ public sealed class LauncherSettingsService
 
     public LauncherSettings Load()
     {
+        if (!File.Exists(SettingsPath)) return new LauncherSettings();
+
         try
         {
-            if (!File.Exists(SettingsPath)) return new LauncherSettings();
-            return JsonSerializer.Deserialize<LauncherSettings>(File.ReadAllText(SettingsPath), JsonOptions)
-                ?? new LauncherSettings();
+            // Allow the launcher UI and diagnostic readers to inspect the file
+            // without making a transient sharing violation look like corruption.
+            using var stream = new FileStream(SettingsPath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            return Normalize(JsonSerializer.Deserialize<LauncherSettings>(stream, JsonOptions)
+                ?? new LauncherSettings());
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (JsonException)
+        {
+            // Preserve the user's damaged file for recovery instead of silently
+            // overwriting the only copy with defaults on the next save.
+            TryArchiveCorruptSettings();
+            return new LauncherSettings();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             return new LauncherSettings();
         }
@@ -36,6 +48,7 @@ public sealed class LauncherSettingsService
     public void Save(LauncherSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        settings = Normalize(settings);
         Directory.CreateDirectory(SettingsDirectory);
 
         // Use a unique temporary file in the same directory so concurrent writes
@@ -59,6 +72,35 @@ public sealed class LauncherSettingsService
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    private static LauncherSettings Normalize(LauncherSettings settings) => new()
+    {
+        // Older releases stored these fields even though the current UI no
+        // longer exposes them. Keep bounded legacy values for forward/backward
+        // compatibility and prevent malformed JSON from injecting nulls.
+        PlayerName = (settings.PlayerName ?? string.Empty).Trim()[..Math.Min(
+            (settings.PlayerName ?? string.Empty).Trim().Length, 24)],
+        PlayerTag = (settings.PlayerTag ?? string.Empty).Trim()[..Math.Min(
+            (settings.PlayerTag ?? string.Empty).Trim().Length, 12)],
+        CheckUpdatesOnStartup = settings.CheckUpdatesOnStartup,
+        ConfirmBeforeLaunch = settings.ConfirmBeforeLaunch,
+        PersistLogs = settings.PersistLogs
+    };
+
+    private static void TryArchiveCorruptSettings()
+    {
+        try
+        {
+            if (!File.Exists(SettingsPath)) return;
+            var backup = SettingsPath + ".corrupt-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff") +
+                "-" + Guid.NewGuid().ToString("N")[..8];
+            File.Move(SettingsPath, backup);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Loading defaults remains possible even if the backup cannot be moved.
         }
     }
 
