@@ -48,6 +48,33 @@ privado do cliente, nunca em logs ou arquivos públicos. A API social não é
 apresentada como interface social do launcher; a integração visual pretendida
 é dentro do jogo, ainda pendente de um ponto de extensão verificável.
 
+## Ranked e transporte de partidas Radmin
+
+- POST /v1/ranked/queue/join, GET /v1/ranked/queue e
+  POST /v1/ranked/queue/leave usam uma fila separada da fila casual.
+- GET /v1/ranked/match consulta somente partidas Ranked; GET /v1/match
+  preserva as partidas casuais e privadas existentes.
+- POST /v1/ranked/match/accept|decline e /finish controlam o ciclo de aceite
+  e encerramento sem misturar partidas casuais.
+- POST /v1/ranked/match/connection-code aceita MR1 somente do host (slot 0)
+  de uma partida pronta. O código deve apontar para IPv4 Radmin 26.x.x.x e
+  UDP 8766; depois de publicado, não pode ser substituído.
+- GET /v1/ranked/me e GET /v1/ranked/leaderboard?limit=100 retornam rating,
+  divisão, V/D/E, histórico e classificação da temporada.
+- O endpoint interno POST /internal/v1/matches/{match_id}/result exige
+  X-Ranked-Authority comparado em tempo constante com RANKED_RESULT_SECRET.
+  Não aceita bearer token de jogador. Sem segredo configurado, responde 503.
+- O launcher não contém nem recebe RANKED_RESULT_SECRET. Não configurar o
+  segredo até existir uma autoridade confiável integrada ao jogo/bridge.
+
+## Rede privada Radmin
+
+Todos os jogadores devem entrar na mesma rede Radmin. O host executa a API
+TCP 8765 vinculada ao seu IP virtual Radmin; o tráfego peer usa UDP 8766
+diretamente entre os IPs Radmin dos jogadores. STUN, AutoPunch, MR2, relay
+externo e fallback público não fazem parte do transporte suportado. O IP da
+API é o endereço do servidor, não o endereço peer do host da partida.
+
 ## Limitações conhecidas da base 0.8.1
 
 - O matchmaking aleatório e por código cria atribuições no banco; ainda não
