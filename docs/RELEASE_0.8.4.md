@@ -16,7 +16,17 @@ This branch is the isolated 0.8.4 workstream. It is based on the 0.8.3 launcher 
 
 The current offline bootstrap starts `ufo.exe` directly with fullscreen arguments; it does not invoke a separate Metal Revolution Configuration executable. The launcher must not disable, remove, patch, or bypass TenProtect or any official anti-cheat/security component. Any configuration flow changes must preserve the game's required protection and normal startup dependencies.
 
-## Current implementation status\n\n- The settings window now has dedicated tabs for General, Controller, Video & Graphics, Audio, Subtitles, and About.\n- Controller, video, audio, and subtitle presentation preferences are stored in the existing per-user JSON settings file under `%LocalAppData%\\RevivalRevolution`. Existing settings files remain compatible because new fields have defaults.\n- The settings UI explicitly labels controller input, graphics/FPS, audio, and subtitle rendering as not yet applied to the game. Saving a preference does not patch game files or claim an in-game effect.\n- The FPS selector offers 60, 75, 90, 120, 144, 165, 180, 200, and 240 as saved preferences only; actual caps await a verified supported mechanism.\n- The Mod List page/navigation is absent from the current launcher tree, and the inspected main window, startup, and offline bootstrap files contain no Mod List, Metal Revolution Configuration, or TenProtect launch references. The official protection/runtime dependencies are not removed or bypassed.\n\n## Known implementation prerequisites
+## Current implementation status
+
+- The settings window has dedicated tabs for General, Controller, Video & Graphics, Audio, Subtitles, and About.
+- Controller, video, audio, and subtitle presentation preferences are stored in the existing per-user JSON settings file under `%LocalAppData%\\RevivalRevolution`. Existing settings files remain compatible because new fields have defaults.
+- The graphics tab includes a read-only discovery action. It checks a bounded set of Unity/game configuration locations and relevant registry metadata; it does not write game files or change registry values.
+- Resolution choices (1280×720, 1600×900, 1920×1080, 2560×1440, and 3840×2160) and fullscreen are passed to the Unity player on the next offline launch using documented command-line arguments. The default remains fullscreen to preserve the previous launch behavior.
+- The controller tab has live read-only XInput detection and telemetry for connected XInput-compatible devices (buttons, triggers, and both sticks). Generic HID-only devices may not be detected. Dead-zone, sensitivity, curve, inversion, and vibration preferences are saved, but are not yet applied to game input.
+- Graphics quality presets, V-Sync, FPS cap (60–240), FPS overlay, audio levels, and subtitle rendering preferences are saved only; their in-game application remains pending verification.
+- The Mod List page/navigation is absent from the current launcher tree. The inspected startup and offline bootstrap paths do not launch a separate Metal Revolution Configuration app or TenProtect executable. Official protection/runtime dependencies are not removed or bypassed.
+
+## Known implementation prerequisites
 
 - The repository does not currently include authoritative character-intro dialogue/transcripts and timestamps for the target game patch. Do not fabricate translations or subtitle timings.
 - Controller dead-zone/sensitivity changes must not be presented as functional until an input path actually consumes and applies them in-game.
