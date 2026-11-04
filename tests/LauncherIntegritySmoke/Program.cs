@@ -27,6 +27,23 @@ var roundTrip = JsonSerializer.Deserialize<LauncherSettings>(JsonSerializer.Seri
 Require(roundTrip is not null && roundTrip.FpsLimit == 144 &&
     roundTrip.ControllerLeftDeadZone == 12 && !roundTrip.SubtitlesEnabled &&
     roundTrip.AudioMusicVolume == 65, "0.8.4 settings did not survive JSON round-trip.");
+var defaultVideoOptions = UnityPlayerLaunchOptions.FromSettings(new LauncherSettings());
+Require(defaultVideoOptions.Fullscreen == "1" && defaultVideoOptions.Width is null &&
+    defaultVideoOptions.Height is null, "Default display settings must preserve the existing fullscreen launch.");
+var customVideoOptions = UnityPlayerLaunchOptions.FromSettings(new LauncherSettings
+{
+    VideoFullscreen = false,
+    VideoResolution = "1920 × 1080"
+});
+Require(customVideoOptions.Fullscreen == "0" && customVideoOptions.Width == "1920" &&
+    customVideoOptions.Height == "1080", "Validated Unity resolution/fullscreen options were not generated.");
+var unsupportedVideoOptions = UnityPlayerLaunchOptions.FromSettings(new LauncherSettings
+{
+    VideoResolution = "3440 × 1440"
+});
+Require(unsupportedVideoOptions.Width is null && unsupportedVideoOptions.Height is null,
+    "Unsupported resolutions must not be passed to the game.");
+
 
 var root = Path.Combine(Path.GetTempPath(), "RevivalLauncherIntegrity-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
