@@ -20,6 +20,9 @@ PROTOCOL=1
 BUILD='metal-99.4.3.895-gekko-9da2363-peer9'
 
 def find_radmin_ipv4():
+    configured = os.environ.get('REVIVAL_RADMIN_IP', '').strip()
+    if configured:
+        return require_radmin_ipv4(configured)
     try:
         candidates = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET, socket.SOCK_DGRAM)
     except OSError:
