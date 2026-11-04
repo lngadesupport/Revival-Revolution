@@ -272,7 +272,7 @@ public partial class MainWindow : Window
             File.WriteAllText(Path.Combine(_distributionRoot!, "python-runtime.txt"), python);
             File.WriteAllText(Path.Combine(_gameFolder!, "python-runtime.txt"), python);
             _config.SaveGameFolder(_root, _gameFolder!, _distributionRoot);
-            _gameLaunch.StartOffline(python, script, _distributionRoot!);
+            _gameLaunch.StartOffline(python, script, _distributionRoot!, _settings);
             _launchPending = true;
             _launchRequestedAt = DateTime.UtcNow;
             Log("Inicialização offline iniciada. Aguardando o processo ufo.exe; o PLAY ficará bloqueado por até 45 segundos.");
