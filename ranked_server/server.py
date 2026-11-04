@@ -114,9 +114,9 @@ def make_handler(store: RankedStore):
                 except ValueError:
                     return self._json(400, {"error": "invalid_request", "message": "limit must be an integer"})
                 return self._json(200, {"entries": social.leaderboard(limit)})
-            if path == "/v1/queue":
+            if path in ("/v1/queue", "/v1/ranked/queue"):
                 return self._json(200, store.queue_status(player_id))
-            if path == "/v1/match":
+            if path in ("/v1/match", "/v1/ranked/match"):
                 return self._json(200, {"match": store.current_match(player_id)})
             if path == "/v1/rooms/current":
                 return self._json(200, store.current_private_room(player_id))
@@ -174,8 +174,9 @@ def make_handler(store: RankedStore):
                     return self._json(200, {"online": True, "last_seen": player.get("last_seen")})
                 if path == "/v1/friends/remove":
                     return self._json(200, {"removed": social.remove_friend(player_id, body.get("player_id"))})
-                if path == "/v1/queue/join":
-                    result = store.join_queue(player_id, body.get("region", "global"))
+                if path in ("/v1/queue/join", "/v1/ranked/queue/join"):
+                    mode = "ranked" if path == "/v1/ranked/queue/join" else "casual"
+                    result = store.join_queue(player_id, body.get("region", "global"), mode=mode)
                     if result:
                         return self._json(201, {"match": result})
                     return self._json(202, {"queued": True, "queue": store.queue_status(player_id)})
