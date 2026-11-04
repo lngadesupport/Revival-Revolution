@@ -11,6 +11,7 @@ public sealed class RadminHostService
 {
     public const string DefaultEndpoint = "http://26.226.57.19:8765";
     private const int ServerPort = 8765;
+    private const int PeerPort = 8766;
     private const string TcpRule = "Revival Revolution Ranked API - Radmin";
     private const string UdpRule = "Revival Revolution P2P - Radmin Python";
     private static readonly HttpClient HealthClient = new() { Timeout = TimeSpan.FromSeconds(2) };
