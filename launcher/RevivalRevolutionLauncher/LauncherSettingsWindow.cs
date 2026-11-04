@@ -23,6 +23,7 @@ public sealed class LauncherSettingsWindow : Window
     private readonly ToggleButton _persistLogs = null!;
     private readonly CheckBox _customRadminIpEnabled = null!;
     private readonly TextBox _customRadminIp = null!;
+    private readonly TextBlock _customRadminIpHint = null!;
 
     public LauncherSettings Result { get; private set; }
 
@@ -236,13 +237,29 @@ public sealed class LauncherSettingsWindow : Window
         _customRadminIp = new TextBox
         {
             Text = current.CustomRadminIp, IsEnabled = current.UseCustomRadminIp,
-            Height = 38, Padding = new Thickness(10, 8, 10, 8),
+            MaxLength = 15, Height = 38, Padding = new Thickness(10, 8, 10, 8),
             ToolTip = "IPv4 da rede Radmin: 26.x.x.x"
         };
-        _customRadminIpEnabled.Checked += (_, _) => _customRadminIp.IsEnabled = true;
-        _customRadminIpEnabled.Unchecked += (_, _) => _customRadminIp.IsEnabled = false;
+        _customRadminIpHint = new TextBlock
+        {
+            FontSize = 9, Margin = new Thickness(2, 6, 0, 0),
+            TextWrapping = TextWrapping.Wrap
+        };
+        _customRadminIp.TextChanged += (_, _) => UpdateCustomRadminIpHint();
+        _customRadminIpEnabled.Checked += (_, _) =>
+        {
+            _customRadminIp.IsEnabled = true;
+            UpdateCustomRadminIpHint();
+        };
+        _customRadminIpEnabled.Unchecked += (_, _) =>
+        {
+            _customRadminIp.IsEnabled = false;
+            UpdateCustomRadminIpHint();
+        };
         network.Children.Add(_customRadminIpEnabled);
         network.Children.Add(_customRadminIp);
+        network.Children.Add(_customRadminIpHint);
+        UpdateCustomRadminIpHint();
         networkTabContent.Children.Add(networkCard);
 
         var supportCard = MakeCard();
@@ -339,6 +356,28 @@ public sealed class LauncherSettingsWindow : Window
                 e.Handled = true;
             }
         };
+    }
+
+    private void UpdateCustomRadminIpHint()
+    {
+        if (_customRadminIpHint is null || _customRadminIp is null || _customRadminIpEnabled is null)
+            return;
+
+        if (_customRadminIpEnabled.IsChecked != true)
+        {
+            _customRadminIpHint.Text = "Desativado — o launcher continuará usando o endpoint Radmin padrão.";
+            _customRadminIpHint.Foreground = Brush(MutedColor);
+        }
+        else if (IsValidRadminIp(_customRadminIp.Text.Trim()))
+        {
+            _customRadminIpHint.Text = "Endereço válido da faixa privada Radmin 26.0.0.0/8.";
+            _customRadminIpHint.Foreground = Brush(Color.FromRgb(113, 218, 151));
+        }
+        else
+        {
+            _customRadminIpHint.Text = "Informe um IPv4 válido iniciado por 26. Exemplo: 26.226.57.19.";
+            _customRadminIpHint.Foreground = Brush(Color.FromRgb(230, 183, 112));
+        }
     }
 
     private static bool IsValidRadminIp(string value) =>
