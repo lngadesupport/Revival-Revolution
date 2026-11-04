@@ -15,12 +15,18 @@ class CompetitiveRatingTests(unittest.TestCase):
         self.one = self.accounts.register("RANKED-ONE")
         self.two = self.accounts.register("RANKED-TWO")
         self.competitive = CompetitiveStore(self.db, clock=lambda: self.now)
-        self.accounts.join_queue(self.one["player_id"], "sa-east")
-        match = self.accounts.join_queue(self.two["player_id"], "sa-east")
+        self.accounts.join_queue(self.one["player_id"], "sa-east", mode="ranked")
+        match = self.accounts.join_queue(self.two["player_id"], "sa-east", mode="ranked")
         self.match_id = match["match_id"]
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_casual_queue_does_not_create_ranked_match(self):
+        self.assertIsNone(self.accounts.join_queue(self.one["player_id"], "sa-east", mode="casual"))
+        self.assertIsNone(self.accounts.join_queue(self.two["player_id"], "sa-east", mode="ranked"))
+        self.assertEqual(self.accounts.queue_status(self.one["player_id"])["mode"], "casual")
+        self.assertEqual(self.accounts.queue_status(self.two["player_id"])["mode"], "ranked")
 
     def test_elo_is_zero_sum_and_rewards_upset(self):
         one, two = calculate_elo(1000, 1400, 1.0)
