@@ -7,9 +7,10 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 
 - Interface WPF com dashboard editorial, navegação agrupada e identidade visual escura com acento vermelho.
 - Sala por código integrada ao conteúdo principal, sem abrir uma segunda janela sobre o dashboard.
-- Configurações em abas Geral, Rede, Dados e Suporte, com preferência de acessibilidade para reduzir animações.
-- Central de diagnósticos com filtros por criticidade, resumo de integridade, cópia de relatório e acesso aos logs.
-- Atalhos de navegação: Ctrl+1 (offline), Ctrl+2 (sala), Ctrl+3 (diagnósticos), Ctrl+4 (configurações) e Esc (voltar da sala).
+- Configurações em abas Geral, Interface, Rede, Dados e Suporte, com preferência de acessibilidade para reduzir animações.
+- Central de diagnósticos com filtros por criticidade, resumo de integridade, avisos não bloqueantes, cópia de relatório e acesso aos logs.
+- Central de comunidade com subabas Visão geral, Biblioteca e Conteúdo local; a biblioteca informa claramente que catálogo e instalação de mods ainda não estão integrados.
+- Atalhos de navegação: Ctrl+1 (offline), Ctrl+2 (sala), Ctrl+3 (diagnósticos), Ctrl+4 (configurações), Ctrl+5 (comunidade) e Esc (voltar da sala).
 - Seleção e persistência da pasta que contém `ufo.exe` e `ufo_Data/Managed`.
 - Inicialização do fluxo offline original via `offline_launcher.py`, com logs
   em `Launcher/Logs`.
@@ -18,8 +19,9 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 - Diagnóstico de dependências essenciais offline e componentes opcionais
   multiplayer; a lista identifica a bridge correta `MetalNetplayBridgeV8.dll`
   e os scripts de sessão.
-- Central ONLINE com matchmaking aleatório e salas privadas por código,
-  usando a API Ranked e token no Gerenciador de Credenciais do Windows.
+- Central de salas privadas por código, com conta e token protegidos pelo
+  Gerenciador de Credenciais do Windows. Não há fila pública de matchmaking nem
+  ranking competitivo público nesta entrega.
 
 ## Build
 
@@ -59,15 +61,16 @@ precisa permanecer ligado e conectado. Não abra portas no roteador.
 
 ## Estado multiplayer 0.8.1
 
-A central ONLINE atribui partidas no servidor e integra aceite/recusa bilateral,
-acompanha a confirmação do adversário e restaura uma atribuição ativa ao
-reconectar a conta. A configuração Radmin permite API local e transporte UDP
+A central de sala privada cria e aceita convites por código, acompanha o estado
+do adversário e restaura uma sala ou atribuição ativa ao reconectar a conta. A configuração Radmin permite API local e transporte UDP
 direto pela VPN sem AutoPunch/STUN/relay externo. A janela ONLINE ainda não
 inicia o processo P2P automaticamente nem abre a luta sozinha. Não anunciar
 Ranked público nem aplicação de ELO nesta versão.
 
 A sala por código é um UserControl WPF embutido no conteúdo principal do
-launcher. O fluxo de conta, convite e confronto permanece separado do dashboard,
+launcher. A interface mostra o estado de disponibilidade do servidor, valida o
+formato do código de convite localmente e recupera a consulta da sala quando uma
+solicitação de cancelamento falha. O fluxo de conta, convite e confronto permanece separado do dashboard,
 mas compartilha a mesma janela e o mesmo shell de navegação. Recursos sociais
 de perfil, amigos e leaderboard não são simulados pela interface: só devem ser
 adicionados quando houver serviço e integração técnica verificáveis.
