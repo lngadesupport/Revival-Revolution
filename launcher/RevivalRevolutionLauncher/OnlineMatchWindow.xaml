@@ -1,7 +1,7 @@
 <UserControl x:Class="RevivalRevolution.OnlineMatchWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Height="760" MinHeight="680" Background="#080911" Foreground="#FFFFFF"
+        Background="#080911" Foreground="#FFFFFF"
         FontFamily="Segoe UI" Loaded="Window_Loaded">
     <UserControl.Resources>
         <SolidColorBrush x:Key="Panel" Color="#B00A0B18"/>
@@ -43,8 +43,8 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="REVIVAL REVOLUTION / PRIVATE MATCH" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold"/>
-                <TextBlock Text="PARTIDA PRIVADA" FontSize="34" FontWeight="Black" Margin="0,3,0,0"/>
+                <TextBlock Text="REVIVAL REVOLUTION / SALA POR CÓDIGO" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold"/>
+                <TextBlock Text="SALA POR CÓDIGO" FontSize="34" FontWeight="Black" Margin="0,3,0,0"/>
                 <TextBlock Text="Convide um jogador ou entre usando o código da sala." Foreground="{StaticResource Muted}" FontSize="13"/>
             </StackPanel>
             <Border Grid.Column="1" Background="#99101420" BorderBrush="#44FFFFFF" BorderThickness="1" CornerRadius="10" Padding="14,10" VerticalAlignment="Center">
