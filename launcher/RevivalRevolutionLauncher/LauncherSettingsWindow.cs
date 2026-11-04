@@ -18,8 +18,6 @@ public sealed class LauncherSettingsWindow : Window
     private static readonly Color MutedColor = Color.FromRgb(157, 163, 181);
     private static readonly Color AccentColor = Color.FromRgb(218, 48, 62);
 
-    private readonly TextBox _playerName;
-    private readonly TextBox _playerTag;
     private readonly ToggleButton _startupUpdates;
     private readonly ToggleButton _confirmLaunch;
     private readonly ToggleButton _persistLogs;
@@ -37,6 +35,9 @@ public sealed class LauncherSettingsWindow : Window
         MinHeight = 680;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.CanResize;
+        ShowInTaskbar = false;
+        UseLayoutRounding = true;
+        SnapsToDevicePixels = true;
         Background = Brush(BackgroundColor);
         Foreground = Brushes.White;
         FontFamily = new FontFamily("Segoe UI");
@@ -49,11 +50,11 @@ public sealed class LauncherSettingsWindow : Window
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var back = new Button
         {
-            Content = "‹",
+            Content = "←",
             Width = 42,
             Height = 42,
-            FontSize = 30,
-            Padding = new Thickness(0, -5, 0, 0),
+            FontSize = 19,
+            Padding = new Thickness(0),
             Background = Brush(SurfaceRaisedColor),
             BorderBrush = Brush(BorderColor),
             BorderThickness = new Thickness(1),
@@ -74,7 +75,7 @@ public sealed class LauncherSettingsWindow : Window
         });
         heading.Children.Add(new TextBlock
         {
-            Text = "Personalize sua experiência no Revival Revolution.",
+            Text = "Preferências, instalação e suporte em um só lugar.",
             Margin = new Thickness(0, 2, 0, 0),
             FontSize = 12,
             Foreground = Brush(MutedColor)
@@ -84,57 +85,72 @@ public sealed class LauncherSettingsWindow : Window
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
 
-        var footer = new DockPanel { LastChildFill = false, Margin = new Thickness(0, 18, 0, 0) };
+        var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 18, 0, 0) };
+        var reset = MakeButton("RESTAURAR PADRÕES", false);
+        reset.Click += (_, _) =>
+        {
+            _startupUpdates.IsChecked = true;
+            _confirmLaunch.IsChecked = false;
+            _persistLogs.IsChecked = true;
+        };
         var cancel = MakeButton("CANCELAR", false);
         cancel.Click += (_, _) => { DialogResult = false; Close(); };
         var save = MakeButton("SALVAR ALTERAÇÕES", true);
         save.Margin = new Thickness(10, 0, 0, 0);
         save.Click += (_, _) =>
         {
-            var playerName = _playerName.Text.Trim();
-            var playerTag = _playerTag.Text.Trim();
-            if (playerName.Length > 24 || playerTag.Length > 12)
-            {
-                MessageBox.Show(this, "O nome aceita até 24 caracteres e a tag até 12.",
-                    "Perfil inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            Result = new LauncherSettings
-            {
-                PlayerName = playerName,
-                PlayerTag = playerTag,
-                CheckUpdatesOnStartup = _startupUpdates.IsChecked == true,
-                ConfirmBeforeLaunch = _confirmLaunch.IsChecked == true,
-                PersistLogs = _persistLogs.IsChecked == true
-            };
+            Result = CopySettings(current);
+            Result.CheckUpdatesOnStartup = _startupUpdates.IsChecked == true;
+            Result.ConfirmBeforeLaunch = _confirmLaunch.IsChecked == true;
+            Result.PersistLogs = _persistLogs.IsChecked == true;
             DialogResult = true;
             Close();
         };
+        footer.Children.Add(reset);
+        cancel.Margin = new Thickness(10, 0, 0, 0);
         footer.Children.Add(cancel);
         footer.Children.Add(save);
-        DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);
 
         var content = new StackPanel();
 
         var accountCard = MakeCard();
         var account = CardContent(accountCard);
-        AddCardHeading(account, "ACCOUNT", "Seu perfil local do launcher");
-        var profileGrid = new Grid { Margin = new Thickness(0, 14, 0, 0) };
-        profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        _playerName = AddTextField(profileGrid, 0, "NOME DO JOGADOR", current.PlayerName, 24);
-        _playerTag = AddTextField(profileGrid, 1, "TAG / CLÃ", current.PlayerTag, 12);
-        account.Children.Add(profileGrid);
-        account.Children.Add(new TextBlock
+        AddCardHeading(account, "ACCOUNT", "Privacidade e dados locais");
+        var accountRow = new Grid { Margin = new Thickness(0, 14, 0, 0) };
+        accountRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
+        accountRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        accountRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var accountIcon = new Border
         {
-            Text = "Essas informações ficam salvas neste computador. Ainda não são enviadas nem sincronizadas com o jogo.",
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 12, 0, 0),
-            FontSize = 10,
-            Foreground = Brush(MutedColor)
+            Width = 34, Height = 34, CornerRadius = new CornerRadius(17),
+            Background = Brush(Color.FromRgb(48, 34, 48)),
+            Child = new TextBlock { Text = "●", Foreground = Brush(Color.FromRgb(255, 111, 122)),
+                FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center }
+        };
+        accountRow.Children.Add(accountIcon);
+        var accountLabels = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        accountLabels.Children.Add(new TextBlock
+        {
+            Text = "Conta local • sem login obrigatório",
+            FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White
         });
+        accountLabels.Children.Add(new TextBlock
+        {
+            Text = "Suas preferências ficam neste computador e não são sincronizadas com uma conta online.",
+            FontSize = 10, Foreground = Brush(MutedColor), TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 3, 12, 0)
+        });
+        Grid.SetColumn(accountLabels, 1);
+        accountRow.Children.Add(accountLabels);
+        var openData = MakeButton("ABRIR DADOS", false);
+        openData.Padding = new Thickness(11, 8, 11, 8);
+        openData.VerticalAlignment = VerticalAlignment.Center;
+        openData.Click += (_, _) => OpenFolder(Path.GetDirectoryName(settingsPath) ?? settingsPath);
+        Grid.SetColumn(openData, 2);
+        accountRow.Children.Add(openData);
+        account.Children.Add(accountRow);
         content.Children.Add(accountCard);
 
         var appCard = MakeCard();
@@ -156,10 +172,16 @@ public sealed class LauncherSettingsWindow : Window
         AddInfoRow(support, "Pasta do jogo", string.IsNullOrWhiteSpace(gameFolder)
             ? "Nenhuma pasta selecionada." : gameFolder);
         AddRowDivider(support);
-        AddInfoRow(support, "Arquivo de configurações", settingsPath);
+        var settingsRow = AddInfoRow(support, "Arquivo de configurações", settingsPath);
+        var openSettings = MakeButton("ABRIR", false);
+        openSettings.Padding = new Thickness(12, 7, 12, 7);
+        openSettings.Margin = new Thickness(12, 0, 0, 0);
+        openSettings.VerticalAlignment = VerticalAlignment.Center;
+        openSettings.Click += (_, _) => OpenFolder(Path.GetDirectoryName(settingsPath) ?? settingsPath);
+        settingsRow.Children.Add(openSettings);
         AddRowDivider(support);
         var logsRow = AddInfoRow(support, "Logs do launcher", logDirectory);
-        var openLogs = MakeButton("ABRIR PASTA", false);
+        var openLogs = MakeButton("ABRIR", false);
         openLogs.Padding = new Thickness(12, 7, 12, 7);
         openLogs.Margin = new Thickness(12, 0, 0, 0);
         openLogs.VerticalAlignment = VerticalAlignment.Center;
@@ -195,6 +217,22 @@ public sealed class LauncherSettingsWindow : Window
         };
         root.Children.Add(scroll);
         Content = root;
+
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                DialogResult = false;
+                Close();
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.S &&
+                     (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0)
+            {
+                save.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                e.Handled = true;
+            }
+        };
     }
 
     private static LauncherSettings CopySettings(LauncherSettings current) => new()
@@ -210,6 +248,7 @@ public sealed class LauncherSettingsWindow : Window
     {
         var card = new Border
         {
+            SnapsToDevicePixels = true,
             Background = Brush(SurfaceColor),
             BorderBrush = Brush(BorderColor),
             BorderThickness = new Thickness(1),
@@ -300,6 +339,7 @@ public sealed class LauncherSettingsWindow : Window
             Height = 25,
             IsChecked = isChecked,
             Focusable = true,
+            AutomationProperties = { Name = title, HelpText = description },
             Cursor = System.Windows.Input.Cursors.Hand,
             VerticalAlignment = VerticalAlignment.Center,
             Template = CreateSwitchTemplate()
@@ -319,6 +359,7 @@ public sealed class LauncherSettingsWindow : Window
         track.SetValue(Border.BackgroundProperty, Brush(Color.FromRgb(67, 72, 88)));
         track.SetValue(Border.BorderBrushProperty, Brush(Color.FromRgb(94, 100, 117)));
         track.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        track.SetValue(UIElement.SnapsToDevicePixelsProperty, true);
         grid.AppendChild(track);
 
         var knob = new FrameworkElementFactory(typeof(Ellipse));
@@ -328,6 +369,7 @@ public sealed class LauncherSettingsWindow : Window
         knob.SetValue(FrameworkElement.MarginProperty, new Thickness(3));
         knob.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Left);
         knob.SetValue(Shape.FillProperty, Brushes.White);
+        knob.SetValue(UIElement.IsHitTestVisibleProperty, false);
         grid.AppendChild(knob);
 
         var template = new ControlTemplate(typeof(ToggleButton)) { VisualTree = grid };
@@ -345,7 +387,7 @@ public sealed class LauncherSettingsWindow : Window
     private static Grid AddInfoRow(Panel parent, string title, string value)
     {
         var row = new Grid { Margin = new Thickness(0, 10, 0, 10) };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(145) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.Children.Add(new TextBlock
         {
@@ -359,6 +401,7 @@ public sealed class LauncherSettingsWindow : Window
         {
             Text = value,
             FontSize = 10,
+            MaxWidth = 420,
             Foreground = Brush(MutedColor),
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center
