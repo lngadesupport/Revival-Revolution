@@ -50,8 +50,10 @@ public partial class OnlineMatchWindow : UserControl
         {
             StatusText.Text = "Aguardando o servidor privado Radmin...";
             NetworkStateText.Text = "Radmin VPN  /  verificando servidor...";
+            NetworkStateDot.Fill = new SolidColorBrush(Color.FromRgb(214, 164, 91));
             await _radminHost.WaitForServerAsync(new Uri(RankedEndpoint).Host, _sessionCancellation.Token);
             NetworkStateText.Text = "Radmin VPN  /  servidor alcançável";
+            NetworkStateDot.Fill = new SolidColorBrush(Color.FromRgb(107, 197, 139));
             await RestoreSessionAsync();
         }
         catch (OperationCanceledException)
@@ -60,6 +62,7 @@ public partial class OnlineMatchWindow : UserControl
         catch (Exception ex)
         {
             NetworkStateText.Text = "Radmin VPN  /  servidor indisponível";
+            NetworkStateDot.Fill = new SolidColorBrush(Color.FromRgb(224, 91, 101));
             StatusText.Text = "Servidor privado indisponível: " + ex.Message;
             SetModeButtons(false);
         }
@@ -162,6 +165,15 @@ public partial class OnlineMatchWindow : UserControl
         JoinRoomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token) &&
             !_roomWaiting && !_matchActive && RoomCodeBox.IsEnabled &&
             code.Length == 6 && code.All(char.IsAsciiLetterOrDigit);
+    }
+
+    private void RoomCodeBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter && JoinRoomButton.IsEnabled)
+        {
+            JoinRoom_Click(sender, new RoutedEventArgs());
+            e.Handled = true;
+        }
     }
 
     private void RoomCodeBox_TextChanged(object sender, TextChangedEventArgs e)
