@@ -17,3 +17,7 @@ Ranked matchmaking remains beta. ELO and competitive results remain disabled unt
 ## Validation
 
 The Windows CI workflow builds the launcher, runs integrity smoke tests, publishes the self-contained x64 build, and verifies the published runtime files. CI does not prove a real two-PC Radmin match or closed-bridge result integrity.
+
+## Interface refresh
+
+The main dashboard was reorganized into a game command center with direct Offline and Private Match actions, installation status, Radmin network status, quick diagnostics, a compact activity log, and a clearer build/beta status panel. Legacy Mod List and Discord navigation remain removed. This is a UI refresh only; it does not claim new gameplay or bridge capabilities.
