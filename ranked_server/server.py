@@ -202,6 +202,10 @@ def make_handler(store: RankedStore):
                     return self._json(200, store.confirm_match_finished(player_id, mode="casual"))
                 if path == "/v1/ranked/match/finish":
                     return self._json(200, store.confirm_match_finished(player_id, mode="ranked"))
+                if path == "/v1/match/connection-code":
+                    return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="casual"))
+                if path == "/v1/ranked/match/connection-code":
+                    return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="ranked"))
                 if path == "/v1/match/accept":
                     return self._json(200, {"match": store.accept_match(player_id)})
                 if path == "/v1/match/decline":
