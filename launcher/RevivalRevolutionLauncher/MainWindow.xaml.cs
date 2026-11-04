@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private const int LaunchDetectionTimeoutSeconds = 45;
     private string _lastGameStateFooterStatus = string.Empty;
     private string _lastDashboardState = string.Empty;
+    private OnlineMatchWindow? _privateMatchView;
 
     public MainWindow()
     {
@@ -640,6 +641,11 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _gameStateTimer.Stop();
+        if (_privateMatchView is not null)
+        {
+            _ = _privateMatchView.ShutdownAsync();
+            _privateMatchView = null;
+        }
         base.OnClosed(e);
     }
 
@@ -648,7 +654,14 @@ public partial class MainWindow : Window
     private async void PrivateMatch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("private");
-        FooterStatus.Text = "PRIVATE MATCH — abrindo salas por código.";
+        if (_privateMatchView is not null)
+        {
+            DashboardPage.Visibility = Visibility.Collapsed;
+            PrivateMatchHost.Visibility = Visibility.Visible;
+            FooterStatus.Text = "SALA POR CÓDIGO — pronta para criar ou entrar em um convite.";
+            return;
+        }
+        FooterStatus.Text = "SALA POR CÓDIGO — preparando conexão.";
         Log("Central Private Match aberta.");
         var configuredEndpoint = RankedApiClient.LoadEndpoint();
         if (string.IsNullOrWhiteSpace(configuredEndpoint))
@@ -700,8 +713,25 @@ public partial class MainWindow : Window
             return;
         }
         _config.SaveGameFolder(_root, _gameFolder, distributionRoot);
-        var window = new OnlineMatchWindow(distributionRoot, _gameFolder, python) { Owner = this };
-        window.ShowDialog();
+        var roomView = new OnlineMatchWindow(distributionRoot, _gameFolder, python);
+        roomView.BackRequested += PrivateMatchBackRequested;
+        _privateMatchView = roomView;
+        PrivateMatchHost.Content = roomView;
+        DashboardPage.Visibility = Visibility.Collapsed;
+        PrivateMatchHost.Visibility = Visibility.Visible;
+        FooterStatus.Text = "SALA POR CÓDIGO — conectando ao servidor privado.";
+    }
+
+    private async void PrivateMatchBackRequested(object? sender, EventArgs e)
+    {
+        var view = _privateMatchView;
+        _privateMatchView = null;
+        PrivateMatchHost.Content = null;
+        PrivateMatchHost.Visibility = Visibility.Collapsed;
+        DashboardPage.Visibility = Visibility.Visible;
+        SetActiveNavigation("offline");
+        if (view is not null)
+            await view.ShutdownAsync();
         RefreshGameState();
     }
 
