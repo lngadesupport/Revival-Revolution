@@ -3,11 +3,19 @@
 This release coordinates owned-slot setup and stops at stage selection. It never
 feeds synthetic inputs to the game. MR2 uses AutoPunch; MR1 uses direct networking.
 """
-import argparse,base64,ctypes,hashlib,hmac,ipaddress,json,msvcrt,os,pathlib,secrets,socket,struct,time,uuid,zlib
+import argparse,base64,ctypes,hashlib,hmac,ipaddress,json,os,pathlib,secrets,socket,struct,time,uuid,zlib
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
 from peer_native import SyntheticPeer
 from autopunch_transport import AutoPunchSocket,discover_public_endpoint,ipv4_endpoint,settings
 from selection_sync import SelectionSync
-from fighter_input_test import FighterInputTest
+try:
+    from fighter_input_test import FighterInputTest
+except ImportError:
+    # The legacy diagnostic is optional; live_fighter is the supported play path.
+    FighterInputTest = None
 from live_fighter import LiveFighter
 PROTOCOL=1
 BUILD='metal-99.4.3.895-gekko-9da2363-peer9'
@@ -202,11 +210,11 @@ class Session:
             if self.selection is None:self.selection=SelectionSync(self.root,self.slot,self.bridge,atomic_json)
             self.selection.step(self.remote_selection)
             if self.selection.ready:
-                if self.fighter_test is None:self.fighter_test=FighterInputTest(self.root,self.slot,self.bridge,self.selection,atomic_json)
-                if not (self.live and self.live.ready):self.fighter_test.step(self.remote_fighter)
+                if FighterInputTest is not None and self.fighter_test is None:self.fighter_test=FighterInputTest(self.root,self.slot,self.bridge,self.selection,atomic_json)
+                if self.fighter_test is not None and not (self.live and self.live.ready):self.fighter_test.step(self.remote_fighter)
                 if self.live is None:self.live=LiveFighter(self.root,self.slot,self.bridge,self.selection,atomic_json)
-                if (self.live.ready and isinstance(self.remote_fighter,dict) and self.remote_fighter.get('ready') is True) or (self.fighter_test.ready and isinstance(self.remote_live,dict) and self.remote_live.get('ready') is True):raise RuntimeError('Both PCs must choose the same fighter input option; reconnect and retry')
-                if not self.fighter_test.ready:self.live.step(self.remote_live)
+                if (self.live.ready and isinstance(self.remote_fighter,dict) and self.remote_fighter.get('ready') is True) or (self.fighter_test is not None and self.fighter_test.ready and isinstance(self.remote_live,dict) and self.remote_live.get('ready') is True):raise RuntimeError('Both PCs must choose the same fighter input option; reconnect and retry')
+                if self.fighter_test is None or not self.fighter_test.ready:self.live.step(self.remote_live)
                 for packet in self.live.packets():self.send('live_gekko',packet)
                 if self.live.finished:self.close();return
         if now>=self.next_send:
@@ -231,6 +239,10 @@ class Session:
 def main():
     p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=0);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true');p.add_argument('--preflight-only',action='store_true');args=p.parse_args()
     root=args.root.resolve();root.mkdir(parents=True,exist_ok=True)
+    # This runtime is Windows-only; keeping the module importable elsewhere
+    # allows CI to validate its connection-code protocol without game DLLs.
+    if msvcrt is None:
+        raise SystemExit('peer_session requires Windows')
     # Windows byte-range lock is released on process exit, including crashes.
     lock=open(root/'peer-session.lock','a+b');lock.seek(0);lock.write(b'0');lock.flush();lock.seek(0)
     try:msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
