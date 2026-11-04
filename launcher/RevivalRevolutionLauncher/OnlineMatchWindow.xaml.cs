@@ -33,6 +33,7 @@ public partial class OnlineMatchWindow : Window
     private bool _hostSessionActive;
     private bool _peerReady;
     private bool _closing;
+    private string MatchApiPrefix => _matchType == "ranked" ? "/v1/ranked" : "/v1";
     private bool _queueActive;
     private string? _acceptingMatchId;
     private string _queueMode = "casual";
