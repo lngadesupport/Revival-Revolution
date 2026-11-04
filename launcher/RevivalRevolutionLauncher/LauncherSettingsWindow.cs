@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using RevivalRevolution.Services;
 
 namespace RevivalRevolution;
@@ -17,9 +16,9 @@ public sealed class LauncherSettingsWindow : Window
     private static readonly Color MutedColor = Color.FromRgb(157, 163, 181);
     private static readonly Color AccentColor = Color.FromRgb(218, 48, 62);
 
-    private readonly ToggleButton _startupUpdates;
-    private readonly ToggleButton _confirmLaunch;
-    private readonly ToggleButton _persistLogs;
+    private readonly ToggleButton _startupUpdates = null!;
+    private readonly ToggleButton _confirmLaunch = null!;
+    private readonly ToggleButton _persistLogs = null!;
 
     public LauncherSettings Result { get; private set; }
 
@@ -342,7 +341,7 @@ public sealed class LauncherSettingsWindow : Window
         knob.SetValue(FrameworkElement.HeightProperty, 17d);
         knob.SetValue(FrameworkElement.MarginProperty, new Thickness(3));
         knob.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Left);
-        knob.SetValue(Shape.FillProperty, Brushes.White);
+        knob.SetValue(Ellipse.FillProperty, Brushes.White);
         knob.SetValue(UIElement.IsHitTestVisibleProperty, false);
         grid.AppendChild(knob);
 
