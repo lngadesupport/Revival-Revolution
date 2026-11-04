@@ -5,7 +5,11 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 
 ## Escopo desta versão
 
-- Interface WPF escura com identidade visual preta/vermelha.
+- Interface WPF com dashboard editorial, navegação agrupada e identidade visual escura com acento vermelho.
+- Sala por código integrada ao conteúdo principal, sem abrir uma segunda janela sobre o dashboard.
+- Configurações em abas Geral, Rede, Dados e Suporte, com preferência de acessibilidade para reduzir animações.
+- Central de diagnósticos com filtros por criticidade, resumo de integridade, cópia de relatório e acesso aos logs.
+- Atalhos de navegação: Ctrl+1 (offline), Ctrl+2 (sala), Ctrl+3 (diagnósticos), Ctrl+4 (configurações) e Esc (voltar da sala).
 - Seleção e persistência da pasta que contém `ufo.exe` e `ufo_Data/Managed`.
 - Inicialização do fluxo offline original via `offline_launcher.py`, com logs
   em `Launcher/Logs`.
@@ -62,8 +66,9 @@ direto pela VPN sem AutoPunch/STUN/relay externo. A janela ONLINE ainda não
 inicia o processo P2P automaticamente nem abre a luta sozinha. Não anunciar
 Ranked público nem aplicação de ELO nesta versão.
 
-A interface ONLINE é uma janela WPF dedicada aberta pelo item de navegação;
-ainda não é uma aba embutida na janela principal. Recursos sociais de perfil,
-amigos e leaderboard devem permanecer dentro do jogo quando houver um ponto
-de extensão técnico verificável.
+A sala por código é um UserControl WPF embutido no conteúdo principal do
+launcher. O fluxo de conta, convite e confronto permanece separado do dashboard,
+mas compartilha a mesma janela e o mesmo shell de navegação. Recursos sociais
+de perfil, amigos e leaderboard não são simulados pela interface: só devem ser
+adicionados quando houver serviço e integração técnica verificáveis.
 
