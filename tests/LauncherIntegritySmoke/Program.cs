@@ -67,7 +67,31 @@ try
     Require(settingsService.Load().ConfirmBeforeLaunch,
         "Settings storage must remain writable after corruption recovery.");
 
-    Console.WriteLine("Launcher smoke tests passed: Radmin connection-code validation, manual-IP safe default, settings persistence and corruption recovery; launcher updater preference is absent.");
+    var diagnosticRoot = Path.Combine(root, "diagnostic-test");
+    var diagnosticGame = Path.Combine(diagnosticRoot, "Metal Revolution");
+    var managedPath = Path.Combine(diagnosticGame, "ufo_Data", "Managed");
+    Directory.CreateDirectory(managedPath);
+    foreach (var script in new[] { "offline_launcher.py", "inject_offline.py", "inject_overlay.py" })
+        await File.WriteAllTextAsync(Path.Combine(diagnosticRoot, script), "# smoke fixture");
+    await File.WriteAllTextAsync(Path.Combine(diagnosticRoot, "MetalOfflineBridgeImGuiV3.dll"), "fixture");
+    await File.WriteAllTextAsync(Path.Combine(diagnosticGame, "ufo.exe"), "fixture");
+    var emptyManagedDll = Path.Combine(managedPath, "legacy-placeholder.dll");
+    await File.WriteAllBytesAsync(emptyManagedDll, Array.Empty<byte>());
+    var pythonPath = Path.Combine(diagnosticRoot, "python.exe");
+    await File.WriteAllTextAsync(pythonPath, "fixture");
+
+    var diagnosticItems = new LauncherDiagnosticService().Run(diagnosticRoot, diagnosticGame, pythonPath);
+    Require(diagnosticItems.Single(item => item.Name == "Essencial offline: offline_launcher.py").Passed,
+        "The diagnostics service must recognize the offline bootstrap script.");
+    var optionalPeer = diagnosticItems.Single(item => item.Name == "Opcional online: peer_session.py");
+    Require(optionalPeer.Optional && optionalPeer.Passed,
+        "Missing optional multiplayer scripts must not block the offline experience.");
+    var managedWarning = diagnosticItems.Single(item => item.Name == "DLLs vazias em Managed");
+    Require(managedWarning.Optional && !managedWarning.Passed &&
+            managedWarning.Detail.StartsWith("Aviso não bloqueante:", StringComparison.Ordinal),
+        "Empty Managed placeholders must be shown as non-blocking warnings, not essential failures.");
+
+    Console.WriteLine("Launcher smoke tests passed: Radmin code validation, safe network defaults, settings persistence and recovery, diagnostics severity, optional multiplayer dependencies, and non-blocking Managed DLL warnings; updater preference is absent.");
 }
 finally
 {
