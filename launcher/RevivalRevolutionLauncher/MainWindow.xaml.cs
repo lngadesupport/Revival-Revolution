@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
         _settings = _settingsService.Load();
         SetActiveNavigation("offline");
         var version = typeof(MainWindow).Assembly.GetName().Version;
@@ -387,6 +388,45 @@ public partial class MainWindow : Window
                 ? Color.FromRgb(255, 82, 96)
                 : Color.FromArgb(102, 255, 255, 255));
             item.Button.BorderThickness = selected ? new Thickness(1.5) : new Thickness(1);
+        }
+    }
+
+    private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape &&
+            PrivateMatchHost.Visibility == Visibility.Visible &&
+            _privateMatchView is not null)
+        {
+            PrivateMatchBackRequested(_privateMatchView, EventArgs.Empty);
+            e.Handled = true;
+            return;
+        }
+
+        if (System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.Control)
+            return;
+
+        switch (e.Key)
+        {
+            case System.Windows.Input.Key.D1:
+            case System.Windows.Input.Key.NumPad1:
+                Launch_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.D2:
+            case System.Windows.Input.Key.NumPad2:
+                PrivateMatch_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.D3:
+            case System.Windows.Input.Key.NumPad3:
+                Diagnostics_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.D4:
+            case System.Windows.Input.Key.NumPad4:
+                Settings_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
         }
     }
 
