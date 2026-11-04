@@ -42,6 +42,8 @@ class RankedStoreTests(unittest.TestCase):
         self.assertNotEqual(first["room_role"], second["room_role"])
         self.assertEqual(first["room_status"], "matched")
         self.assertEqual(second["room_status"], "matched")
+        self.assertEqual(first["match_type"], "random")
+        self.assertEqual(second["match_type"], "random")
 
         self.store.accept_match(self.one["player_id"])
         ready = self.store.accept_match(self.two["player_id"])
