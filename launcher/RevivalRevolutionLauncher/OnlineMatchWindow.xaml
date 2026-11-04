@@ -110,7 +110,7 @@
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="REDE PRIVADA" Foreground="{StaticResource Muted}"
                                FontSize="8" FontWeight="Bold"/>
-                    <TextBlock Text="Radmin VPN  /  endpoint configurado" FontSize="11"
+                    <TextBlock x:Name="NetworkStateText" Text="Radmin VPN  /  verificando servidor..." FontSize="11"
                                FontWeight="SemiBold" Margin="0,3,0,0"/>
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="NICKNAME" Foreground="{StaticResource Muted}"
@@ -194,7 +194,7 @@
                     <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,15">
                         <TextBlock Text="CÓDIGO DE CONVITE" Foreground="{StaticResource Muted}"
                                    FontSize="8" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <TextBox x:Name="RoomCodeBox" MaxLength="8" CharacterCasing="Upper"
+                        <TextBox x:Name="RoomCodeBox" MaxLength="6" CharacterCasing="Upper" TextChanged="RoomCodeBox_TextChanged"
                                  TextAlignment="Center" FontSize="24" FontWeight="Bold"
                                  VerticalContentAlignment="Center" Padding="14,13"
                                  ToolTip="Código de 6 caracteres"/>
