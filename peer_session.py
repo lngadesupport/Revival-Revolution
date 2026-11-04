@@ -1,7 +1,7 @@
 """Direct UDP connection-code preflight and coordinated local VS entry.
 
-This release coordinates owned-slot setup and stops at stage selection. It never
-feeds synthetic inputs to the game. MR2 uses AutoPunch; MR1 uses direct networking.
+This release coordinates owned-slot setup and local VS entry over the Radmin VPN.
+It never uses STUN, AutoPunch, third-party relays, or public-network fallback.
 """
 import argparse,base64,ctypes,hashlib,hmac,ipaddress,json,os,pathlib,secrets,socket,struct,time,uuid,zlib
 try:
@@ -9,7 +9,6 @@ try:
 except ImportError:
     msvcrt = None
 from peer_native import SyntheticPeer
-from autopunch_transport import AutoPunchSocket,discover_public_endpoint,ipv4_endpoint,settings
 from selection_sync import SelectionSync
 try:
     from fighter_input_test import FighterInputTest
@@ -20,27 +19,56 @@ from live_fighter import LiveFighter
 PROTOCOL=1
 BUILD='metal-99.4.3.895-gekko-9da2363-peer9'
 
+def find_radmin_ipv4():
+    try:
+        candidates = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET, socket.SOCK_DGRAM)
+    except OSError:
+        candidates = []
+    for candidate in candidates:
+        address = candidate[4][0]
+        try:
+            if ipaddress.IPv4Address(address).packed[0] == 26:
+                return address
+        except ipaddress.AddressValueError:
+            continue
+    raise RuntimeError('Nenhum adaptador Radmin VPN (IPv4 26.x.x.x) foi encontrado.')
+
+def require_radmin_ipv4(address):
+    try:
+        parsed = ipaddress.IPv4Address(address)
+    except ipaddress.AddressValueError as exc:
+        raise ValueError('O endereço do peer deve ser um IPv4 Radmin válido.') from exc
+    if parsed.packed[0] != 26:
+        raise ValueError('A conexão P2P aceita somente endereços da rede Radmin VPN (26.x.x.x).')
+    return str(parsed)
+
 def encode_code(address,port,key,relay=None):
+    address=require_radmin_ipv4(address)
+    if relay is not None:
+        raise ValueError('AutoPunch/relay connection codes are disabled; use Radmin VPN.')
+    if type(port) is not int or not 1<=port<=65535:
+        raise ValueError('Invalid Radmin UDP port')
+    if not isinstance(key,bytes) or len(key)!=16:
+        raise ValueError('Connection key must contain exactly 16 bytes')
     body=socket.inet_aton(address)+struct.pack('!H',port)+key
-    if relay:body+=socket.inet_aton(relay[0])+struct.pack('!H',relay[1])
-    return ('MR2-' if relay else 'MR1-')+base64.b32encode(body+struct.pack('!I',zlib.crc32(body))).decode().rstrip('=')
+    return 'MR1-'+base64.b32encode(body+struct.pack('!I',zlib.crc32(body))).decode().rstrip('=')
 
 def decode_code(code):
     endpoint,key,relay=decode_connection_code(code);return endpoint,key
 
 def decode_connection_code(code):
+    if not isinstance(code,str):
+        raise ValueError('Connection code must be text')
     code=code.strip().upper()
-    if code[:4] not in ('MR1-','MR2-') or len(code)>96:raise ValueError('Invalid MR1/MR2 connection code')
+    if not code.startswith('MR1-') or len(code)>96:
+        raise ValueError('Only MR1 Radmin connection codes are supported')
     text=code[4:];raw=base64.b32decode(text+'='*((-len(text))%8))
-    if len(raw)!=(32 if code.startswith('MR2-') else 26) or zlib.crc32(raw[:-4])!=struct.unpack('!I',raw[-4:])[0]:raise ValueError('Connection code checksum failed')
+    if len(raw)!=26 or zlib.crc32(raw[:-4])!=struct.unpack('!I',raw[-4:])[0]:
+        raise ValueError('Connection code checksum failed')
     address=socket.inet_ntoa(raw[:4]);port=struct.unpack('!H',raw[4:6])[0]
-    ip=ipaddress.IPv4Address(address)
-    if not port or ip.is_multicast or ip.is_unspecified or int(ip)==0xffffffff:raise ValueError('Invalid code endpoint')
-    relay=None
-    if code.startswith('MR2-'):
-        relay=(socket.inet_ntoa(raw[22:26]),struct.unpack('!H',raw[26:28])[0]);ip=ipaddress.IPv4Address(relay[0])
-        if not relay[1] or ip.is_multicast or ip.is_unspecified or int(ip)==0xffffffff:raise ValueError('Invalid AutoPunch relay endpoint')
-    return (address,port),raw[6:22],relay
+    address=require_radmin_ipv4(address)
+    if not port:raise ValueError('Invalid Radmin UDP port')
+    return (address,port),raw[6:22],None
 
 def atomic_json(path,value):
     tmp=path.with_name(path.name+'.'+str(os.getpid())+'.tmp')
@@ -67,8 +95,13 @@ class GameBridge:
 
 class Session:
     def __init__(self,root,mode,code='',bind='0.0.0.0',port=8766,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True):
+        if mode not in ('host','join'):
+            raise ValueError('mode must be host or join')
+        if autopunch:
+            raise ValueError('AutoPunch is disabled. Connect both players to the same Radmin VPN network.')
+        local_address=find_radmin_ipv4() if bind in ('', '0.0.0.0') else require_radmin_ipv4(bind)
         self.root=pathlib.Path(root);self.root.mkdir(parents=True,exist_ok=True);self.slot=0 if mode=='host' else 1
-        self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((bind,port));self.sock.setblocking(False)
+        self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((local_address,port));self.sock.setblocking(False)
         self.logical_port=self.sock.getsockname()[1];self.autopunch=False
         self.selection=None;self.enable_selection=selection_sync;self.remote_selection=None
         self.fighter_test=None;self.remote_fighter=None;self.live=None;self.remote_live=None
@@ -77,20 +110,13 @@ class Session:
         self.key=secrets.token_bytes(16);self.code='';self.advertised_endpoint=None;self.phase='preparing';self.remote_phase='';self.remote_proof=None;self.native=None;self.local_proof=None
         self.closed=False;self.error=None;self.next_send=0;self.next_status=0;self.started=time.monotonic();self.last_tick=0;self.prepared=False;self.route_started=False;self.vs_ready=False;self.preflight_done=False;self.metrics={}
         if self.slot==0:
-            relay=None
-            if autopunch:
-                config=settings(self.root);relay=ipv4_endpoint(config['relay_host'],config['relay_port'])
-                public=discover_public_endpoint(self.sock,ipv4_endpoint(config['stun_host'],config['stun_port']));advertise=public[0]
-                self.sock=AutoPunchSocket(self.sock,relay);self.autopunch=True
-            elif advertise is None:
-                # Route selection uses no game/Steam server; the UDP connect sends no datagram.
-                with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as probe:
-                    try:probe.connect(('192.0.2.1',9));advertise=probe.getsockname()[0]
-                    except OSError:advertise='127.0.0.1'
-            ipaddress.IPv4Address(advertise);self.advertised_endpoint=(advertise,self.logical_port);self.code=encode_code(*self.advertised_endpoint,self.key,relay=relay)
+            advertise=require_radmin_ipv4(advertise or local_address)
+            if advertise != local_address:
+                raise ValueError('O IP anunciado deve ser o IP Radmin local deste computador.')
+            self.advertised_endpoint=(advertise,self.logical_port)
+            self.code=encode_code(*self.advertised_endpoint,self.key)
         else:
-            self.peer,self.key,relay=decode_connection_code(code)
-            if relay:self.sock=AutoPunchSocket(self.sock,relay);self.autopunch=True
+            self.peer,self.key,_=decode_connection_code(code)
         self.bridge=bridge_factory(self.root,self.slot,hashlib.sha256(self.key).hexdigest()[:24]);self.bridge.begin('peer_prepare')
         self.write_status()
     def write_status(self):
@@ -98,7 +124,6 @@ class Session:
                   local_vs_ready=self.vs_ready,remote_vs_ready=self.remote_phase=='vs_ready',input_authority_enforced=bool(self.live and self.live.started),live_netplay=bool(self.live and self.live.state=="playing"),autopunch=self.autopunch,
                   message=self.error or ('Use the panel selection controls. After both players are Ready, choose Live keyboard play on both PCs.' if self.enable_selection else 'Stop at character selection; network fighting is not enabled.'))
         if self.selection:data.update(selection_state=self.selection.state,match_setup_ready=self.selection.ready,selection_authority_enforced=self.selection.catalog is not None)
-        if self.autopunch:data.update(relay_endpoint=self.sock.relay,autopunch_registrations=self.sock.registrations,autopunch_mapping_responses=self.sock.mapping_responses,autopunch_punches=self.sock.punches)
         if self.native:data.update(frame=self.native.frame,rollback_advances=self.native.report.rollback_advances,desyncs=self.native.report.desyncs)
         else:data.update(self.metrics)
         if self.live and self.live.report:
@@ -147,11 +172,6 @@ class Session:
                 if kind!='hello' or (self.slot==1 and m.get('to')!=self.nonce):continue
             elif nonce!=self.remote_nonce:continue
             if m.get('to') not in (None,self.nonce) or seq in self.seen or seq<self.high-512:continue
-            if self.autopunch:
-                internal=m.get('port')
-                if type(internal) is not int or not 1<=internal<=65535:continue
-                if self.peer is not None and (endpoint[0],internal)!=self.peer:continue
-                endpoint=self.sock.confirm_authenticated_peer(endpoint,internal)
             if first:
                 self.peer=endpoint;self.remote_nonce=nonce
             self.high=max(self.high,seq);self.seen.add(seq);self.seen={n for n in self.seen if n>=self.high-512};self.last_received=time.monotonic()
@@ -237,7 +257,7 @@ class Session:
             self.sock.close();self.closed=True;self.phase='error' if error else 'closed';self.write_status()
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=8766);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true');p.add_argument('--preflight-only',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--root',type=pathlib.Path,default=pathlib.Path(__file__).resolve().parent);p.add_argument('--request',type=pathlib.Path);p.add_argument('--mode',choices=['host','join']);p.add_argument('--code',default='');p.add_argument('--bind',default='0.0.0.0');p.add_argument('--port',type=int,default=8766);p.add_argument('--advertise');p.add_argument('--autopunch',action='store_true',help='Disabled: all peer traffic must use Radmin VPN.');p.add_argument('--preflight-only',action='store_true');args=p.parse_args()
     root=args.root.resolve();root.mkdir(parents=True,exist_ok=True)
     # This runtime is Windows-only; keeping the module importable elsewhere
     # allows CI to validate its connection-code protocol without game DLLs.
@@ -255,15 +275,13 @@ def main():
         if args.mode=='host' and address:requested_address=address
         if args.request.parent.resolve()==root and args.request.name.startswith('peer-request-'):args.request.unlink()
     if args.mode not in ('host','join'):raise SystemExit('Choose host or join')
+    if args.autopunch:raise SystemExit('AutoPunch/relay is disabled. Connect both PCs to the same Radmin VPN network.')
     stop=root/'peer-stop.json'
     if stop.exists():stop.unlink()
     session=None
     try:
-        if requested_address and not args.autopunch:
-            address=str(ipaddress.IPv4Address(requested_address));args.advertise=address;args.bind=address
-        if args.mode=='host' and args.autopunch:
-            atomic_json(root/'peer-status.json',dict(state='discovering_public_endpoint',autopunch=True,live_netplay=False))
-            (root/'peer-summary.txt').write_text('AutoPunch: discovering the public endpoint...',encoding='utf-8');(root/'peer-code.txt').write_text('')
+        if requested_address:
+            address=require_radmin_ipv4(requested_address);args.advertise=address;args.bind=address
         session=Session(root,args.mode,args.code,args.bind,args.port,args.advertise,autopunch=args.autopunch,selection_sync=not args.preflight_only)
         while not session.closed:
             if stop.exists():break
@@ -271,7 +289,7 @@ def main():
     except Exception as e:
         if session:session.close(str(e))
         else:
-            hint='Retry AutoPunch or switch to direct/Radmin mode.' if args.autopunch else 'For Radmin, use this PC\'s Radmin IPv4, not the other PC\'s address.'
+            hint='Connect both PCs to the same Radmin VPN network and use this PC\'s own 26.x.x.x address.'
             message='Could not start connection test: '+str(e)+'\n'+hint
             atomic_json(root/'peer-status.json',dict(state='error',message=message,live_netplay=False))
             (root/'peer-summary.txt').write_text(message,encoding='utf-8');(root/'peer-code.txt').write_text('')
