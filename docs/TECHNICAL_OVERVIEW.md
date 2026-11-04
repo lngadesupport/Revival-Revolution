@@ -18,21 +18,31 @@ A distribuição original inclui scripts Python, bridges gerenciadas e nativas, 
 
 ## Arquitetura do launcher
 
-- `MainWindow.xaml`: interface WPF, estilos locais e navegação.
-- `MainWindow.xaml.cs`: coordenação de eventos, estado ocupado e mensagens.
+- `MainWindow.xaml`: shell WPF, identidade visual, navegação lateral e dashboard.
+- `MainWindow.xaml.cs`: coordenação de eventos, atalhos, estado ocupado e transições.
+- `OnlineMatchWindow.xaml` / `.xaml.cs`: sala privada embutida, perfil, convite e estado de confronto.
+- `LauncherSettingsWindow.cs`: preferências organizadas por abas (Geral, Rede, Dados e Suporte).
+- `LauncherDiagnosticsWindow.cs`: resultados de integridade com filtros, resumo e exportação de relatório.
 - `DownloadService`: downloads HTTPS retomáveis com validação de redirecionamento.
 - `ArchiveExtractionService`: extração ZIP com limites de tamanho, proteção contra traversal, links e colisões.
 - `PythonRuntimeService`: runtime Python 3.13.17, verificação SHA-256, extração em staging e teste de inicialização antes da troca.
 - `GameLaunchService`: validação da pasta e execução do script offline com logs.
-- `LauncherUpdateService`: validação do manifesto, hash do pacote, staging e aplicação com backup/rollback.
 - `LauncherDiagnosticService`: verificação de arquivos essenciais e DLLs vazias.
 
 ## Segurança e distribuição
 
 - Os pacotes de jogo não são baixados nem extraídos pelo launcher enquanto não houver hashes autenticados por canal independente. Um manifesto contido no próprio ZIP não autentica esse ZIP.
-- O atualizador exige HTTPS e hash SHA-256, mas o hash publicado no mesmo manifesto não equivale a uma assinatura digital do publicador.
+- O launcher não contém atualizador automático nem mecanismo para baixar/instalar o jogo. O download permanece restrito ao runtime Python auxiliar.
 - Não incluir arquivos proprietários do jogo neste repositório sem autorização.
 - A publicação deve ocorrer em Windows x64; a compilação automatizada não substitui testes em uma instalação limpa.
+
+## Experiência da interface
+
+- A navegação principal agrupa as áreas em Jogar, Comunidade e Sistema.
+- Atalhos: Ctrl+1 (modo offline), Ctrl+2 (sala por código), Ctrl+3 (diagnósticos) e Ctrl+4 (configurações); Esc retorna da sala ao dashboard.
+- As configurações oferecem preferência de confirmação de inicialização, redução de movimento, logs locais e endpoint Radmin manual validado.
+- O diagnóstico distingue dependências essenciais das opcionais e permite filtrar e copiar o relatório.
+- A biblioteca de mods é apenas uma área sinalizada como em desenvolvimento; não instala nem modifica conteúdo.
 
 ## Limitações conhecidas
 
