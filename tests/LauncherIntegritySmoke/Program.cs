@@ -77,7 +77,24 @@ try
     }
     Require(invalidHashRejected, "The integrity planner must reject malformed SHA-256 values.");
 
-    Console.WriteLine("Launcher smoke tests passed: legacy settings compatibility, settings JSON round-trip, selective repair, intact-file preservation, protected game paths, and SHA-256 validation.");
+    var gameRoot = Path.Combine(root, "Game");
+    var gameData = Path.Combine(gameRoot, "ufo_Data");
+    Directory.CreateDirectory(gameData);
+    await File.WriteAllTextAsync(Path.Combine(gameRoot, "ufo.exe"), "test executable metadata placeholder");
+    var bootConfig = Path.Combine(gameData, "boot.config");
+    await File.WriteAllTextAsync(bootConfig, "gfx-enable-gfx-jobs=1\nvSyncCount=1\n");
+    var beforeScan = Hash(await File.ReadAllTextAsync(bootConfig));
+    var discovery = new GameSettingsDiscoveryService().Inspect(gameRoot);
+    Require(discovery.InstallationFound, "Read-only discovery did not recognize a minimal Unity game layout.");
+    Require(discovery.CandidateFiles.Contains(bootConfig), "Read-only discovery did not identify Unity boot.config.");
+    Require(discovery.RelevantKeys.Contains("vsync"), "Read-only discovery did not recognize a relevant graphics token.");
+    Require(Hash(await File.ReadAllTextAsync(bootConfig)) == beforeScan,
+        "Read-only discovery unexpectedly modified a game configuration file.");
+    var missingDiscovery = new GameSettingsDiscoveryService().Inspect(Path.Combine(root, "missing-game"));
+    Require(!missingDiscovery.InstallationFound, "Discovery must report a missing game directory without throwing.");
+
+    Console.WriteLine("Launcher smoke tests passed: legacy settings compatibility, JSON round-trip, selective repair, intact-file preservation, protected game paths, SHA-256 validation, and read-only Unity config discovery.");
+
 }
 finally
 {
