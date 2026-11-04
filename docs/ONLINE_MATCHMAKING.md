@@ -51,8 +51,8 @@ host da API.
    vinculada à partida. O primeiro slot é o anfitrião; o segundo é convidado.
 2. Os dois launchers aceitam automaticamente a atribuição. A partida só fica
    pronta quando ambos confirmam.
-3. O anfitrião pressiona **INICIAR PARTIDA**. O launcher inicia o jogo e o
-   peer UDP diretamente no IPv4 Radmin local, sem STUN ou relay.
+3. Quando os dois aceitam, o launcher do anfitrião inicia automaticamente o
+   jogo e o peer UDP diretamente no IPv4 Radmin local, sem STUN ou relay.
 4. O anfitrião publica o código MR1; o convidado o recebe pela API Radmin e
    conecta ao anfitrião na porta UDP 8766.
 5. Ambos observam o handshake autenticado e a prontidão da bridge antes de
@@ -69,8 +69,11 @@ não autentica resultado competitivo nem altera rating. O encerramento ainda
 depende de confirmação dos clientes. Não aplicar rating competitivo até
 existir adjudicação confiável do resultado.
 
-A integração de matchmaking agora reutiliza o fluxo de sala Radmin e a
-inicialização peer já usados pela partida por código. Isso não substitui o
+A integração de matchmaking cria salas marcadas como aleatórias e reutiliza
+o fluxo de sala Radmin e a inicialização peer já usados pela partida por
+código. O host do jogo é escolhido entre os dois jogadores pareados; ele
+seleciona seu próprio adaptador Radmin local, sem depender de ser a máquina
+que hospeda a API. Isso não substitui o
 teste real com dois PCs conectados à mesma rede Radmin. Ainda precisam ser
 validados timeout, desconexão, reentrada, firewall UDP 8766, compatibilidade
 da bridge e a luta completa com rollback.
