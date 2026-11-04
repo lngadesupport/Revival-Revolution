@@ -509,6 +509,13 @@ public sealed class LauncherUpdateService
             normalized.StartsWith("Launcher/UpdateBackup/", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("Launcher/Config/", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("Launcher/Logs/", StringComparison.OrdinalIgnoreCase) ||
+            // Community mods, imported mobile ports and user-created content are
+            // user-owned data. Official launcher updates must never overwrite them.
+            normalized.StartsWith("Launcher/Mods/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/UserContent/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/Content/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/Profiles/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("Launcher/Backups/", StringComparison.OrdinalIgnoreCase) ||
             ProtectedFiles.Contains(normalized);
     }
 }
