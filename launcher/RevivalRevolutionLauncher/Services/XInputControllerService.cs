@@ -37,6 +37,22 @@ public sealed class XInputControllerService
         public Gamepad Gamepad;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Vibration
+    {
+        public ushort LeftMotorSpeed;
+        public ushort RightMotorSpeed;
+    }
+
+    [DllImport("xinput1_4.dll", EntryPoint = "XInputSetState")]
+    private static extern uint SetState14(uint userIndex, ref Vibration vibration);
+
+    [DllImport("xinput1_3.dll", EntryPoint = "XInputSetState")]
+    private static extern uint SetState13(uint userIndex, ref Vibration vibration);
+
+    [DllImport("xinput9_1_0.dll", EntryPoint = "XInputSetState")]
+    private static extern uint SetState910(uint userIndex, ref Vibration vibration);
+
     [DllImport("xinput1_4.dll", EntryPoint = "XInputGetState")]
     private static extern uint GetState14(uint userIndex, out State state);
 
@@ -64,6 +80,25 @@ public sealed class XInputControllerService
                 Normalize(pad.ThumbRY)));
         }
         return connected;
+    }
+
+    public bool TrySetVibration(int userIndex, ushort leftMotorSpeed, ushort rightMotorSpeed)
+    {
+        if (userIndex is < 0 or > 3) return false;
+        var vibration = new Vibration { LeftMotorSpeed = leftMotorSpeed, RightMotorSpeed = rightMotorSpeed };
+        try { return SetState14((uint)userIndex, ref vibration) == 0; }
+        catch (DllNotFoundException) { }
+        catch (EntryPointNotFoundException) { }
+
+        try { return SetState13((uint)userIndex, ref vibration) == 0; }
+        catch (DllNotFoundException) { }
+        catch (EntryPointNotFoundException) { }
+
+        try { return SetState910((uint)userIndex, ref vibration) == 0; }
+        catch (DllNotFoundException) { }
+        catch (EntryPointNotFoundException) { }
+
+        return false;
     }
 
     private static bool TryRead(uint index, out State state)
