@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
+        CommunityGamePath.Text = _gameFolder ?? "Nenhuma instalação selecionada.";
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
@@ -159,6 +160,7 @@ public partial class MainWindow : Window
         _gameFolder = folder;
         _distributionRoot = _distributionLocator.Find(_root, folder);
         GameFolderBox.Text = folder;
+        CommunityGamePath.Text = folder;
         _config.SaveGameFolder(_root, folder, _distributionRoot);
         RefreshGameState();
         FooterStatus.Text = IsValidFolder(folder)
@@ -172,6 +174,8 @@ public partial class MainWindow : Window
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("offline");
+        CommunityPage.Visibility = Visibility.Collapsed;
+        DashboardPage.Visibility = Visibility.Visible;
         if (_busy || IsGameRunning()) return;
         RefreshGameState();
         if (!IsValidFolder(_gameFolder))
@@ -445,6 +449,11 @@ public partial class MainWindow : Window
                 Settings_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 break;
+            case System.Windows.Input.Key.D5:
+            case System.Windows.Input.Key.NumPad5:
+                ModList_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
         }
     }
 
@@ -589,6 +598,7 @@ public partial class MainWindow : Window
         if (_privateMatchView is not null)
         {
             DashboardPage.Visibility = Visibility.Collapsed;
+            CommunityPage.Visibility = Visibility.Collapsed;
             PrivateMatchHost.Visibility = Visibility.Visible;
             FooterStatus.Text = "SALA POR CÓDIGO — pronta para criar ou entrar em um convite.";
             return;
@@ -650,6 +660,7 @@ public partial class MainWindow : Window
         _privateMatchView = roomView;
         PrivateMatchHost.Content = roomView;
         DashboardPage.Visibility = Visibility.Collapsed;
+        CommunityPage.Visibility = Visibility.Collapsed;
         PrivateMatchHost.Visibility = Visibility.Visible;
         FooterStatus.Text = "SALA POR CÓDIGO — conectando ao servidor privado.";
     }
@@ -660,6 +671,7 @@ public partial class MainWindow : Window
         _privateMatchView = null;
         PrivateMatchHost.Content = null;
         PrivateMatchHost.Visibility = Visibility.Collapsed;
+        CommunityPage.Visibility = Visibility.Collapsed;
         DashboardPage.Visibility = Visibility.Visible;
         SetActiveNavigation("offline");
         if (view is not null)
@@ -670,11 +682,71 @@ public partial class MainWindow : Window
     private void ModList_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("mods");
-        FooterStatus.Text = "MOD LIST — catálogo ainda não integrado.";
-        MessageBox.Show(this,
-            "A lista de mods será integrada em uma etapa própria. Por enquanto, o launcher não altera nem instala mods.",
-            "Mod List", MessageBoxButton.OK, MessageBoxImage.Information);
-        Log("Mod List selecionada; catálogo ainda não integrado.");
+        DashboardPage.Visibility = Visibility.Collapsed;
+        PrivateMatchHost.Visibility = Visibility.Collapsed;
+        CommunityPage.Visibility = Visibility.Visible;
+        CommunityGamePath.Text = _gameFolder ?? "Nenhuma instalação selecionada.";
+        SetCommunityTab("overview");
+        FooterStatus.Text = "COMUNIDADE — canais, estado da biblioteca e conteúdo local.";
+    }
+
+    private void CommunityOverview_Click(object sender, RoutedEventArgs e) => SetCommunityTab("overview");
+    private void CommunityLibrary_Click(object sender, RoutedEventArgs e) => SetCommunityTab("library");
+    private void CommunityLocal_Click(object sender, RoutedEventArgs e) => SetCommunityTab("local");
+
+    private void SetCommunityTab(string tab)
+    {
+        CommunityOverviewPanel.Visibility = tab == "overview" ? Visibility.Visible : Visibility.Collapsed;
+        CommunityLibraryPanel.Visibility = tab == "library" ? Visibility.Visible : Visibility.Collapsed;
+        CommunityLocalPanel.Visibility = tab == "local" ? Visibility.Visible : Visibility.Collapsed;
+        SetCommunityTabStyle(CommunityOverviewTab, tab == "overview");
+        SetCommunityTabStyle(CommunityLibraryTab, tab == "library");
+        SetCommunityTabStyle(CommunityLocalTab, tab == "local");
+    }
+
+    private static void SetCommunityTabStyle(System.Windows.Controls.Button button, bool selected)
+    {
+        button.Background = new SolidColorBrush(selected
+            ? Color.FromRgb(157, 31, 44) : Color.FromArgb(35, 255, 255, 255));
+        button.BorderBrush = new SolidColorBrush(selected
+            ? Color.FromRgb(255, 105, 116) : Color.FromRgb(57, 66, 82));
+        button.BorderThickness = new Thickness(1);
+    }
+
+    private void OpenGameFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (!IsValidFolder(_gameFolder))
+        {
+            FooterStatus.Text = "Selecione uma instalação válida antes de abrir a pasta.";
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = _gameFolder!, UseShellExecute = true });
+            Log("Pasta local do jogo aberta pelo usuário.");
+        }
+        catch (Exception ex)
+        {
+            FooterStatus.Text = "Não foi possível abrir a pasta do jogo.";
+            MessageBox.Show(this, "Não foi possível abrir a pasta selecionada: " + ex.Message,
+                "Conteúdo local", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void Repository_Click(object sender, RoutedEventArgs e)
+    {
+        const string repositoryUrl = "https://github.com/lngadesupport/Revival-Revolution";
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = repositoryUrl, UseShellExecute = true });
+            Log("Repositório comunitário aberto no navegador padrão.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Não foi possível abrir o repositório: " + ex.Message,
+                "Comunidade", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
 
