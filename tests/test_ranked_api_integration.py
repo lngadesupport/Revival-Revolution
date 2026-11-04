@@ -6,6 +6,8 @@ import unittest
 import urllib.error
 import urllib.request
 from unittest.mock import patch
+
+import peer_session
 from http.server import ThreadingHTTPServer
 
 from ranked_server.server import make_handler
@@ -78,6 +80,30 @@ class RankedApiIntegrationTests(unittest.TestCase):
             CompetitiveStore(self.store.database).record_authoritative_result(
                 match["match"]["match_id"], host["player_id"], authority_event_id="private-room-event"
             )
+
+    def test_ranked_match_uses_radmin_mr1_code_exchange(self):
+        one = self.register("Radmin One")
+        two = self.register("Radmin Two")
+        self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, one["token"])
+        self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, two["token"])
+        _, one_match = self.request("GET", "/v1/ranked/match", token=one["token"])
+        _, two_match = self.request("GET", "/v1/ranked/match", token=two["token"])
+        self.assertEqual(one_match["match"]["match_id"], two_match["match"]["match_id"])
+        self.request("POST", "/v1/ranked/match/accept", {}, one["token"])
+        self.request("POST", "/v1/ranked/match/accept", {}, two["token"])
+        host, guest = (one, two) if one_match["match"]["player_slot"] == 0 else (two, one)
+        code = peer_session.encode_code("26.10.20.30", 8766, bytes(range(16)))
+        status, _ = self.request(
+            "POST", "/v1/ranked/match/connection-code", {"code": code}, host["token"]
+        )
+        self.assertEqual(status, 200)
+        status, guest_state = self.request("GET", "/v1/ranked/match", token=guest["token"])
+        self.assertEqual(status, 200)
+        self.assertEqual(guest_state["match"]["connection_code"], code)
+        status, _ = self.request(
+            "POST", "/v1/ranked/match/connection-code", {"code": code}, guest["token"]
+        )
+        self.assertEqual(status, 400)
 
     def test_ranked_profile_and_leaderboard_routes(self):
         player = self.register("Leaderboard Player")
