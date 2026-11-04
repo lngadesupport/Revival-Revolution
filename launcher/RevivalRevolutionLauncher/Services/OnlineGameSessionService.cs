@@ -378,7 +378,16 @@ public sealed class OnlineGameSessionService : IDisposable
         catch (UnauthorizedAccessException) { }
         if (_peerProcess is { HasExited: false })
         {
-            try { _peerProcess.WaitForExit(1500); } catch (InvalidOperationException) { }
+            try
+            {
+                if (!_peerProcess.WaitForExit(2000) && !_peerProcess.HasExited)
+                {
+                    _peerProcess.Kill(entireProcessTree: true);
+                    _peerProcess.WaitForExit(2000);
+                }
+            }
+            catch (InvalidOperationException) { }
+            catch (System.ComponentModel.Win32Exception) { }
         }
         _peerProcess?.Dispose();
         _peerProcess = null;
