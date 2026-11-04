@@ -14,6 +14,8 @@ public partial class OnlineMatchWindow : Window
     private string? _playerId;
     private bool _queued;
     private bool _roomWaiting;
+    private string _ratingText = "—";
+    private string _rankedDetails = "";
 
     public OnlineMatchWindow() => InitializeComponent();
 
@@ -33,6 +35,7 @@ public partial class OnlineMatchWindow : Window
             if (string.IsNullOrWhiteSpace(_token)) return;
             _api.Configure(endpoint, _token);
             ApplyProfile(await _api.GetAsync("/v1/me"));
+            await RefreshRankedSummaryAsync();
             StatusText.Text = "Conta autenticada. Escolha uma modalidade de matchmaking.";
         }
         catch (Exception ex)
@@ -66,11 +69,13 @@ public partial class OnlineMatchWindow : Window
                 _credentials.Write(endpoint, _token);
                 _api.Configure(endpoint, _token);
                 ApplyProfile(created);
+                await RefreshRankedSummaryAsync();
                 StatusText.Text = "Conta criada e credencial protegida no Gerenciador de Credenciais do Windows.";
             }
             else
             {
                 ApplyProfile(await _api.GetAsync("/v1/me"));
+                await RefreshRankedSummaryAsync();
                 StatusText.Text = "Sessão restaurada com segurança.";
             }
         }
@@ -88,10 +93,37 @@ public partial class OnlineMatchWindow : Window
         if (profile is null) return;
         _playerId = profile["player_id"]?.GetValue<string>() ?? _playerId;
         var name = profile["display_name"]?.GetValue<string>() ?? NicknameBox.Text;
-        var rating = profile["rating"]?.ToString() ?? "—";
+        _ratingText = profile["rating"]?.ToString() ?? "—";
         NicknameBox.Text = name;
-        ProfileText.Text = $"{name}  •  Rating {rating}\nID: {_playerId ?? "—"}";
+        RenderProfile();
         SetModeButtons(!string.IsNullOrWhiteSpace(_token));
+    }
+
+    private void RenderProfile()
+    {
+        var name = NicknameBox.Text;
+        ProfileText.Text = $"{name}  •  Rating {_ratingText}{_rankedDetails}\nID: {_playerId ?? "—"}";
+    }
+
+    private async Task RefreshRankedSummaryAsync()
+    {
+        try
+        {
+            var summary = await _api.GetAsync("/v1/ranked/me");
+            _ratingText = summary["rating"]?.ToString() ?? _ratingText;
+            var division = summary["division"]?.GetValue<string>() ?? "Sem divisão";
+            var wins = summary["wins"]?.ToString() ?? "0";
+            var losses = summary["losses"]?.ToString() ?? "0";
+            var draws = summary["draws"]?.ToString() ?? "0";
+            _rankedDetails = $"\n{division}  •  V {wins} / D {losses} / E {draws}";
+            RenderProfile();
+        }
+        catch (Exception)
+        {
+            // Keep account login usable against older API deployments.
+            _rankedDetails = "\nDados Ranked indisponíveis";
+            RenderProfile();
+        }
     }
 
     private void SetModeButtons(bool enabled)
