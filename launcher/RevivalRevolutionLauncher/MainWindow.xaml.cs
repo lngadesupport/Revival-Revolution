@@ -103,18 +103,30 @@ public partial class MainWindow : Window
         var logo = Path.Combine(assets, "metal-revolution-logo.png");
 
         if (File.Exists(background))
-            HeroBackground.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(background));
+            HeroBackground.Source = LoadBitmap(background, 1600);
         else
             Log("Arte de fundo opcional ausente: Assets\\metal-revolution-background.jpg");
 
         if (File.Exists(logo))
         {
-            MetalLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(logo));
+            MetalLogo.Source = LoadBitmap(logo, 640);
             MetalLogo.Visibility = Visibility.Visible;
             LogoFallback.Visibility = Visibility.Collapsed;
         }
         else
             Log("Logo PNG opcional ausente: Assets\\metal-revolution-logo.png");
+    }
+
+    private static System.Windows.Media.Imaging.BitmapImage LoadBitmap(string path, int decodeWidth)
+    {
+        var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+        bitmap.DecodePixelWidth = decodeWidth;
+        bitmap.UriSource = new Uri(path);
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
     }
 
     private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
