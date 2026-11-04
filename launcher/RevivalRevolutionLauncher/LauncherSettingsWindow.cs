@@ -105,6 +105,13 @@ public sealed class LauncherSettingsWindow : Window
             Result.CheckUpdatesOnStartup = _startupUpdates.IsChecked == true;
             Result.ConfirmBeforeLaunch = _confirmLaunch.IsChecked == true;
             Result.PersistLogs = _persistLogs.IsChecked == true;
+            Result.UseCustomRadminIp = _customRadminIpEnabled.IsChecked == true;
+            Result.CustomRadminIp = _customRadminIp.Text.Trim();
+            if (Result.UseCustomRadminIp && !IsValidRadminIp(Result.CustomRadminIp))
+            {
+                MessageBox.Show(this, "Informe um IPv4 da faixa 26.x.x.x.", "IP Radmin inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             DialogResult = true;
             Close();
         };
@@ -247,13 +254,18 @@ public sealed class LauncherSettingsWindow : Window
         };
     }
 
+    private static bool IsValidRadminIp(string value) =>
+        IPAddress.TryParse(value, out var address) && address.AddressFamily == AddressFamily.InterNetwork && address.GetAddressBytes()[0] == 26;
+
     private static LauncherSettings CopySettings(LauncherSettings current) => new()
     {
         PlayerName = current.PlayerName,
         PlayerTag = current.PlayerTag,
         CheckUpdatesOnStartup = current.CheckUpdatesOnStartup,
         ConfirmBeforeLaunch = current.ConfirmBeforeLaunch,
-        PersistLogs = current.PersistLogs
+        PersistLogs = current.PersistLogs,
+        UseCustomRadminIp = current.UseCustomRadminIp,
+        CustomRadminIp = current.CustomRadminIp
     };
 
     private static Border MakeCard()
