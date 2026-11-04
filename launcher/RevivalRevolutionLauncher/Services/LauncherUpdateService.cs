@@ -35,7 +35,7 @@ public sealed class LauncherUpdateService
     private static readonly HashSet<string> ProtectedFiles = new(StringComparer.OrdinalIgnoreCase)
     {
         "launcher-update.json", "launcher-config.json", "python-runtime.txt", "autopunch-config.json",
-        "Launcher/apply-update.cmd", "MetalNetplayBridge.cs", "MetalOfflineBridgeImGui.cs", "SHA256SUMS.json"
+        "Launcher/apply-update.cmd", "Launcher/apply-update.ps1", "MetalNetplayBridge.cs", "MetalOfflineBridgeImGui.cs", "SHA256SUMS.json"
     };
 
     public async Task<LauncherUpdateInfo?> CheckAsync(string root, CancellationToken token = default)
@@ -190,7 +190,7 @@ public sealed class LauncherUpdateService
             stageProgress?.Report(new("extract", "Validando o manifesto e preparando os arquivos autorizados..."));
             ExtractAuthorizedFiles(zip, staging, update.Files, update.FileHashes, token);
             stageProgress?.Report(new("finalize", "Preparando a aplicação segura da atualização..."));
-            return await CreateApplyScriptAsync(root, staging, update.Files, token);
+            return await CreateApplyScriptAsync(root, staging, update.Files, update.FileHashes, token);
         }
         catch
         {
@@ -332,55 +332,110 @@ public sealed class LauncherUpdateService
         string root,
         string staging,
         IReadOnlyList<string> files,
+        IReadOnlyDictionary<string, string> fileHashes,
         CancellationToken token)
     {
         var backup = Path.Combine(root, "Launcher", "UpdateBackup");
         var logs = Path.Combine(root, "Launcher", "Logs");
-        Directory.CreateDirectory(logs);
-        var script = Path.Combine(root, "Launcher", "apply-update.cmd");
-        foreach (var relative in files)
-            EnsureSafeDestination(root, relative);
+        var script = Path.Combine(root, "Launcher", "apply-update.ps1");
+        var command = Path.Combine(root, "Launcher", "apply-update.cmd");
+
+        EnsureSafeDestination(root, "Launcher/apply-update.ps1");
+        EnsureSafeDestination(root, "Launcher/apply-update.cmd");
         EnsureSafeDirectoryPath(root, "Launcher/UpdateBackup");
         EnsureSafeDirectoryPath(root, "Launcher/Logs");
+
         var ps = new StringBuilder();
         ps.AppendLine("$ErrorActionPreference = 'Stop'");
-        ps.AppendLine($"$launcherPid = {Process.GetCurrentProcess().Id}");
+        ps.AppendLine("$launcherPid = " + Process.GetCurrentProcess().Id);
         ps.AppendLine("for ($i = 0; $i -lt 60 -and (Get-Process -Id $launcherPid -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }");
         ps.AppendLine("if (Get-Process -Id $launcherPid -ErrorAction SilentlyContinue) { throw 'Launcher ainda está em execução.' }");
         ps.AppendLine($"$stage = {PsQuote(staging)}");
         ps.AppendLine($"$root = {PsQuote(root)}");
         ps.AppendLine($"$backup = {PsQuote(backup)}");
-        ps.AppendLine("if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }");
-        ps.AppendLine("New-Item -ItemType Directory -Force -Path $backup | Out-Null");
-        ps.AppendLine("$processed = [System.Collections.Generic.List[string]]::new()");
-        ps.AppendLine("try {");
-        foreach (var relative in files)
+        ps.AppendLine($"$log = {PsQuote(Path.Combine(logs, "update-error.log"))}");
+        ps.AppendLine("function Assert-NoReparsePath([string]$Path, [string]$Boundary) {");
+        ps.AppendLine("  $full = [System.IO.Path]::GetFullPath($Path)");
+        ps.AppendLine("  $base = [System.IO.Path]::GetFullPath($Boundary).TrimEnd([System.IO.Path]::DirectorySeparatorChar)");
+        ps.AppendLine("  if (-not ($full.Equals($base, [System.StringComparison]::OrdinalIgnoreCase) -or $full.StartsWith($base + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase))) { throw ('Path escapes update root: ' + $full) }");
+        ps.AppendLine("  $cursor = $full");
+        ps.AppendLine("  while ($cursor) {");
+        ps.AppendLine("    if (Test-Path -LiteralPath $cursor) { $entry = Get-Item -LiteralPath $cursor -Force; if (($entry.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { throw ('Reparse point is not allowed: ' + $cursor) } }");
+        ps.AppendLine("    if ($cursor.Equals($base, [System.StringComparison]::OrdinalIgnoreCase)) { break }");
+        ps.AppendLine("    $cursor = Split-Path -Parent $cursor");
+        ps.AppendLine("  }");
+        ps.AppendLine("}");
+        ps.AppendLine("$items = @(");
+        for (var i = 0; i < files.Count; i++)
         {
+            var relative = files[i];
+            if (!fileHashes.TryGetValue(relative, out var hash) || hash.Length != 64 || !hash.All(Uri.IsHexDigit))
+                throw new InvalidDataException($"Hash SHA-256 ausente ou inválido para {relative}.");
+            EnsureSafeDestination(root, relative);
             var source = Path.Combine(staging, relative.Replace('/', Path.DirectorySeparatorChar));
             var destination = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
-            ps.AppendLine($"  $src = {PsQuote(source)}; $dst = {PsQuote(destination)}; $bak = Join-Path $backup {PsQuote(relative)}");
-            ps.AppendLine($"  if (Test-Path -LiteralPath $dst) {{ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bak) | Out-Null; Move-Item -LiteralPath $dst -Destination $bak -Force }}");
-            ps.AppendLine($"  $processed.Add({PsQuote(relative)})");
-            ps.AppendLine("  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null");
-            ps.AppendLine("  Copy-Item -LiteralPath $src -Destination $dst -Force");
+            var comma = i == files.Count - 1 ? "" : ",";
+            ps.AppendLine($"  [pscustomobject]@{{ Relative = {PsQuote(relative)}; Source = {PsQuote(source)}; Destination = {PsQuote(destination)}; Sha256 = {PsQuote(hash.ToUpperInvariant())} }}{comma}");
         }
-        ps.AppendLine($"  Start-Process -FilePath {PsQuote(Path.Combine(root, "RevivalRevolution.exe"))} -WorkingDirectory {PsQuote(root)}");
+        ps.AppendLine(")");
+        ps.AppendLine("$processed = [System.Collections.Generic.List[object]]::new()");
+        ps.AppendLine("try {");
+        ps.AppendLine("  Assert-NoReparsePath $root $root");
+        ps.AppendLine("  Assert-NoReparsePath $stage $root");
+        ps.AppendLine("  if (-not (Test-Path -LiteralPath $stage -PathType Container)) { throw 'Update staging folder is missing.' }");
+        ps.AppendLine("  foreach ($item in $items) {");
+        ps.AppendLine("    Assert-NoReparsePath $item.Source $root");
+        ps.AppendLine("    if (-not (Test-Path -LiteralPath $item.Source -PathType Leaf)) { throw ('Staged file is missing: ' + $item.Relative) }");
+        ps.AppendLine("    if ((Get-FileHash -LiteralPath $item.Source -Algorithm SHA256).Hash -ne $item.Sha256) { throw ('Staged file hash mismatch: ' + $item.Relative) }");
+        ps.AppendLine("    Assert-NoReparsePath $item.Destination $root");
+        ps.AppendLine("    if (Test-Path -LiteralPath $item.Destination -PathType Container) { throw ('Destination is a directory: ' + $item.Relative) }");
+        ps.AppendLine("  }");
+        ps.AppendLine("  if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }");
+        ps.AppendLine("  New-Item -ItemType Directory -Force -Path $backup | Out-Null");
+        ps.AppendLine("  foreach ($item in $items) {");
+        ps.AppendLine("    Assert-NoReparsePath $item.Source $root");
+        ps.AppendLine("    if ((Get-FileHash -LiteralPath $item.Source -Algorithm SHA256).Hash -ne $item.Sha256) { throw ('Staged file changed before copy: ' + $item.Relative) }");
+        ps.AppendLine("    Assert-NoReparsePath $item.Destination $root");
+        ps.AppendLine("    $bak = Join-Path $backup $item.Relative");
+        ps.AppendLine("    if (Test-Path -LiteralPath $item.Destination) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $bak) | Out-Null; Move-Item -LiteralPath $item.Destination -Destination $bak -Force }");
+        ps.AppendLine("    $processed.Add($item)");
+        ps.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $item.Destination) | Out-Null");
+        ps.AppendLine("    Copy-Item -LiteralPath $item.Source -Destination $item.Destination -Force");
+        ps.AppendLine("    if ((Get-FileHash -LiteralPath $item.Destination -Algorithm SHA256).Hash -ne $item.Sha256) { throw ('Installed file hash mismatch: ' + $item.Relative) }");
+        ps.AppendLine("  }");
+        ps.AppendLine($"  $launched = Start-Process -FilePath {PsQuote(Path.Combine(root, "RevivalRevolution.exe"))} -WorkingDirectory $root -PassThru");
+        ps.AppendLine("  Start-Sleep -Seconds 2");
+        ps.AppendLine("  if ($launched.HasExited -and $launched.ExitCode -ne 0) { throw ('Updated launcher exited with code ' + $launched.ExitCode) }");
         ps.AppendLine("} catch {");
         ps.AppendLine("  $failure = $_.Exception.ToString()");
-        ps.AppendLine("  foreach ($relative in $processed.ToArray()) { $dst = Join-Path $root $relative; $bak = Join-Path $backup $relative; if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }; if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force } }");
-        ps.AppendLine("  Set-Content -LiteralPath " + PsQuote(Path.Combine(logs, "update-error.log")) + " -Value $failure -Encoding UTF8");
+        ps.AppendLine("  foreach ($item in $processed.ToArray()) {");
+        ps.AppendLine("    $dst = $item.Destination; $bak = Join-Path $backup $item.Relative");
+        ps.AppendLine("    if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Force }");
+        ps.AppendLine("    if (Test-Path -LiteralPath $bak) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null; Move-Item -LiteralPath $bak -Destination $dst -Force }");
+        ps.AppendLine("  }");
+        ps.AppendLine("  Set-Content -LiteralPath $log -Value $failure -Encoding UTF8");
         ps.AppendLine("  throw");
         ps.AppendLine("}");
         ps.AppendLine("Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue");
         ps.AppendLine("Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue");
 
-        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(ps.ToString()));
-        var log = Path.Combine(root, "Launcher", "Logs", "update-error.log");
-        var command = "@echo off\r\ntimeout /t 2 /nobreak >nul\r\npowershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " +
-            encoded + "\r\nif errorlevel 1 (echo Falha ao aplicar atualizacao. Consulte o log: " + CmdQuote(log) +
-            " & exit /b 1)\r\ndel \"%~f0\"\r\n";
-        await File.WriteAllTextAsync(script, command, token);
-        return script;
+        var scriptTemp = script + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var commandTemp = command + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            await File.WriteAllTextAsync(scriptTemp, ps.ToString(), new UTF8Encoding(false), token);
+            File.Move(scriptTemp, script, overwrite: true);
+            var batch = "@echo off\r\ntimeout /t 2 /nobreak >nul\r\npowershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"%~dp0apply-update.ps1\"\r\n" +
+                "if errorlevel 1 (echo Falha ao aplicar atualizacao. Consulte Logs\\update-error.log & exit /b 1)\r\ndel \"%~f0\"\r\ndel \"%~dp0apply-update.ps1\"\r\n";
+            await File.WriteAllTextAsync(commandTemp, batch, new UTF8Encoding(false), token);
+            File.Move(commandTemp, command, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(scriptTemp)) File.Delete(scriptTemp);
+            if (File.Exists(commandTemp)) File.Delete(commandTemp);
+        }
+        return command;
     }
 
     private static string PsQuote(string value) => "'" + value.Replace("'", "''") + "'";
