@@ -4,62 +4,68 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Revival Revolution" Height="810" Width="1440"
         MinHeight="700" MinWidth="1100" WindowStartupLocation="CenterScreen"
-        WindowStyle="None" ResizeMode="CanResize" Background="#080911" Foreground="#FFFFFF"
+        WindowStyle="None" ResizeMode="CanResize" Background="#070910" Foreground="#FFFFFF"
         FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue">
     <Window.Resources>
-        <SolidColorBrush x:Key="Glass" Color="#B00A0B17"/>
-        <SolidColorBrush x:Key="Muted" Color="#C5C4D2"/>
-        <SolidColorBrush x:Key="Red" Color="#D52D3B"/>
+        <SolidColorBrush x:Key="Muted" Color="#B9BECE"/>
+        <SolidColorBrush x:Key="Accent" Color="#F04452"/>
         <Style TargetType="Button">
             <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="Background" Value="#7610182A"/>
-            <Setter Property="BorderBrush" Value="#66FFFFFF"/>
+            <Setter Property="Background" Value="#8B121827"/>
+            <Setter Property="BorderBrush" Value="#45FFFFFF"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Padding" Value="15,12"/>
             <Setter Property="Margin" Value="0,5"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}"
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="7" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                CornerRadius="9" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#B02B3149"/>
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#FFE04A58"/>
+                                <Setter TargetName="Surface" Property="Background" Value="#C0263045"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="#FFF05A67"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#DD9D1F2C"/>
+                                <Setter TargetName="Surface" Property="Background" Value="#E02A1827"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="PlayButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#D5C21D2C"/>
-            <Setter Property="BorderBrush" Value="#FFFF6671"/>
+        <Style x:Key="PrimaryAction" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#DDF02D40"/>
+            <Setter Property="BorderBrush" Value="#FFFF6974"/>
             <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="Padding" Value="35,16"/>
-            <Setter Property="FontSize" Value="42"/>
+            <Setter Property="Padding" Value="24,15"/>
+            <Setter Property="FontSize" Value="22"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0"/>
         </Style>
+        <Style x:Key="SmallCaps" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#AEB5C8"/>
+        </Style>
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#7F080A13"/>
+            <Setter Property="Background" Value="#99070A13"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#42FFFFFF"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Padding" Value="11,9"/>
             <Setter Property="CaretBrush" Value="#FFFFFF"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
@@ -67,39 +73,56 @@
     </Window.Resources>
 
     <Grid ClipToBounds="True">
-        <Image x:Name="HeroBackground" Stretch="UniformToFill" Opacity="0.96"/>
-        <Rectangle Fill="#38050916"/>
+        <Image x:Name="HeroBackground" Stretch="UniformToFill" Opacity="0.82"/>
+        <Rectangle Fill="#52040712"/>
         <Rectangle>
             <Rectangle.Fill>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#AA070914" Offset="0"/>
-                    <GradientStop Color="#22080B1C" Offset="0.48"/>
-                    <GradientStop Color="#C9080710" Offset="1"/>
+                    <GradientStop Color="#D5070912" Offset="0"/>
+                    <GradientStop Color="#65090D1B" Offset="0.48"/>
+                    <GradientStop Color="#E5070810" Offset="1"/>
                 </LinearGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
 
-        <Grid x:Name="MainContent" Margin="28,58,28,28" Opacity="0" Loaded="MainContent_Loaded">
+        <Grid x:Name="MainContent" Margin="26,64,26,26" Opacity="0" Loaded="MainContent_Loaded">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="224"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border x:Name="SidebarPanel" Grid.Column="0" Opacity="0" Background="#B30A0B18" BorderBrush="#33FFFFFF"
-                    BorderThickness="1" CornerRadius="16" Padding="16">
+            <Border x:Name="SidebarPanel" Grid.Column="0" Opacity="0" Background="#D6090D19"
+                    BorderBrush="#38FFFFFF" BorderThickness="1" CornerRadius="17" Padding="15">
                 <DockPanel LastChildFill="True">
-                    <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,5">
-                        
-                        <TextBlock Text="REVIVAL REVOLUTION" FontSize="9" Foreground="#AEB2C2"
-                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,2">
+                        <Border Height="1" Background="#35FFFFFF" Margin="2,0,2,12"/>
+                        <TextBlock Text="REVIVAL REVOLUTION" Style="{StaticResource SmallCaps}"
+                                   HorizontalAlignment="Center" FontSize="9"/>
+                        <TextBlock Text="COMMUNITY BUILD  •  0.8.3" FontFamily="Segoe UI" FontSize="8"
+                                   Foreground="#778196" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="MENU" FontSize="10" FontWeight="Bold" Foreground="#AEB2C2"
-                                   Margin="8,4,0,16"/>
-                        <Button x:Name="OfflineNavButton" Content="OFFLINE" Click="Launch_Click" FontSize="22" Padding="13,13"/>
-                        <Button x:Name="PrivateMatchNavButton" Content="PRIVATE MATCH" Click="PrivateMatch_Click" FontSize="16" Padding="13,13"/>
-                        <Button x:Name="RadminNavButton" Content="REDE RADMIN" Click="RadminNetwork_Click" FontSize="22" Padding="13,13"/>
-                        <Separator Background="#55FFFFFF" Margin="4,20,4,14"/>
+                        <StackPanel Orientation="Horizontal" Margin="5,5,0,22">
+                            <Border Width="31" Height="31" CornerRadius="9" Background="#DDF02D40"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="R" FontSize="22" FontWeight="Black"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="REVIVAL" FontSize="19" FontWeight="Black" LineHeight="19"/>
+                                <TextBlock Text="REVOLUTION" FontFamily="Segoe UI" FontSize="8"
+                                           FontWeight="Bold" Foreground="#AEB5C8" CharacterSpacing="170"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock Text="MENU PRINCIPAL" Style="{StaticResource SmallCaps}" Margin="7,0,0,9"/>
+                        <Button x:Name="OfflineNavButton" Content="  JOGAR OFFLINE" Click="Launch_Click"
+                                FontSize="17" Padding="13,13"/>
+                        <Button x:Name="PrivateMatchNavButton" Content="  PRIVATE MATCH" Click="PrivateMatch_Click"
+                                FontSize="17" Padding="13,13"/>
+                        <Button x:Name="RadminNavButton" Content="  REDE RADMIN" Click="RadminNetwork_Click"
+                                FontSize="17" Padding="13,13"/>
+                        <Border Height="1" Background="#35FFFFFF" Margin="3,18,3,14"/>
+                        <TextBlock Text="FERRAMENTAS" Style="{StaticResource SmallCaps}" Margin="7,0,0,9"/>
                         <Button x:Name="DiagnosticsNavButton" Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="11"/>
                         <Button x:Name="UpdatesNavButton" Content="ATUALIZAÇÕES" Click="Updates_Click" FontSize="11"/>
                         <Button x:Name="SettingsNavButton" Content="CONFIGURAÇÕES" Click="Settings_Click" FontSize="11"/>
@@ -107,36 +130,54 @@
                 </DockPanel>
             </Border>
 
-            <Grid Grid.Column="1" Margin="22,0,0,0">
+            <Grid Grid.Column="1" Margin="20,0,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <DockPanel x:Name="HeaderPanel" Grid.Row="0" Opacity="0" LastChildFill="False">
-                    <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
-                        <Image x:Name="MetalLogo" Width="190" Height="64" Stretch="Uniform" Visibility="Collapsed"/>
-                        <StackPanel x:Name="LogoFallback">
-                            <TextBlock Text="METAL" FontSize="34" FontWeight="Black" HorizontalAlignment="Right"
-                                       Foreground="White"/>
-                            <TextBlock Text="R E V O L U T I O N" FontSize="9" FontWeight="Bold"
-                                       HorizontalAlignment="Right" Foreground="#E7E5EC" Margin="0,-3,2,0"/>
+                <DockPanel x:Name="HeaderPanel" Grid.Row="0" Opacity="0" LastChildFill="False" Margin="0,2,0,0">
+                    <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                        <TextBlock Text="CENTRAL DE JOGO" Style="{StaticResource SmallCaps}" Foreground="#F05A66"/>
+                        <TextBlock Text="BEM-VINDO DE VOLTA" FontSize="26" FontWeight="Black" Margin="0,1,0,0"/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#B90B1220" BorderBrush="#42FFFFFF" BorderThickness="1"
+                                CornerRadius="9" Padding="12,9" Margin="0,0,12,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="7" Height="7" Fill="#31C779" Margin="0,0,8,0"/>
+                                <TextBlock Text="MODO LOCAL DISPONÍVEL" FontFamily="Segoe UI" FontSize="9"
+                                           FontWeight="Bold" Foreground="#E5E8F0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#B90B1220" BorderBrush="#42FFFFFF" BorderThickness="1"
+                                CornerRadius="9" Padding="12,9">
+                            <TextBlock x:Name="VersionLabel" FontFamily="Segoe UI" FontSize="10"
+                                       FontWeight="Bold" Foreground="#FFFFFF"/>
+                        </Border>
+                        <Image x:Name="MetalLogo" Width="112" Height="54" Stretch="Uniform"
+                               Visibility="Collapsed" Margin="14,0,0,0"/>
+                        <StackPanel x:Name="LogoFallback" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="METAL" FontSize="24" FontWeight="Black" HorizontalAlignment="Right"/>
+                            <TextBlock Text="REVOLUTION" FontFamily="Segoe UI" FontSize="7"
+                                       FontWeight="Bold" HorizontalAlignment="Right" Foreground="#D8DCE7"/>
                         </StackPanel>
                     </StackPanel>
-                    <Border Background="#9B090A12" CornerRadius="6" Padding="12,7"
-                            VerticalAlignment="Center" BorderBrush="#44FFFFFF" BorderThickness="1">
-                        <TextBlock x:Name="VersionLabel" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF"/>
-                    </Border>
                 </DockPanel>
 
-                <Grid Grid.Row="1" Margin="0,22,0,24">
+                <Grid Grid.Row="1" Margin="0,20,0,18">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="230"/>
+                        <ColumnDefinition Width="1.7*"/>
+                        <ColumnDefinition Width="0.92*"/>
                     </Grid.ColumnDefinitions>
-                    <Border x:Name="HeroPanel" Grid.Column="0" Opacity="0" Background="#9B090A12" BorderBrush="#44FFFFFF"
-                            BorderThickness="1" CornerRadius="16" Padding="28" Margin="0,0,18,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border x:Name="HeroPanel" Grid.Column="0" Opacity="0" Background="#C8080D19"
+                            BorderBrush="#55FFFFFF" BorderThickness="1" CornerRadius="18"
+                            Padding="25" Margin="0,0,14,0">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -144,116 +185,163 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <StackPanel>
-                                <TextBlock Text="REVIVAL REVOLUTION" FontFamily="Segoe UI" FontSize="11"
-                                           FontWeight="Bold" Foreground="#FFE04A58"/>
-                                <TextBlock Text="SUA ARENA. SEU COMBATE." FontSize="42" FontWeight="Black"
-                                           Foreground="White" Margin="0,8,0,2"/>
-                                <TextBlock Text="Launcher da comunidade • Inicialização offline preservada"
-                                           FontFamily="Segoe UI" FontSize="12" Foreground="#D0CED8"/>
+                                <Border Background="#2BF04452" CornerRadius="5" Padding="8,4"
+                                        HorizontalAlignment="Left">
+                                    <TextBlock Text="REVIVAL REVOLUTION" FontFamily="Segoe UI" FontSize="9"
+                                               FontWeight="Bold" Foreground="#FFFF6974"/>
+                                </Border>
+                                <TextBlock Text="SUA ARENA.&#xA;SEU COMBATE." FontSize="46" FontWeight="Black"
+                                           LineHeight="47" Margin="0,13,0,6"/>
+                                <TextBlock Text="Escolha seu modo e entre na luta." FontFamily="Segoe UI"
+                                           FontSize="12" Foreground="#C7CCDA"/>
                             </StackPanel>
-                            <Grid Grid.Row="1" VerticalAlignment="Center" Margin="0,24,0,18">
+
+                            <Grid Grid.Row="1" VerticalAlignment="Center" Margin="0,20,0,18">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Background="#66161A2A" BorderBrush="#44FFFFFF" BorderThickness="1"
-                                        CornerRadius="10" Padding="16" Margin="0,0,8,0">
+                                <Border Background="#75141C2B" BorderBrush="#45FFFFFF" BorderThickness="1"
+                                        CornerRadius="13" Padding="16" Margin="0,0,7,0">
                                     <StackPanel>
-                                        <TextBlock Text="MODO OFFLINE" FontFamily="Segoe UI" FontSize="10"
-                                                   FontWeight="Bold" Foreground="#BFC0CC"/>
-                                        <TextBlock Text="PRONTO PARA JOGAR" FontSize="22" FontWeight="Bold"
-                                                   Foreground="#FFFFFF" Margin="0,5,0,0"/>
-                                        <TextBlock Text="Usa os scripts e bridges originais da distribuição."
-                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C8C6D2"
-                                                   TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        <TextBlock Text="01  /  SINGLE PLAYER" Style="{StaticResource SmallCaps}"/>
+                                        <TextBlock Text="OFFLINE" FontSize="25" FontWeight="Black" Margin="0,7,0,2"/>
+                                        <TextBlock Text="Jogue localmente usando os arquivos originais da sua instalação."
+                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C4C9D7"
+                                                   TextWrapping="Wrap" MinHeight="42"/>
+                                        <Button Content="JOGAR OFFLINE  →" Click="Launch_Click"
+                                                Style="{StaticResource PrimaryAction}" FontSize="13"
+                                                Padding="12,10" Margin="0,12,0,0"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Grid.Column="1" Background="#66161A2A" BorderBrush="#44FFFFFF"
-                                        BorderThickness="1" CornerRadius="10" Padding="16" Margin="8,0,0,0">
+                                <Border Grid.Column="1" Background="#75141C2B" BorderBrush="#65F04452"
+                                        BorderThickness="1.2" CornerRadius="13" Padding="16" Margin="7,0,0,0">
                                     <StackPanel>
-                                        <TextBlock Text="INSTALAÇÃO" FontFamily="Segoe UI" FontSize="10"
-                                                   FontWeight="Bold" Foreground="#BFC0CC"/>
-                                        <TextBlock x:Name="DashboardLocalStatus" Text="NÃO CONFIGURADA"
-                                                   FontSize="22" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,5,0,0"/>
-                                        <TextBlock Text="Diagnóstico local disponível. Reparos seguem protegidos."
-                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C8C6D2"
-                                                   TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        <TextBlock Text="02  /  MULTIPLAYER" Style="{StaticResource SmallCaps}" Foreground="#FF8D98AA"/>
+                                        <TextBlock Text="PRIVATE MATCH" FontSize="24" FontWeight="Black" Margin="0,7,0,2"/>
+                                        <TextBlock Text="Crie uma sala ou entre com o código de outro jogador pela rede Radmin."
+                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C4C9D7"
+                                                   TextWrapping="Wrap" MinHeight="42"/>
+                                        <Button Content="ABRIR SALA PRIVADA  →" Click="PrivateMatch_Click"
+                                                Style="{StaticResource PrimaryAction}" FontSize="12"
+                                                Padding="12,10" Margin="0,12,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>
-                            <TextBlock Grid.Row="2" Text="Selecione a instalação do jogo para habilitar o botão PLAY."
-                                       FontFamily="Segoe UI" FontSize="11" Foreground="#D0CED8"/>
+
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="#251FC779" BorderBrush="#5531C779" BorderThickness="1"
+                                        CornerRadius="7" Padding="9,6">
+                                    <TextBlock Text="BUILD 0.8.3" FontFamily="Segoe UI" FontSize="9"
+                                               FontWeight="Bold" Foreground="#9BE5BD"/>
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="Ranked em fase beta • ELO e resultados competitivos desativados"
+                                           FontFamily="Segoe UI" FontSize="9" Foreground="#AEB5C8"
+                                           VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
+                            </Grid>
                         </Grid>
                     </Border>
-                    <Border x:Name="QuickAccessPanel" Grid.Column="1" Opacity="0" Background="#A0090A14" BorderBrush="#44FFFFFF"
-                            BorderThickness="1" CornerRadius="16" Padding="16">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="ACESSO RÁPIDO" FontFamily="Segoe UI" FontSize="10"
-                                       FontWeight="Bold" Foreground="#BFC0CC" Margin="0,0,0,14"/>
-                            <Button Content="LOCALIZAR JOGO" Click="ChooseFolder_Click"
-                                    HorizontalContentAlignment="Center" FontSize="12" Padding="10,13"/>
-                            <Button Content="RODAR DIAGNÓSTICO" Click="Diagnostics_Click"
-                                    HorizontalContentAlignment="Center" FontSize="11" Padding="10,13"/>
-                            <Separator Background="#55FFFFFF" Margin="2,12"/>
-                            <TextBlock Text="RECURSOS" FontFamily="Segoe UI" FontSize="9"
-                                       FontWeight="Bold" Foreground="#AEB2C2" Margin="0,4,0,6"/>
-                            <TextBlock Text="• Offline disponível&#xA;• Private Match por convite&#xA;• Rede Radmin • UDP 8766"
-                                       FontFamily="Segoe UI" FontSize="10" Foreground="#C8C6D2"
-                                       TextWrapping="Wrap" LineHeight="19"/>
-                        </StackPanel>
-                    </Border>
+
+                    <StackPanel Grid.Column="1">
+                        <Border x:Name="QuickAccessPanel" Opacity="0" Background="#C8080D19"
+                                BorderBrush="#55FFFFFF" BorderThickness="1" CornerRadius="18"
+                                Padding="19" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="STATUS DO SISTEMA" Style="{StaticResource SmallCaps}"/>
+                                <TextBlock Text="SEU SETUP" FontSize="23" FontWeight="Black" Margin="0,4,0,14"/>
+                                <Border Background="#70131B2B" CornerRadius="10" Padding="12" Margin="0,0,0,9">
+                                    <StackPanel>
+                                        <TextBlock Text="INSTALAÇÃO DO JOGO" Style="{StaticResource SmallCaps}"/>
+                                        <TextBlock x:Name="DashboardLocalStatus" Text="NÃO CONFIGURADA"
+                                                   FontSize="19" FontWeight="Bold" Margin="0,4,0,0"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#70131B2B" CornerRadius="10" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="CONEXÃO" Style="{StaticResource SmallCaps}"/>
+                                        <TextBlock Text="RADMIN VPN" FontSize="19" FontWeight="Bold" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Mesma rede para todos os jogadores • UDP 8766"
+                                                   FontFamily="Segoe UI" FontSize="9" Foreground="#B9BECE"
+                                                   TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Button Content="VER STATUS DA REDE  →" Click="RadminNetwork_Click"
+                                        HorizontalContentAlignment="Center" FontSize="10" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#A90A101D" BorderBrush="#35FFFFFF" BorderThickness="1"
+                                CornerRadius="18" Padding="18">
+                            <StackPanel>
+                                <TextBlock Text="ACESSO RÁPIDO" Style="{StaticResource SmallCaps}"/>
+                                <Button Content="LOCALIZAR INSTALAÇÃO" Click="ChooseFolder_Click"
+                                        HorizontalContentAlignment="Center" FontSize="10" Padding="11,10"/>
+                                <Button Content="EXECUTAR DIAGNÓSTICO" Click="Diagnostics_Click"
+                                        HorizontalContentAlignment="Center" FontSize="10" Padding="11,10"/>
+                                <TextBlock Text="Sem relay externo, STUN ou fallback público. Private Match funciona somente na rede Radmin compartilhada."
+                                           FontFamily="Segoe UI" FontSize="9" Foreground="#9EA6B9"
+                                           TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                 </Grid>
 
-                <Grid x:Name="BottomPanel" Grid.Row="2" Opacity="0" Margin="0,0,0,0">
+                <Grid x:Name="BottomPanel" Grid.Row="2" Opacity="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="190"/>
+                        <ColumnDefinition Width="210"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <Grid Margin="0,0,0,10">
+                        <Grid Margin="0,0,0,9">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="178"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="GameFolderBox" IsReadOnly="True" VerticalContentAlignment="Center"
-                                     Text="CAMINHO DA PASTA" Background="#A0080A15" BorderBrush="#33FFFFFF"
-                                     Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" Content="SELECIONE A PASTA" Click="ChooseFolder_Click"
-                                    HorizontalContentAlignment="Center" FontSize="10" Margin="0"/>
+                                     Text="CAMINHO DA PASTA DO JOGO" Background="#B8070A13"
+                                     BorderBrush="#42FFFFFF" Margin="0,0,9,0"/>
+                            <Button Grid.Column="1" Content="SELECIONAR PASTA" Click="ChooseFolder_Click"
+                                    HorizontalContentAlignment="Center" FontSize="9" Margin="0"/>
                         </Grid>
-                        <Border Background="#A0090A14" BorderBrush="#33FFFFFF" BorderThickness="1"
-                                CornerRadius="9" Padding="10">
+                        <Border Background="#B9080D18" BorderBrush="#42FFFFFF" BorderThickness="1"
+                                CornerRadius="11" Padding="11">
                             <StackPanel>
-                                <TextBlock Text="LOG" FontSize="10" FontWeight="Bold" Foreground="#DAD8E2"
-                                           Margin="0,0,0,6"/>
+                                <TextBlock Text="LOG DE ATIVIDADE" Style="{StaticResource SmallCaps}" Margin="0,0,0,5"/>
                                 <TextBox x:Name="LogBox" IsReadOnly="True" TextWrapping="Wrap"
-                                         AcceptsReturn="True" MinHeight="76" MaxHeight="130"
+                                         AcceptsReturn="True" MinHeight="54" MaxHeight="78"
                                          Background="Transparent" BorderThickness="0" Padding="0"
-                                         Foreground="#E6E4EC" FontSize="10" FontFamily="Segoe UI"
+                                         Foreground="#D9DEEA" FontSize="9" FontFamily="Segoe UI"
                                          VerticalScrollBarVisibility="Auto"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="12,0,0,0">
-                        <Border x:Name="GameStateBorder" Background="#FF555B66" CornerRadius="8" Padding="12,7" HorizontalAlignment="Stretch">
-                            <TextBlock x:Name="GameStateLabel" Text="NENHUM" FontSize="15" FontWeight="Black"
-                                       HorizontalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="13,0,0,0">
+                        <Border x:Name="GameStateBorder" Background="#FF555B66" CornerRadius="9"
+                                Padding="12,8" HorizontalAlignment="Stretch">
+                            <TextBlock x:Name="GameStateLabel" Text="NENHUM" FontSize="14"
+                                       FontWeight="Black" HorizontalAlignment="Center"/>
                         </Border>
-                        <Button x:Name="PlayButton" Content="PLAY" Style="{StaticResource PlayButton}" Click="Launch_Click"
-                                HorizontalContentAlignment="Center" Margin="0,10,0,0"/>
+                        <Button x:Name="PlayButton" Content="PLAY  →" Style="{StaticResource PrimaryAction}"
+                                Click="Launch_Click" HorizontalContentAlignment="Center"
+                                Margin="0,9,0,0" FontSize="29" Padding="20,10"/>
                     </StackPanel>
                 </Grid>
             </Grid>
         </Grid>
 
         <TextBlock x:Name="FooterStatus" Text="Selecione a pasta do jogo para começar."
-                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,30,12"
-                   Foreground="#D1CEDA" FontSize="10" />
+                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,30,9"
+                   Foreground="#C5CAD7" FontFamily="Segoe UI" FontSize="9"/>
 
-        <!-- Custom window chrome sits over the game artwork. -->
-        <Border x:Name="WindowChrome" Opacity="0" Height="44" VerticalAlignment="Top" Margin="10,9,10,0"
-                Background="#D9090D18" BorderBrush="#66FFFFFF" BorderThickness="1"
-                CornerRadius="9" MouseLeftButtonDown="WindowChrome_MouseLeftButtonDown">
+        <Border x:Name="WindowChrome" Opacity="0" Height="44" VerticalAlignment="Top"
+                Margin="10,9,10,0" Background="#E6080B14" BorderBrush="#55FFFFFF"
+                BorderThickness="1" CornerRadius="10"
+                MouseLeftButtonDown="WindowChrome_MouseLeftButtonDown">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -261,9 +349,10 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"
                             IsHitTestVisible="False">
-                    <Ellipse Width="7" Height="7" Fill="#D52D3B" Margin="0,0,9,0"/>
-                    <TextBlock Text="REVIVAL REVOLUTION  /  GAME LAUNCHER" FontFamily="Segoe UI" FontSize="9"
-                               FontWeight="Bold" Foreground="#D9D8E2" VerticalAlignment="Center"/>
+                    <Ellipse Width="7" Height="7" Fill="#F04452" Margin="0,0,9,0"/>
+                    <TextBlock Text="REVIVAL REVOLUTION  /  GAME LAUNCHER" FontFamily="Segoe UI"
+                               FontSize="9" FontWeight="Bold" Foreground="#E1E5EF"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
                     <Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"
@@ -280,7 +369,7 @@
                             ToolTip="Fechar">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="CloseSurface" Background="Transparent" CornerRadius="0,8,8,0">
+                                <Border x:Name="CloseSurface" Background="Transparent" CornerRadius="0,9,9,0">
                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
@@ -298,11 +387,10 @@
             </Grid>
         </Border>
 
-        <!-- Update progress modal -->
         <Grid x:Name="UpdateOverlay" Visibility="Collapsed" Opacity="0"
-              Background="#CC03040A" Panel.ZIndex="20">
-            <Border Width="520" Padding="30" CornerRadius="18"
-                    Background="#F20B0D19" BorderBrush="#88FFFFFF" BorderThickness="1"
+              Background="#E603040A" Panel.ZIndex="20">
+            <Border Width="520" Padding="30" CornerRadius="18" Background="#F20B0D19"
+                    BorderBrush="#88FFFFFF" BorderThickness="1"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
                     <TextBlock Text="REVIVAL REVOLUTION" FontFamily="Segoe UI" FontSize="10"
