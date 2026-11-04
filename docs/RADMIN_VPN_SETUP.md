@@ -43,13 +43,14 @@ Se não responder:
 - confira se o IP informado é o do anfitrião;
 - confirme se o agente "Revival Revolution Ranked Host" aparece no Agendador de Tarefas do Windows;
 - confira os logs `%LOCALAPPDATA%\\RevivalRevolution\\RankedServer\\ranked.sqlite3.log` e `ranked.sqlite3.agent.log`;
+- no diretório de distribuição do launcher, confira `peer-session.log`, `peer-status.json` e `peer-summary.txt` para diagnosticar o transporte UDP;
 - teste `Test-NetConnection 26.226.57.19 -Port 8765` no cliente.
 
 ## 5. Transporte do jogo pela Radmin
 
 O fluxo de PRIVATE MATCH inicia o transporte UDP diretamente entre os dois jogadores pela interface Radmin. O código de conexão é trocado pelo backend Ranked; não é necessário executar `peer_session.py` manualmente nem copiar `peer-code.txt`. O launcher instala a regra de firewall UDP restrita a origem 26.0.0.0/8 na primeira utilização de cada computador.
 
-Não use `--autopunch`: esse modo depende de STUN/relay externo e não faz parte do caminho Radmin direto. Ambos os computadores precisam usar a mesma versão do launcher e ter o jogo instalado com as DLLs de bridge compatíveis.
+Não use `--autopunch` na distribuição normal: o protótipo atual depende de STUN público e do relay de terceiros `delthas.fr:14763`, sem SLA ou controle operacional do projeto. Ele não é um fallback automático nem uma alternativa de produção. Para jogar sem Radmin, será necessário disponibilizar uma API Ranked acessível publicamente e operar um relay UDP próprio (ou contratar um serviço TURN/relay equivalente); apenas trocar o código P2P não torna a API privada acessível pela internet. Ambos os computadores precisam usar a mesma versão do launcher e ter o jogo instalado com as DLLs de bridge compatíveis.
 
 ## Limitações e segurança
 
