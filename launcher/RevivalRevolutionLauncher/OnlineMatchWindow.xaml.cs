@@ -90,6 +90,8 @@ public partial class OnlineMatchWindow : UserControl
         catch (Exception ex)
         {
             _token = null;
+            NicknameBox.IsReadOnly = false;
+            ConnectButton.Content = "CONECTAR";
             ProfileText.Text = "Não foi possível restaurar a sessão.";
             StatusText.Text = "Falha ao conectar ao servidor: " + ex.Message;
             SetModeButtons(false);
@@ -144,6 +146,8 @@ public partial class OnlineMatchWindow : UserControl
         _playerId = profile["player_id"]?.GetValue<string>() ?? _playerId;
         var name = profile["display_name"]?.GetValue<string>() ?? NicknameBox.Text;
         NicknameBox.Text = name;
+        NicknameBox.IsReadOnly = true;
+        ConnectButton.Content = "ATUALIZAR";
         MyNicknameText.Text = name;
         ProfileText.Text = "CONTA CONECTADA";
         AvatarButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
