@@ -7,10 +7,10 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 
 - Interface WPF com dashboard editorial, navegação agrupada e identidade visual escura com acento vermelho.
 - Sala por código integrada ao conteúdo principal, sem abrir uma segunda janela sobre o dashboard.
+- Launcher focado em localizar e iniciar o jogo, acessar salas privadas por código, diagnósticos e configurações; não inclui loja, biblioteca de mods ou central social.
 - Configurações em abas Geral, Interface, Rede, Dados e Suporte, com validação em tempo real do endpoint Radmin e preferência de acessibilidade para reduzir animações.
 - Central de diagnósticos com filtros por criticidade, resumo de integridade, avisos não bloqueantes, cópia de relatório com caminhos pessoais redigidos e acesso aos logs.
-- Central de comunidade com subabas Visão geral, Biblioteca e Conteúdo local; inclui acesso ao Discord, repositório e pasta local do jogo. A biblioteca informa claramente que catálogo e instalação de mods ainda não estão integrados.
-- Atalhos de navegação: Ctrl+1 (offline), Ctrl+2 (sala), Ctrl+3 (diagnósticos), Ctrl+4 (configurações), Ctrl+5 (comunidade) e Esc (voltar da sala).
+- Atalhos de navegação: Ctrl+1 (offline), Ctrl+2 (sala), Ctrl+3 (diagnósticos), Ctrl+4 (configurações) e Esc (voltar da sala).
 - Seleção e persistência da pasta que contém `ufo.exe` e `ufo_Data/Managed`.
 - Inicialização do fluxo offline original via `offline_launcher.py`, com logs
   em `Launcher/Logs`.
