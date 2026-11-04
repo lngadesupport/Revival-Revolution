@@ -160,6 +160,7 @@ public partial class MainWindow : Window
 
         if (File.Exists(logo))
         {
+            Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(logo));
             MetalLogo.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(logo));
             MetalLogo.Visibility = Visibility.Visible;
             LogoFallback.Visibility = Visibility.Collapsed;
