@@ -43,7 +43,6 @@ public partial class MainWindow : Window
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
         GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
-        CommunityGamePath.Text = _gameFolder ?? "Nenhuma instalação selecionada.";
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
@@ -174,7 +173,6 @@ public partial class MainWindow : Window
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("offline");
-        CommunityPage.Visibility = Visibility.Collapsed;
         DashboardPage.Visibility = Visibility.Visible;
         if (_busy || IsGameRunning()) return;
         RefreshGameState();
@@ -393,7 +391,7 @@ public partial class MainWindow : Window
         var buttons = new (string Key, System.Windows.Controls.Button Button)[]
         {
             ("offline", OfflineNavButton),
-            ("private", PrivateMatchNavButton), ("mods", ModListNavButton),
+            ("private", PrivateMatchNavButton),
             ("diagnostics", DiagnosticsNavButton),
             ("settings", SettingsNavButton)
         };
@@ -447,11 +445,6 @@ public partial class MainWindow : Window
             case System.Windows.Input.Key.D4:
             case System.Windows.Input.Key.NumPad4:
                 Settings_Click(this, new RoutedEventArgs());
-                e.Handled = true;
-                break;
-            case System.Windows.Input.Key.D5:
-            case System.Windows.Input.Key.NumPad5:
-                ModList_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 break;
         }
@@ -679,77 +672,6 @@ public partial class MainWindow : Window
         RefreshGameState();
     }
 
-    private void ModList_Click(object sender, RoutedEventArgs e)
-    {
-        SetActiveNavigation("mods");
-        DashboardPage.Visibility = Visibility.Collapsed;
-        PrivateMatchHost.Visibility = Visibility.Collapsed;
-        CommunityPage.Visibility = Visibility.Visible;
-        CommunityGamePath.Text = _gameFolder ?? "Nenhuma instalação selecionada.";
-        SetCommunityTab("overview");
-        FooterStatus.Text = "COMUNIDADE — canais, estado da biblioteca e conteúdo local.";
-    }
-
-    private void CommunityOverview_Click(object sender, RoutedEventArgs e) => SetCommunityTab("overview");
-    private void CommunityLibrary_Click(object sender, RoutedEventArgs e) => SetCommunityTab("library");
-    private void CommunityLocal_Click(object sender, RoutedEventArgs e) => SetCommunityTab("local");
-
-    private void SetCommunityTab(string tab)
-    {
-        CommunityOverviewPanel.Visibility = tab == "overview" ? Visibility.Visible : Visibility.Collapsed;
-        CommunityLibraryPanel.Visibility = tab == "library" ? Visibility.Visible : Visibility.Collapsed;
-        CommunityLocalPanel.Visibility = tab == "local" ? Visibility.Visible : Visibility.Collapsed;
-        SetCommunityTabStyle(CommunityOverviewTab, tab == "overview");
-        SetCommunityTabStyle(CommunityLibraryTab, tab == "library");
-        SetCommunityTabStyle(CommunityLocalTab, tab == "local");
-    }
-
-    private static void SetCommunityTabStyle(System.Windows.Controls.Button button, bool selected)
-    {
-        button.Background = new SolidColorBrush(selected
-            ? Color.FromRgb(157, 31, 44) : Color.FromArgb(35, 255, 255, 255));
-        button.BorderBrush = new SolidColorBrush(selected
-            ? Color.FromRgb(255, 105, 116) : Color.FromRgb(57, 66, 82));
-        button.BorderThickness = new Thickness(1);
-    }
-
-    private void OpenGameFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_gameFolder) || !Directory.Exists(_gameFolder))
-        {
-            FooterStatus.Text = "Selecione uma pasta de instalação existente antes de abrir o conteúdo local.";
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo { FileName = _gameFolder!, UseShellExecute = true });
-            Log("Pasta local do jogo aberta pelo usuário.");
-        }
-        catch (Exception ex)
-        {
-            FooterStatus.Text = "Não foi possível abrir a pasta do jogo.";
-            MessageBox.Show(this, "Não foi possível abrir a pasta selecionada: " + ex.Message,
-                "Conteúdo local", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-    }
-
-    private void Repository_Click(object sender, RoutedEventArgs e)
-    {
-        const string repositoryUrl = "https://github.com/lngadesupport/Revival-Revolution";
-        try
-        {
-            Process.Start(new ProcessStartInfo { FileName = repositoryUrl, UseShellExecute = true });
-            Log("Repositório comunitário aberto no navegador padrão.");
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, "Não foi possível abrir o repositório: " + ex.Message,
-                "Comunidade", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-    }
-
-
     private void WindowChrome_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.ChangedButton != System.Windows.Input.MouseButton.Left) return;
@@ -792,19 +714,4 @@ public partial class MainWindow : Window
     private void CloseWindow_Click(object sender, RoutedEventArgs e)
         => Close();
 
-    private void Discord_Click(object sender, RoutedEventArgs e)
-    {
-        const string discordUrl = "https://discord.gg/Zw2GCscKU";
-        try
-        {
-            Process.Start(new ProcessStartInfo { FileName = discordUrl, UseShellExecute = true });
-            Log("Convite do Discord aberto no navegador padrão.");
-        }
-        catch (Exception ex)
-        {
-            Log("Não foi possível abrir o Discord: " + ex.Message);
-            MessageBox.Show(this, "Não foi possível abrir o navegador automaticamente. Acesse:\n" + discordUrl,
-                "Discord", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-    }
 }
