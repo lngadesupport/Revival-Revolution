@@ -80,6 +80,44 @@ class PeerConnectionCodeTests(unittest.TestCase):
         self.assertTrue(hasattr(peer_session, "LiveFighter"))
 
 
+class LiveFighterReportTests(unittest.TestCase):
+    def test_partial_or_missing_report_keeps_last_good_until_heartbeat_expires(self):
+        import json
+        from types import SimpleNamespace
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            bridge = SimpleNamespace(session="session-123")
+            selection = SimpleNamespace(proposal_hash="setup-hash")
+            live = peer_session.LiveFighter(root, 0, bridge, selection, peer_session.atomic_json)
+            live.test_id = "test-123"
+            report_path = root / "live-fighter.json"
+            report_path.write_text(json.dumps({
+                "session_id": bridge.session,
+                "test_id": live.test_id,
+                "state": "playing",
+                "frame": 120,
+                "port": 40000
+            }), encoding="utf-8")
+            try:
+                live.refresh_report()
+                self.assertEqual(live.report["frame"], 120)
+
+                report_path.write_text('{"partial":', encoding="utf-8")
+                live.refresh_report()
+                self.assertEqual(live.report["frame"], 120)
+
+                report_path.unlink()
+                live.refresh_report()
+                self.assertEqual(live.report["frame"], 120)
+
+                live.last_report_seen = time.monotonic() - 6
+                with self.assertRaisesRegex(RuntimeError, "heartbeat expired"):
+                    live.refresh_report()
+            finally:
+                live.close()
+
+
 class DirectUdpPeerSessionTests(unittest.TestCase):
     class FakeBridge:
         def __init__(self, root, slot, session):
