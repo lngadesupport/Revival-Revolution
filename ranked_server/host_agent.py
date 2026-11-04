@@ -46,6 +46,10 @@ def main() -> None:
     parser.add_argument("--root", required=True)
     args = parser.parse_args()
 
+    # A local matchmaking host must never inherit or activate the competitive
+    # result authority secret; adjudication remains disabled until a trusted
+    # game authority is implemented and deployed separately.
+    os.environ.pop("RANKED_RESULT_SECRET", None)
     root = Path(args.root).resolve()
     database = Path(args.database).resolve()
     database.parent.mkdir(parents=True, exist_ok=True)

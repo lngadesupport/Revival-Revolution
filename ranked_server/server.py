@@ -1,8 +1,8 @@
-"""Small standard-library HTTP API for the Ranked matchmaking MVP.
+"""Standard-library API for Radmin matchmaking and Ranked account data.
 
-Run behind HTTPS in production. This service intentionally does not accept match
-results or modify ratings: the current client-reported peer completion is not
-server-authoritative enough for competitive rating changes.
+Run behind HTTPS in production. Competitive results are accepted only through
+the internal authority endpoint protected by RANKED_RESULT_SECRET; player
+bearer tokens cannot submit winners.
 """
 from __future__ import annotations
 
@@ -10,16 +10,19 @@ import argparse
 import json
 import logging
 import os
+import hmac
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from .storage import RankedStore
 from .social import SocialStore
+from .competitive import CompetitiveStore
 
 
 def make_handler(store: RankedStore):
     social = SocialStore(store.database, clock=store.clock)
+    competitive = CompetitiveStore(store.database, clock=store.clock)
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "RevivalRanked/0.8.1"
@@ -69,6 +72,22 @@ def make_handler(store: RankedStore):
             player_id = player["player_id"]
             if path == "/v1/me":
                 return self._json(200, social.profile(player_id))
+            if path == "/v1/ranked/me":
+                summary = competitive.player_summary(player_id)
+                summary["recent_matches"] = competitive.match_history(player_id)
+                summary["competitive_status"] = "provisional"
+                summary["competitive_enabled"] = False
+                return self._json(200, summary)
+            if path == "/v1/ranked/leaderboard":
+                query = parse_qs(parsed.query)
+                try:
+                    limit = int(query.get("limit", ["100"])[0])
+                    return self._json(200, {
+                        "season_id": "season-1", "entries": competitive.leaderboard(limit),
+                        "competitive_status": "provisional", "competitive_enabled": False,
+                    })
+                except (TypeError, ValueError) as exc:
+                    return self._json(400, {"error": "invalid_request", "message": str(exc)})
             if path == "/v1/friends":
                 return self._json(200, social.friends(player_id))
             if path == "/v1/blocks":
@@ -102,17 +121,43 @@ def make_handler(store: RankedStore):
                 except ValueError:
                     return self._json(400, {"error": "invalid_request", "message": "limit must be an integer"})
                 return self._json(200, {"entries": social.leaderboard(limit)})
-            if path == "/v1/queue":
-                return self._json(200, store.queue_status(player_id))
-            if path == "/v1/match":
-                return self._json(200, {"match": store.current_match(player_id)})
+            if path in ("/v1/queue", "/v1/ranked/queue"):
+                mode = "ranked" if path == "/v1/ranked/queue" else "casual"
+                return self._json(200, store.queue_status(player_id, mode=mode))
+            if path in ("/v1/match", "/v1/ranked/match"):
+                mode = "ranked" if path == "/v1/ranked/match" else "casual"
+                return self._json(200, {"match": store.current_match(player_id, mode=mode)})
             if path == "/v1/rooms/current":
                 return self._json(200, store.current_private_room(player_id))
             return self._json(404, {"error": "not_found"})
         def do_POST(self):
             path = urlparse(self.path).path
             try:
+                is_internal_result = path.startswith("/internal/v1/matches/") and path.endswith("/result")
+                if is_internal_result:
+                    # Authority must authenticate before an untrusted body is parsed.
+                    # A secret alone is not sufficient: competitive results stay
+                    # hard-disabled until an independent, trusted game authority
+                    # has been integrated and explicitly enabled by an operator.
+                    if os.environ.get("RANKED_COMPETITIVE_RESULTS_ENABLED") != "1":
+                        return self._json(503, {"error": "competitive_results_disabled"})
+                    authority_secret = os.environ.get("RANKED_RESULT_SECRET", "")
+                    if not authority_secret:
+                        return self._json(503, {"error": "result_authority_not_configured"})
+                    supplied = self.headers.get("X-Ranked-Authority", "")
+                    if not hmac.compare_digest(supplied, authority_secret):
+                        return self._json(403, {"error": "result_authority_forbidden"})
                 body = self._body()
+                if is_internal_result:
+                    match_id = path[len("/internal/v1/matches/"):-len("/result")].strip("/")
+                    if not match_id or "/" in match_id:
+                        return self._json(404, {"error": "not_found"})
+                    result = competitive.record_authoritative_result(
+                        match_id, body.get("winner_player_id"),
+                        is_draw=body.get("draw", False),
+                        authority_event_id=body.get("authority_event_id", ""),
+                    )
+                    return self._json(200, {"result": result})
                 if path == "/v1/register":
                     name = body.get("display_name")
                     result = store.register(name)
@@ -146,19 +191,33 @@ def make_handler(store: RankedStore):
                     return self._json(200, {"online": True, "last_seen": player.get("last_seen")})
                 if path == "/v1/friends/remove":
                     return self._json(200, {"removed": social.remove_friend(player_id, body.get("player_id"))})
-                if path == "/v1/queue/join":
-                    result = store.join_queue(player_id, body.get("region", "global"))
+                if path in ("/v1/queue/join", "/v1/ranked/queue/join"):
+                    mode = "ranked" if path == "/v1/ranked/queue/join" else "casual"
+                    result = store.join_queue(player_id, body.get("region", "global"), mode=mode)
                     if result:
                         return self._json(201, {"match": result})
-                    return self._json(202, {"queued": True, "queue": store.queue_status(player_id)})
-                if path == "/v1/queue/leave":
-                    return self._json(200, {"left": store.leave_queue(player_id)})
+                    return self._json(202, {"queued": True, "queue": store.queue_status(player_id, mode=mode)})
+                if path in ("/v1/queue/leave", "/v1/ranked/queue/leave"):
+                    mode = "ranked" if path == "/v1/ranked/queue/leave" else "casual"
+                    return self._json(200, {"left": store.leave_queue(player_id, mode=mode)})
                 if path == "/v1/match/accept":
-                    return self._json(200, {"match": store.accept_match(player_id)})
+                    return self._json(200, {"match": store.accept_match(player_id, mode="casual")})
+                if path == "/v1/ranked/match/accept":
+                    return self._json(200, {"match": store.accept_match(player_id, mode="ranked")})
                 if path == "/v1/match/decline":
-                    return self._json(200, store.decline_match(player_id))
+                    return self._json(200, store.decline_match(player_id, mode="casual"))
+                if path == "/v1/ranked/match/decline":
+                    return self._json(200, store.decline_match(player_id, mode="ranked"))
                 if path == "/v1/match/finish":
-                    return self._json(200, store.confirm_match_finished(player_id))
+                    return self._json(200, store.confirm_match_finished(player_id, mode="casual"))
+                if path == "/v1/ranked/match/finish":
+                    return self._json(200, store.confirm_match_finished(player_id, mode="ranked"))
+                if path == "/v1/match/connection-code":
+                    return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="casual"))
+                if path == "/v1/ranked/match/connection-code":
+                    return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="ranked"))
+                if path == "/v1/ranked/match/ticket":
+                    return self._json(200, store.issue_ranked_peer_ticket(player_id))
                 if path == "/v1/rooms/create":
                     room = store.create_private_room(player_id, body.get("region", "sa-east"))
                     return self._json(201, {"room": room})

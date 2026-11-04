@@ -2,7 +2,7 @@ name: Build Windows launcher
 
 on:
   push:
-    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, release/0.8.1-stabilization, ops/windows-local-ranked-host, feature/0.8.1-radmin-room-start ]
+    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, integration/radmin-ranked-v1, release/0.8.1-stabilization, ops/windows-local-ranked-host, feature/0.8.1-radmin-room-start ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - "offline_launcher.py"

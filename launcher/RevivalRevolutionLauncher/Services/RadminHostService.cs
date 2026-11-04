@@ -11,6 +11,7 @@ public sealed class RadminHostService
 {
     public const string DefaultEndpoint = "http://26.226.57.19:8765";
     private const int ServerPort = 8765;
+    private const int PeerPort = 8766;
     private const string TcpRule = "Revival Revolution Ranked API - Radmin";
     private const string UdpRule = "Revival Revolution P2P - Radmin Python";
     private static readonly HttpClient HealthClient = new() { Timeout = TimeSpan.FromSeconds(2) };
@@ -55,7 +56,7 @@ public sealed class RadminHostService
         }
         if (missingUdp)
         {
-            commands.AppendLine($"New-NetFirewallRule -DisplayName '{UdpRule}' -Direction Inbound -Action Allow -Enabled True -Profile Any -Protocol UDP -Program '{python}' -RemoteAddress '26.0.0.0/8' | Out-Null");
+            commands.AppendLine($"New-NetFirewallRule -DisplayName '{UdpRule}' -Direction Inbound -Action Allow -Enabled True -Profile Any -Protocol UDP -Program '{python}' -LocalPort {PeerPort} -RemoteAddress '26.0.0.0/8' | Out-Null");
         }
 
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes("$ErrorActionPreference='Stop'\n" + commands));
