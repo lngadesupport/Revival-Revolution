@@ -8,40 +8,40 @@ namespace RevivalRevolution;
 
 public sealed class LauncherSettingsWindow : Window
 {
-    private readonly TextBox _playerName = null!;
-    private readonly TextBox _playerTag = null!;
-    private readonly CheckBox _startupUpdates = null!;
-    private readonly CheckBox _confirmLaunch = null!;
-    private readonly CheckBox _persistLogs = null!;
+    private TextBox _playerName = null!;
+    private TextBox _playerTag = null!;
+    private CheckBox _startupUpdates = null!;
+    private CheckBox _confirmLaunch = null!;
+    private CheckBox _persistLogs = null!;
 
-    private readonly ComboBox _fpsLimit = null!;
-    private readonly ComboBox _graphicsPreset = null!;
-    private readonly ComboBox _resolution = null!;
-    private readonly CheckBox _fullscreen = null!;
-    private readonly CheckBox _vSync = null!;
-    private readonly CheckBox _showFps = null!;
+    private ComboBox _fpsLimit = null!;
+    private ComboBox _graphicsPreset = null!;
+    private ComboBox _resolution = null!;
+    private CheckBox _fullscreen = null!;
+    private CheckBox _vSync = null!;
+    private CheckBox _showFps = null!;
 
-    private readonly Slider _masterVolume = null!;
-    private readonly Slider _musicVolume = null!;
-    private readonly Slider _effectsVolume = null!;
-    private readonly CheckBox _muteAudio = null!;
+    private Slider _masterVolume = null!;
+    private Slider _musicVolume = null!;
+    private Slider _effectsVolume = null!;
+    private CheckBox _muteAudio = null!;
 
-    private readonly CheckBox _subtitlesEnabled = null!;
-    private readonly ComboBox _subtitleSize = null!;
-    private readonly ComboBox _subtitleColor = null!;
-    private readonly ComboBox _subtitleBackground = null!;
-    private readonly ComboBox _subtitlePosition = null!;
+    private CheckBox _subtitlesEnabled = null!;
+    private ComboBox _subtitleSize = null!;
+    private ComboBox _subtitleColor = null!;
+    private ComboBox _subtitleBackground = null!;
+    private ComboBox _subtitlePosition = null!;
 
-    private readonly Slider _leftDeadZone = null!;
-    private readonly Slider _rightDeadZone = null!;
-    private readonly Slider _triggerDeadZone = null!;
-    private readonly Slider _horizontalSensitivity = null!;
-    private readonly Slider _verticalSensitivity = null!;
-    private readonly ComboBox _leftCurve = null!;
-    private readonly ComboBox _rightCurve = null!;
-    private readonly CheckBox _invertHorizontal = null!;
-    private readonly CheckBox _invertVertical = null!;
-    private readonly CheckBox _controllerVibration = null!;
+    private Slider _leftDeadZone = null!;
+    private Slider _rightDeadZone = null!;
+    private Slider _triggerDeadZone = null!;
+    private Slider _horizontalSensitivity = null!;
+    private Slider _verticalSensitivity = null!;
+    private ComboBox _leftCurve = null!;
+    private ComboBox _rightCurve = null!;
+    private CheckBox _invertHorizontal = null!;
+    private CheckBox _invertVertical = null!;
+    private CheckBox _controllerVibration = null!;
 
     public LauncherSettings Result { get; private set; }
 
