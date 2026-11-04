@@ -18,6 +18,17 @@ class PeerConnectionCodeTests(unittest.TestCase):
             self.assertEqual(target.read_text(encoding="utf-8"), "MR1-valid-invitation")
             self.assertEqual([p.name for p in pathlib.Path(temp).iterdir()], ["peer-code.txt"])
 
+    def test_atomic_text_keeps_previous_file_when_reader_blocks_replace(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as temp:
+            target = pathlib.Path(temp) / "peer-code.txt"
+            target.write_text("complete-old-invitation", encoding="utf-8")
+            with patch.object(peer_session.os, "replace", side_effect=PermissionError("sharing violation")):
+                self.assertFalse(peer_session.atomic_text(target, "partial-new-invitation"))
+            self.assertEqual(target.read_text(encoding="utf-8"), "complete-old-invitation")
+            self.assertEqual([p.name for p in pathlib.Path(temp).iterdir()], ["peer-code.txt"])
+
     def test_mr1_code_round_trip(self):
         code = peer_session.encode_code("203.0.113.10", 27015, self.key)
         endpoint, key, relay = peer_session.decode_connection_code(code)
