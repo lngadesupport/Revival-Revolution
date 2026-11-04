@@ -109,6 +109,14 @@ try
         "Read-only discovery unexpectedly modified a game configuration file.");
     var missingDiscovery = new GameSettingsDiscoveryService().Inspect(Path.Combine(root, "missing-game"));
     Require(!missingDiscovery.InstallationFound, "Discovery must report a missing game directory without throwing.");
+    var detectedControllers = new XInputControllerService().ReadConnected();
+    Require(detectedControllers.Count <= 4 &&
+        detectedControllers.All(controller => controller.UserIndex is >= 0 and < 4 &&
+            controller.LeftStickX is >= -100 and <= 100 &&
+            controller.LeftStickY is >= -100 and <= 100 &&
+            controller.RightStickX is >= -100 and <= 100 &&
+            controller.RightStickY is >= -100 and <= 100),
+        "XInput controller telemetry returned invalid device or axis data.");
 
     Console.WriteLine("Launcher smoke tests passed: legacy settings compatibility, JSON round-trip, selective repair, intact-file preservation, protected game paths, SHA-256 validation, and read-only Unity config discovery.");
 
