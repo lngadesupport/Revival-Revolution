@@ -60,8 +60,10 @@ sociais.
   criação abusiva de identidades.
 - Salas por código e fila aleatória atribuem partidas, mas ainda não há aceitação de partida, lease de reconexão, rate limit ou administração.
 - Não há ticket para autorizar a sessão UDP atual.
-- O serviço não recebe vencedor e não altera ELO: checksum reportado pelos dois
-  clientes detecta divergência, mas não impede cliente modificado.
+- A API não aceita resultados via token de jogador. O ledger só pode ser acionado
+  pela autoridade interna; essa autoridade de jogo ainda não foi integrada. O
+  checksum reportado pelos dois clientes detecta divergência, mas não impede
+  cliente modificado.
 - A interface social dentro do jogo ainda não foi integrada.
 - Clãs não foram implementados: ainda não foi encontrado suporte verificável
   no jogo nem um ponto de extensão seguro.
