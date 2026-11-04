@@ -810,19 +810,4 @@ public partial class MainWindow : Window
     private void CloseWindow_Click(object sender, RoutedEventArgs e)
         => Close();
 
-    private void Discord_Click(object sender, RoutedEventArgs e)
-    {
-        const string discordUrl = "https://discord.gg/Zw2GCscKU";
-        try
-        {
-            Process.Start(new ProcessStartInfo { FileName = discordUrl, UseShellExecute = true });
-            Log("Convite do Discord aberto no navegador padrão.");
-        }
-        catch (Exception ex)
-        {
-            Log("Não foi possível abrir o Discord: " + ex.Message);
-            MessageBox.Show(this, "Não foi possível abrir o navegador automaticamente. Acesse:\n" + discordUrl,
-                "Discord", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-    }
 }
