@@ -177,13 +177,23 @@ class Session:
             except (ValueError,UnicodeError):continue
             if not isinstance(m,dict) or m.get('v')!=PROTOCOL or m.get('slot')!=1-self.slot:continue
             if m.get('build')!=BUILD:raise RuntimeError('Peer build/protocol differs; install the same launcher package')
-            nonce=m.get('nonce');seq=m.get('seq');kind=m.get('kind')
-            if not isinstance(nonce,str) or len(nonce)!=16 or type(seq) is not int or seq<1:continue
+            nonce=m.get('nonce');seq=m.get('seq');kind=m.get('kind');target=m.get('to')
+            if (not isinstance(nonce,str) or len(nonce)!=16 or type(seq) is not int or seq<1
+                    or type(m.get('port')) is not int or not 1<=m['port']<=65535
+                    or kind not in ('hello','close','state','gekko','selection','fighter_test','live_state','live_gekko')):
+                continue
             first=self.remote_nonce is None
             if first:
-                if kind!='hello' or (self.slot==1 and m.get('to')!=self.nonce):continue
-            elif nonce!=self.remote_nonce:continue
-            if m.get('to') not in (None,self.nonce) or seq in self.seen or seq<self.high-512:continue
+                # The joining peer addresses its first hello to the host's nonce.
+                # The host has not learned the guest nonce yet, so its first hello
+                # is the only packet allowed to carry a null target.
+                if kind!='hello' or (self.slot==1 and target!=self.nonce):continue
+            elif nonce!=self.remote_nonce or target!=self.nonce:
+                # Once authenticated, every packet must be explicitly bound to
+                # this session nonce. Accepting a null target permits cross-session
+                # replay of otherwise valid packets captured with the shared key.
+                continue
+            if (target not in (None,self.nonce) or seq in self.seen or seq<self.high-512):continue
             if self.autopunch:
                 internal=m.get('port')
                 if type(internal) is not int or not 1<=internal<=65535:continue
