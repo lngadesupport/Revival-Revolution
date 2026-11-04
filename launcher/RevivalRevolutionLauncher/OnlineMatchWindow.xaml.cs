@@ -348,7 +348,7 @@ public partial class OnlineMatchWindow : Window
             else
             {
                 QueueStateText.Text = "BUSCA CANCELADA";
-                QueueDetailText.Text = "Você saiu da fila casual.";
+                QueueDetailText.Text = "Você saiu da fila não ranqueada.";
             }
             StatusText.Text = "Busca cancelada.";
         }
