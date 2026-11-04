@@ -79,7 +79,19 @@ class RankedApiTests(unittest.TestCase):
         status, summary = self.request("GET", "/v1/ranked/me", token=one["token"])
         self.assertEqual(status, 200)
         self.assertEqual(summary["division"], "Bronze")
+        with patch.dict(os.environ, {"RANKED_RESULT_SECRET": ""}):
+            status, body = self.request(
+                "POST", f"/internal/v1/matches/{match_id}/result", None
+            )
+            self.assertEqual(status, 503)
+            self.assertEqual(body["error"], "result_authority_not_configured")
         with patch.dict(os.environ, {"RANKED_RESULT_SECRET": "test-authority-secret"}):
+            # Reject unauthenticated requests before parsing their body.
+            status, body = self.request(
+                "POST", f"/internal/v1/matches/{match_id}/result", None
+            )
+            self.assertEqual(status, 403)
+            self.assertEqual(body["error"], "result_authority_forbidden")
             status, _ = self.request(
                 "POST", f"/internal/v1/matches/{match_id}/result",
                 {"winner_player_id": one["player_id"], "authority_event_id": "api-test-event"},
