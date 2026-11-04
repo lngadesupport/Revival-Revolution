@@ -24,13 +24,7 @@ public partial class MainWindow : Window
     private string? _gameFolder;
     private bool _busy;
     private readonly DispatcherTimer _gameStateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly DispatcherTimer _radminHostTimer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private bool _radminHostStarting;
     private bool _radminHostFirewallReady;
-    private bool _radminHostTaskReady;
-    private bool _radminHostDisabled;
-    private DateTime _radminHostRetryAtUtc;
-    private string _radminHostLastError = string.Empty;
     private bool _gameRunning;
     private bool _launchPending;
     private DateTime _launchRequestedAt;
@@ -52,72 +46,9 @@ public partial class MainWindow : Window
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
-        _radminHostTimer.Tick += RadminHostTimer_Tick;
-        _radminHostTimer.Start();
         RefreshGameState();
         Log("Revival Revolution Launcher iniciado.");
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
-    }
-
-    private async void RadminHostTimer_Tick(object? sender, EventArgs e)
-    {
-        if (_radminHostStarting || _radminHostDisabled || _radminHostTaskReady ||
-            DateTime.UtcNow < _radminHostRetryAtUtc) return;
-        var endpoint = RankedApiClient.LoadEndpoint();
-        if (string.IsNullOrWhiteSpace(endpoint)) endpoint = RadminHostService.DefaultEndpoint;
-        var hostAddress = RadminHostService.GetLocalRadminAddress(endpoint);
-        if (hostAddress is null) return;
-
-        _radminHostStarting = true;
-        try
-        {
-            var python = _python.FindRuntime(_root);
-            if (python is null)
-            {
-                FooterStatus.Text = "Preparando o servidor privado Radmin pela primeira vez...";
-                Log("Este computador é o anfitrião Radmin. Instalando o runtime necessário para iniciar a API automaticamente.");
-                python = await _python.InstallAsync(_root, CreateProgress(), CancellationToken.None);
-            }
-
-            if (!_radminHostFirewallReady)
-            {
-                FooterStatus.Text = "Configurando o firewall privado Radmin (autorização única)...";
-                await _radminHost.EnsureFirewallAsync(python, hostAddress, CancellationToken.None);
-                _radminHostFirewallReady = true;
-            }
-
-            await _radminHost.EnsureHostServerAsync(_root, python, hostAddress, CancellationToken.None);
-            _radminHostTaskReady = true;
-            _radminHostTimer.Stop();
-            FooterStatus.Text = $"Servidor privado ativo em http://{hostAddress}:8765";
-            Log($"API Ranked iniciada/verificada automaticamente em http://{hostAddress}:8765.");
-        }
-        catch (Exception ex)
-        {
-            var authorizationCancelled =
-                ex.InnerException is System.ComponentModel.Win32Exception win32 &&
-                win32.NativeErrorCode == 1223;
-            if (authorizationCancelled)
-            {
-                // Do not repeatedly display UAC after the user explicitly declined it.
-                _radminHostDisabled = true;
-                FooterStatus.Text = "Autorização de rede cancelada. Reabra o launcher após permitir a configuração do Firewall.";
-            }
-            else
-            {
-                _radminHostRetryAtUtc = DateTime.UtcNow.AddSeconds(30);
-                FooterStatus.Text = "Falha temporária ao iniciar o servidor Radmin. Nova tentativa automática em 30 segundos.";
-                if (!string.Equals(_radminHostLastError, ex.Message, StringComparison.Ordinal))
-                {
-                    Log("AVISO: falha temporária no servidor Radmin; haverá nova tentativa automática: " + ex.Message);
-                    _radminHostLastError = ex.Message;
-                }
-            }
-        }
-        finally
-        {
-            _radminHostStarting = false;
-        }
     }
 
     private void MainContent_Loaded(object sender, RoutedEventArgs e)
@@ -698,7 +629,6 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _gameStateTimer.Stop();
-        _radminHostTimer.Stop();
         base.OnClosed(e);
     }
 
