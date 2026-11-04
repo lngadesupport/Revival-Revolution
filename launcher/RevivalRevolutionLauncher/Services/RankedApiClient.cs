@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -58,10 +60,18 @@ public sealed class RankedApiClient
     {
         if (!Uri.TryCreate(value?.Trim(), UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttps &&
-             !(uri.Scheme == Uri.UriSchemeHttp && (uri.IsLoopback || uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))))
+             !(uri.Scheme == Uri.UriSchemeHttp && (uri.IsLoopback ||
+                uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) || IsRadminVpnAddress(uri.Host))))
             || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-            throw new InvalidOperationException("Use uma URL HTTPS válida. HTTP só é permitido para localhost em testes.");
+            throw new InvalidOperationException("Use HTTPS ou HTTP pela Radmin VPN (IP virtual 26.x.x.x). HTTP público não é permitido.");
         return uri.ToString().TrimEnd('/');
+    }
+
+    private static bool IsRadminVpnAddress(string host)
+    {
+        if (!IPAddress.TryParse(host, out var address) || address.AddressFamily != AddressFamily.InterNetwork)
+            return false;
+        return address.GetAddressBytes()[0] == 26;
     }
 
     public static string? LoadEndpoint()
