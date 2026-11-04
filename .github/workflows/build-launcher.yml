@@ -56,6 +56,15 @@ jobs:
             [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
             if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error }
           }
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate offline Unity startup options
+        shell: pwsh
+        run: |
+          python -m py_compile .\offline_launcher.py
+          python .\tests\test_offline_launcher_options.py
       - name: Restore
         run: dotnet restore .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj
       - name: Build
