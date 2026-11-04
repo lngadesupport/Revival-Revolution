@@ -38,6 +38,13 @@ class PeerConnectionCodeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "MR1"):
             peer_session.decode_connection_code("MR2-INVALID")
 
+    def test_peer_session_does_not_load_autopunch_transport(self):
+        self.assertFalse(hasattr(peer_session, "AutoPunchSocket"))
+
+    def test_autopunch_session_start_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "AutoPunch is disabled"):
+            peer_session.Session(".", "host", autopunch=True)
+
     def test_module_import_does_not_require_legacy_diagnostic_file(self):
         self.assertTrue(hasattr(peer_session, "Session"))
         self.assertTrue(hasattr(peer_session, "LiveFighter"))
