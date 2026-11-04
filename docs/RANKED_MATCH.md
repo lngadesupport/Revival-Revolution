@@ -94,6 +94,11 @@ Este MVP ainda não é uma temporada competitiva pública:
 - cadastro aberto, sem recuperação/anti-smurf/limites de criação;
 - sem aceitação de partida, lease de reconexão ou administração;
 - sem ticket de sessão P2P;
+- `peer_session.py` agora está restrito ao transporte direto Radmin/MR1 e
+  porta UDP 8766, mas o launcher ainda não inicia esse processo ao receber
+  uma atribuição de matchmaking nem troca um ticket/connection code com os
+  dois jogadores;
+- o modo Ranked ainda não inicia automaticamente a sessão P2P.
 - ledger de ELO, divisões e histórico implementado no backend; aplicação de resultados reais ainda bloqueada até integrar uma autoridade confiável;
 - sem integração visual dentro do jogo/Community Panel;
 - sem validação autoritativa do resultado.
