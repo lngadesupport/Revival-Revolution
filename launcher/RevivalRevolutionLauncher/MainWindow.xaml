@@ -111,7 +111,7 @@
                             <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="REVIVAL" FontSize="19" FontWeight="Black" LineHeight="19"/>
                                 <TextBlock Text="REVOLUTION" FontFamily="Segoe UI" FontSize="8"
-                                           FontWeight="Bold" Foreground="#AEB5C8" CharacterSpacing="170"/>
+                                           FontWeight="Bold" Foreground="#AEB5C8"/>
                             </StackPanel>
                         </StackPanel>
                         <TextBlock Text="MENU PRINCIPAL" Style="{StaticResource SmallCaps}" Margin="7,0,0,9"/>
