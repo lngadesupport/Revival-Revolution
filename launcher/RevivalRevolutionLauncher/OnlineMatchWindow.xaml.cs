@@ -331,6 +331,13 @@ public partial class OnlineMatchWindow : Window
         _polling?.Cancel();
         try
         {
+            var matchPath = _queueMode == "ranked" ? "/v1/ranked/match" : "/v1/match";
+            var current = await _api.GetAsync(matchPath);
+            if (current["match"] is JsonObject assignedMatch)
+            {
+                ShowMatch(assignedMatch);
+                return;
+            }
             await _api.PostAsync("/v1/queue/leave", new JsonObject());
             _queued = false;
             if (_queueMode == "ranked")
