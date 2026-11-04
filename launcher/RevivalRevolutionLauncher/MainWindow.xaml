@@ -122,7 +122,7 @@
                         <TextBlock Text="REVIVAL" FontSize="27" FontWeight="Black"
                                    FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue"
                                    Foreground="#F5F3F1"/>
-                        <TextBlock Text="REVOLUTION  /  COMMUNITY" FontSize="8" FontWeight="Bold"
+                        <TextBlock Text="REVOLUTION  /  GAME LAUNCHER" FontSize="8" FontWeight="Bold"
                                    Foreground="#E76A73" Margin="1,-2,0,0"/>
                         <Border Height="1" Background="#343B49" Margin="0,19,0,0"/>
                     </StackPanel>
@@ -205,7 +205,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Border Background="#3B20262F" BorderBrush="#67515A66"
                                                 BorderThickness="1" CornerRadius="3" Padding="8,4">
-                                            <TextBlock Text="COMMUNITY BUILD" FontSize="8" FontWeight="Bold"
+                                            <TextBlock Text="GAME LAUNCHER" FontSize="8" FontWeight="Bold"
                                                        Foreground="#D9DDE3"/>
                                         </Border>
                                         <TextBlock Text="  /  METAL REVOLUTION" FontSize="9" FontWeight="Bold"
@@ -254,7 +254,7 @@
                                     <TextBlock Text="SELECIONE SUA INSTALAÇÃO PARA COMEÇAR"
                                                FontSize="8" FontWeight="Bold" Foreground="#818C9C"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock DockPanel.Dock="Right" Text="COMMUNITY EDITION"
+                                    <TextBlock DockPanel.Dock="Right" Text="WINDOWS CLIENT"
                                                FontSize="9" FontWeight="Bold" Foreground="#697586"
                                                VerticalAlignment="Center"/>
                                 </DockPanel>
@@ -305,12 +305,6 @@
                                         <TextBlock Text="Salas privadas" FontSize="10" Foreground="#D0D5DC"/>
                                         <TextBlock Text="ATIVO" DockPanel.Dock="Right" FontSize="8"
                                                    FontWeight="Bold" Foreground="#6BC58B"/>
-                                    </DockPanel>
-                                    <DockPanel Margin="0,7">
-                                        <Ellipse Width="6" Height="6" Fill="#D6A45B" Margin="0,0,9,0"/>
-                                        <TextBlock Text="Biblioteca de mods" FontSize="10" Foreground="#D0D5DC"/>
-                                        <TextBlock Text="EM DESENVOLVIMENTO" DockPanel.Dock="Right"
-                                                   FontSize="7" FontWeight="Bold" Foreground="#D6A45B"/>
                                     </DockPanel>
                                 </StackPanel>
                             </StackPanel>
@@ -395,7 +389,7 @@
                     <Ellipse Width="6" Height="6" Fill="#E34450" Margin="0,0,9,0"/>
                     <TextBlock Text="REVIVAL REVOLUTION" FontSize="9" FontWeight="Bold"
                                Foreground="#D6DAE1" VerticalAlignment="Center"/>
-                    <TextBlock Text="   /   COMMUNITY LAUNCHER" FontSize="8"
+                    <TextBlock Text="   /   GAME LAUNCHER" FontSize="8"
                                Foreground="#788393" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Stretch">
