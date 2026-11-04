@@ -165,14 +165,37 @@ public sealed class LauncherSettingsWindow : Window
         account.Children.Add(accountRow);
         dataTabContent.Children.Add(accountCard);
 
+        var storageCard = MakeCard();
+        var storage = CardContent(storageCard);
+        AddCardHeading(storage, "LOCAL STORAGE", "Registros e arquivos do launcher");
+        _persistLogs = AddSwitchRow(storage, "Salvar logs neste computador",
+            "Mantém registros locais para facilitar diagnósticos. Os arquivos são gravados na pasta abaixo.",
+            current.PersistLogs);
+        AddRowDivider(storage);
+        var storagePathRow = AddInfoRow(storage, "Pasta de configurações", settingsPath);
+        var openSettingsFolder = MakeButton("ABRIR PASTA", false);
+        openSettingsFolder.Padding = new Thickness(10, 7, 10, 7);
+        openSettingsFolder.Margin = new Thickness(10, 0, 0, 0);
+        openSettingsFolder.VerticalAlignment = VerticalAlignment.Center;
+        openSettingsFolder.Click += (_, _) => OpenFolder(Path.GetDirectoryName(settingsPath) ?? settingsPath);
+        Grid.SetColumn(openSettingsFolder, 2);
+        storagePathRow.Children.Add(openSettingsFolder);
+        AddRowDivider(storage);
+        var storageLogsRow = AddInfoRow(storage, "Pasta de logs", logDirectory);
+        var openStorageLogs = MakeButton("ABRIR PASTA", false);
+        openStorageLogs.Padding = new Thickness(10, 7, 10, 7);
+        openStorageLogs.Margin = new Thickness(10, 0, 0, 0);
+        openStorageLogs.VerticalAlignment = VerticalAlignment.Center;
+        openStorageLogs.Click += (_, _) => OpenFolder(logDirectory);
+        Grid.SetColumn(openStorageLogs, 2);
+        storageLogsRow.Children.Add(openStorageLogs);
+        dataTabContent.Children.Add(storageCard);
+
         var appCard = MakeCard();
         var app = CardContent(appCard);
         AddCardHeading(app, "APP SETTINGS", "Comportamento do launcher");
         _confirmLaunch = AddSwitchRow(app, "Confirmar antes de iniciar o jogo",
             "Solicita confirmação antes de abrir o modo offline.", current.ConfirmBeforeLaunch);
-        AddRowDivider(app);
-        _persistLogs = AddSwitchRow(app, "Salvar logs neste computador",
-            "Mantém registros locais para facilitar diagnósticos.", current.PersistLogs);
         generalTabContent.Children.Add(appCard);
 
         var networkCard = MakeCard();
