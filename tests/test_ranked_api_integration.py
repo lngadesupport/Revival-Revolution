@@ -105,6 +105,47 @@ class RankedApiIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(status, 400)
 
+    def test_ranked_peer_ticket_is_match_player_slot_build_and_protocol_bound(self):
+        one = self.register("Ticket One")
+        two = self.register("Ticket Two")
+        outsider = self.register("Ticket Outsider")
+        self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, one["token"])
+        self.request("POST", "/v1/ranked/queue/join", {"region": "sa-east"}, two["token"])
+        self.assertEqual(self.request("POST", "/v1/ranked/match/accept", {}, one["token"])[0], 200)
+        self.assertEqual(self.request("POST", "/v1/ranked/match/accept", {}, two["token"])[0], 200)
+
+        status_one, ticket_one = self.request("POST", "/v1/ranked/match/ticket", {}, one["token"])
+        status_two, ticket_two = self.request("POST", "/v1/ranked/match/ticket", {}, two["token"])
+        self.assertEqual((status_one, status_two), (200, 200))
+        self.assertEqual(ticket_one["match_id"], ticket_two["match_id"])
+        self.assertEqual(ticket_one["player_id"], one["player_id"])
+        self.assertEqual(ticket_two["player_id"], two["player_id"])
+        self.assertEqual(ticket_one["peer_player_id"], two["player_id"])
+        self.assertEqual(ticket_two["peer_player_id"], one["player_id"])
+        self.assertEqual(ticket_one["slot"], 1 - ticket_two["slot"])
+        self.assertEqual(ticket_one["ticket"], ticket_two["peer_ticket"])
+        self.assertEqual(ticket_one["peer_ticket"], ticket_two["ticket"])
+        self.assertEqual(ticket_one["build"], peer_session.BUILD)
+        self.assertEqual(ticket_one["protocol"], peer_session.PROTOCOL)
+        self.assertEqual(ticket_one["expires_at"], ticket_two["expires_at"])
+        self.assertGreater(ticket_one["expires_at"], self.store.clock())
+
+        self.assertEqual(self.request("POST", "/v1/ranked/match/ticket", {}, outsider["token"])[0], 400)
+        self.assertTrue(peer_session.validate_ranked_peer_ticket(ticket_one, {
+            "match_id": ticket_two["match_id"],
+            "player_id": ticket_two["player_id"],
+            "peer_player_id": ticket_two["peer_player_id"],
+            "slot": ticket_two["slot"],
+            "ticket": ticket_two["ticket"],
+            "peer_ticket": ticket_two["peer_ticket"],
+            "build": ticket_two["build"],
+            "protocol": ticket_two["protocol"],
+            "expires_at": ticket_two["expires_at"],
+        }))
+        tampered = dict(ticket_two, match_id="another-match")
+        with self.assertRaisesRegex(ValueError, "does not belong"):
+            peer_session.validate_ranked_peer_ticket(ticket_one, tampered)
+
     def test_ranked_profile_and_leaderboard_routes(self):
         player = self.register("Leaderboard Player")
         status, profile = self.request("GET", "/v1/ranked/me", token=player["token"])

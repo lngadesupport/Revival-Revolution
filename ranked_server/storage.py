@@ -110,6 +110,15 @@ class RankedStore:
                 db.execute("ALTER TABLE matches ADD COLUMN match_type TEXT NOT NULL DEFAULT 'casual'")
             if "connection_code" not in match_columns:
                 db.execute("ALTER TABLE matches ADD COLUMN connection_code TEXT")
+            match_columns = {row["name"] for row in db.execute("PRAGMA table_info(matches)")}
+            ticket_migrations = {
+                "peer_ticket_one": "TEXT",
+                "peer_ticket_two": "TEXT",
+                "peer_ticket_expires_at": "REAL",
+            }
+            for name, declaration in ticket_migrations.items():
+                if name not in match_columns:
+                    db.execute(f"ALTER TABLE matches ADD COLUMN {name} {declaration}")
             db.execute("UPDATE matches SET match_type='private' WHERE match_id IN (SELECT match_id FROM private_rooms WHERE match_id IS NOT NULL)")
             queue_columns = {row["name"] for row in db.execute("PRAGMA table_info(queue)")}
             if "queue_mode" not in queue_columns:
@@ -376,6 +385,51 @@ class RankedStore:
                 entry for entry in waiting
                 if entry["player_id"] not in (first_id, second_id)
             ]
+
+    def issue_ranked_peer_ticket(self, player_id: str) -> dict:
+        """Issue the same short-lived match-bound ticket pair to both participants."""
+        now = self.clock()
+        with self.transaction() as db:
+            self._expire_matches(db, now)
+            match = db.execute("""
+                SELECT * FROM matches
+                WHERE match_type='ranked' AND status='ready'
+                  AND accepted_one=1 AND accepted_two=1
+                  AND (player_one=? OR player_two=?)
+                ORDER BY created_at DESC LIMIT 1
+            """, (player_id, player_id)).fetchone()
+            if match is None:
+                raise ValueError("no_accepted_ranked_match")
+            if float(match["expires_at"] or 0) <= now:
+                raise ValueError("ranked_match_expired")
+
+            ticket_expires = float(match["peer_ticket_expires_at"] or 0)
+            if (not match["peer_ticket_one"] or not match["peer_ticket_two"]
+                    or ticket_expires <= now):
+                ticket_expires = min(float(match["expires_at"]), now + 1800.0)
+                ticket_one = secrets.token_urlsafe(32)
+                ticket_two = secrets.token_urlsafe(32)
+                db.execute("""
+                    UPDATE matches
+                    SET peer_ticket_one=?,peer_ticket_two=?,peer_ticket_expires_at=?
+                    WHERE match_id=? AND status='ready'
+                """, (ticket_one, ticket_two, ticket_expires, match["match_id"]))
+            else:
+                ticket_one = match["peer_ticket_one"]
+                ticket_two = match["peer_ticket_two"]
+
+            is_one = match["player_one"] == player_id
+            return {
+                "match_id": match["match_id"],
+                "player_id": player_id,
+                "peer_player_id": match["player_two"] if is_one else match["player_one"],
+                "slot": 0 if is_one else 1,
+                "ticket": ticket_one if is_one else ticket_two,
+                "peer_ticket": ticket_two if is_one else ticket_one,
+                "build": "metal-99.4.3.895-gekko-9da2363-peer9",
+                "protocol": 1,
+                "expires_at": ticket_expires,
+            }
 
     def current_match(self, player_id: str, mode: str = "casual") -> dict | None:
         if mode not in {"casual", "ranked"}:

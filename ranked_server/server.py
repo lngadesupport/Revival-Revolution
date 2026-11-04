@@ -206,6 +206,8 @@ def make_handler(store: RankedStore):
                     return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="casual"))
                 if path == "/v1/ranked/match/connection-code":
                     return self._json(200, store.publish_match_connection_code(player_id, body.get("code"), mode="ranked"))
+                if path == "/v1/ranked/match/ticket":
+                    return self._json(200, store.issue_ranked_peer_ticket(player_id))
                 if path == "/v1/rooms/create":
                     room = store.create_private_room(player_id, body.get("region", "sa-east"))
                     return self._json(201, {"room": room})

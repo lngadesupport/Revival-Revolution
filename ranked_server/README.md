@@ -97,3 +97,21 @@ API é o endereço do servidor, não o endereço peer do host da partida.
 
 Esta base é para integração e testes controlados, não uma temporada Ranked
 pública nem uma certificação de produção.
+
+
+### Tickets efêmeros do transporte Ranked
+
+- Após os dois aceites, cada participante chama POST /v1/ranked/match/ticket.
+- A API emite um par de capacidades aleatórias, limitado à partida, aos dois
+  UUIDs, aos slots, ao build do peer e ao protocolo. A validade máxima é de
+  30 minutos e o par é renovado após expirar.
+- O launcher injeta os tickets no processo peer por variáveis de ambiente;
+  eles não são argumentos de linha de comando nem aparecem no status público.
+- O handshake UDP exige o ticket complementar exato, o mesmo match_id, slots
+  opostos, UUIDs recíprocos, build/protocolo idênticos e validade temporal.
+  Isso reduz mistura de sessões e replay acidental entre partidas.
+- Os tickets não são uma assinatura pública verificável pela DLL e não
+  protegem contra cliente modificado. A bridge nativa está distribuída como
+  binário sem fonte versionado; portanto, não há validação independente
+  dentro do jogo nem prova autoritativa de vencedor. ELO permanece bloqueado
+  até existir uma autoridade de jogo confiável e testada.

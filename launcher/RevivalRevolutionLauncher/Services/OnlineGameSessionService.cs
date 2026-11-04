@@ -22,12 +22,12 @@ public sealed class OnlineGameSessionService : IDisposable
         _pythonExe = Path.GetFullPath(pythonExe);
     }
 
-    public async Task<string> StartHostAsync(CancellationToken cancellationToken = default)
+    public async Task<string> StartHostAsync(CancellationToken cancellationToken = default, JsonObject? rankedTicket = null)
     {
         var address = FindRadminAddress();
         await PrepareGameAsync(cancellationToken);
         ResetPeerFiles();
-        StartPeer("host", address, null);
+        StartPeer("host", address, null, rankedTicket);
 
         var codePath = Path.Combine(_distributionRoot, "peer-code.txt");
         var statusPath = Path.Combine(_distributionRoot, "peer-status.json");
@@ -53,7 +53,7 @@ public sealed class OnlineGameSessionService : IDisposable
         throw new TimeoutException("A sessão P2P não gerou um código MR1 em 45 segundos. Consulte peer-status.json e peer-summary.txt.");
     }
 
-    public async Task StartGuestAsync(string connectionCode, CancellationToken cancellationToken = default)
+    public async Task StartGuestAsync(string connectionCode, CancellationToken cancellationToken = default, JsonObject? rankedTicket = null)
     {
         if (string.IsNullOrWhiteSpace(connectionCode) ||
             !connectionCode.StartsWith("MR1-", StringComparison.Ordinal) ||
@@ -63,7 +63,7 @@ public sealed class OnlineGameSessionService : IDisposable
         var address = FindRadminAddress();
         await PrepareGameAsync(cancellationToken);
         ResetPeerFiles();
-        StartPeer("join", address, connectionCode);
+        StartPeer("join", address, connectionCode, rankedTicket);
     }
 
     public async Task WaitForPeerReadyAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
@@ -175,7 +175,7 @@ public sealed class OnlineGameSessionService : IDisposable
             throw new InvalidOperationException("O jogo abriu, mas a bridge ONLINE não criou netplay-pid.txt. A sessão P2P não será iniciada.");
     }
 
-    private void StartPeer(string mode, string address, string? code)
+    private void StartPeer(string mode, string address, string? code, JsonObject? rankedTicket)
     {
         var start = new ProcessStartInfo(_pythonExe)
         {
@@ -204,6 +204,17 @@ public sealed class OnlineGameSessionService : IDisposable
         {
             start.ArgumentList.Add("--code");
             start.ArgumentList.Add(code!);
+        }
+        if (rankedTicket is not null)
+        {
+            foreach (var field in new[] { "match_id", "player_id", "peer_player_id", "ticket",
+                         "peer_ticket", "build", "protocol", "slot", "expires_at" })
+            {
+                if (rankedTicket[field] is null)
+                    throw new InvalidOperationException("O ticket Ranked está incompleto: " + field);
+            }
+            start.Environment["REVIVAL_RANKED_MATCH_REQUIRED"] = "1";
+            start.Environment["REVIVAL_RANKED_MATCH_TICKET"] = rankedTicket.ToJsonString();
         }
 
         _peerProcess = Process.Start(start)

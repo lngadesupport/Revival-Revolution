@@ -701,7 +701,10 @@ public partial class OnlineMatchWindow : Window
                 StatusText.Text = "Abrindo ufo.exe diretamente, sem chamar o configurador externo.";
             });
 
-            var connectionCode = await _gameSession.StartHostAsync(sessionToken);
+            JsonObject? rankedTicket = null;
+            if (_matchType == "ranked")
+                rankedTicket = await _api.PostAsync("/v1/ranked/match/ticket", new JsonObject(), cancellationToken: sessionToken);
+            var connectionCode = await _gameSession.StartHostAsync(sessionToken, rankedTicket);
             var publishPath = _matchType == "private"
                 ? "/v1/rooms/connection-code"
                 : MatchApiPrefix + "/match/connection-code";
@@ -762,7 +765,10 @@ public partial class OnlineMatchWindow : Window
                 VersusStateText.Text = "O anfitrião iniciou. Abrindo o jogo diretamente...";
                 StatusText.Text = "Preparando o jogo e a conexão P2P pela Radmin.";
             });
-            await _gameSession.StartGuestAsync(connectionCode, sessionToken);
+            JsonObject? rankedTicket = null;
+            if (_matchType == "ranked")
+                rankedTicket = await _api.PostAsync("/v1/ranked/match/ticket", new JsonObject(), cancellationToken: sessionToken);
+            await _gameSession.StartGuestAsync(connectionCode, sessionToken, rankedTicket);
             await _gameSession.WaitForPeerReadyAsync(TimeSpan.FromMinutes(9), sessionToken);
             _peerReady = true;
             await Dispatcher.InvokeAsync(() =>

@@ -19,6 +19,49 @@ from live_fighter import LiveFighter
 PROTOCOL=1
 BUILD='metal-99.4.3.895-gekko-9da2363-peer9'
 
+def validate_ranked_peer_ticket(local, remote=None, now=None):
+    if not isinstance(local, dict):
+        raise ValueError('Ranked match ticket is required')
+    required = ('match_id', 'player_id', 'peer_player_id', 'slot', 'ticket',
+                'peer_ticket', 'build', 'protocol', 'expires_at')
+    if any(name not in local for name in required):
+        raise ValueError('Ranked match ticket is incomplete')
+    if not all(isinstance(local[name], str) and local[name] for name in
+               ('match_id', 'player_id', 'peer_player_id', 'ticket', 'peer_ticket')):
+        raise ValueError('Ranked match ticket contains invalid identity fields')
+    if local['slot'] not in (0, 1) or type(local['slot']) is not int:
+        raise ValueError('Ranked match ticket has an invalid player slot')
+    if local['build'] != BUILD or local['protocol'] != PROTOCOL:
+        raise ValueError('Ranked match ticket build/protocol is not supported')
+    if len(local['ticket']) < 32 or len(local['peer_ticket']) < 32:
+        raise ValueError('Ranked match ticket capability is invalid')
+    expiry = local['expires_at']
+    if type(expiry) not in (int, float) or expiry <= 0:
+        raise ValueError('Ranked match ticket expiry is invalid')
+    now = time.time() if now is None else now
+    if now > float(expiry):
+        raise ValueError('Ranked match ticket expired; return to matchmaking and retry')
+    if remote is not None:
+        if not isinstance(remote, dict):
+            raise ValueError('Peer did not provide a Ranked match ticket')
+        expected = {
+            'match_id': local['match_id'],
+            'player_id': local['peer_player_id'],
+            'peer_player_id': local['player_id'],
+            'slot': 1 - local['slot'],
+            'ticket': local['peer_ticket'],
+            'peer_ticket': local['ticket'],
+            'build': BUILD,
+            'protocol': PROTOCOL,
+            'expires_at': expiry,
+        }
+        if any(remote.get(name) != value for name, value in expected.items()):
+            raise ValueError('Peer ticket does not belong to this Ranked match/slot/build')
+        if now > float(remote['expires_at']):
+            raise ValueError('Peer Ranked match ticket expired')
+    return True
+
+
 def require_radmin_ipv4(address):
     try:
         parsed = ipaddress.IPv4Address(address)
@@ -101,7 +144,7 @@ class GameBridge:
         return r['state']
 
 class Session:
-    def __init__(self,root,mode,code='',bind='0.0.0.0',port=8766,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True,skip_native_preflight=False,setup_timeout=90):
+    def __init__(self,root,mode,code='',bind='0.0.0.0',port=8766,advertise=None,bridge_factory=GameBridge,autopunch=False,selection_sync=True,skip_native_preflight=False,setup_timeout=90,ranked_ticket=None):
         if mode not in ('host','join'):
             raise ValueError('mode must be host or join')
         if autopunch:
@@ -110,6 +153,11 @@ class Session:
         self.root=pathlib.Path(root);self.root.mkdir(parents=True,exist_ok=True);self.slot=0 if mode=='host' else 1
         self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((local_address,port));self.sock.setblocking(False)
         self.logical_port=self.sock.getsockname()[1];self.autopunch=False
+        self.ranked_ticket=ranked_ticket
+        if self.ranked_ticket is not None:
+            validate_ranked_peer_ticket(self.ranked_ticket)
+            if self.ranked_ticket['slot'] != self.slot:
+                raise ValueError('Ranked ticket slot does not match the local host/guest role')
         self.selection=None;self.enable_selection=selection_sync;self.remote_selection=None;self.skip_native_preflight=bool(skip_native_preflight)
         self.fighter_test=None;self.remote_fighter=None;self.live=None;self.remote_live=None
         self.remote_closed=False;self.setup_timeout=max(30,min(int(setup_timeout),900))
@@ -153,6 +201,10 @@ class Session:
             except PermissionError:pass
     def send(self,kind,payload=None):
         if self.peer is None:return
+        if kind == 'hello' and self.ranked_ticket is not None:
+            payload = {name: self.ranked_ticket[name] for name in (
+                'match_id','player_id','peer_player_id','slot','ticket',
+                'peer_ticket','build','protocol','expires_at')}
         self.seq+=1
         body=json.dumps(dict(v=PROTOCOL,build=BUILD,slot=self.slot,port=self.logical_port,nonce=self.nonce,to=self.remote_nonce,seq=self.seq,kind=kind,payload=payload),sort_keys=True,separators=(',',':')).encode()
         packet=hmac.new(self.key,body,hashlib.sha256).digest()+body
@@ -175,6 +227,13 @@ class Session:
             first=self.remote_nonce is None
             if first:
                 if kind!='hello' or (self.slot==1 and m.get('to')!=self.nonce):continue
+                if self.ranked_ticket is not None:
+                    try:
+                        validate_ranked_peer_ticket(self.ranked_ticket, m.get('payload'))
+                    except ValueError as exc:
+                        raise RuntimeError(str(exc)) from exc
+                elif isinstance(m.get('payload'), dict) and m['payload'].get('match_id'):
+                    raise RuntimeError('This peer expects a Ranked ticket; reconnect from the same matchmaking session')
             elif nonce!=self.remote_nonce:continue
             if m.get('to') not in (None,self.nonce) or seq in self.seen or seq<self.high-512:continue
             if first:
@@ -300,7 +359,13 @@ def main():
     try:
         if requested_address:
             address=require_radmin_ipv4(requested_address);args.advertise=address;args.bind=address
-        session=Session(root,args.mode,args.code,args.bind,args.port,args.advertise,autopunch=args.autopunch,selection_sync=not args.preflight_only,skip_native_preflight=args.skip_native_preflight,setup_timeout=args.setup_timeout)
+        ranked_ticket = None
+        if os.environ.get('REVIVAL_RANKED_MATCH_REQUIRED') == '1':
+            try:
+                ranked_ticket = json.loads(os.environ.get('REVIVAL_RANKED_MATCH_TICKET', ''))
+            except (ValueError, TypeError) as exc:
+                raise RuntimeError('Ranked match ticket was not supplied by the launcher') from exc
+        session=Session(root,args.mode,args.code,args.bind,args.port,args.advertise,autopunch=args.autopunch,selection_sync=not args.preflight_only,skip_native_preflight=args.skip_native_preflight,setup_timeout=args.setup_timeout,ranked_ticket=ranked_ticket)
         while not session.closed:
             if stop.exists():break
             session.step();time.sleep(.002)

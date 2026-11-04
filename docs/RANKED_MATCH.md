@@ -96,3 +96,19 @@ protocolo não substituem testes de gameplay real em dois computadores.
 
 Esta branch é uma integração de desenvolvimento. Não altera main, não
 mescla a PR #4 e não publica uma release.
+
+
+## Tickets de sessão (integração em andamento)
+
+A API agora emite um par de tickets aleatórios para cada partida Ranked pronta.
+O par é vinculado ao match_id, aos dois jogadores, aos slots, ao build e ao
+protocolo, com validade de até 30 minutos. O launcher entrega as credenciais
+ao processo peer pelo ambiente, e o handshake Radmin rejeita ticket ausente,
+expirado, de outra partida ou de slot/build/protocolo incompatível.
+
+Este mecanismo vincula o transporte da versão oficial do cliente à atribuição
+do matchmaking; não é uma assinatura verificável dentro da bridge e não é
+anti-cheat. A bridge nativa está disponível somente como DLL no repositório.
+Não existe fonte para adicionar nela uma validação independente. Por isso,
+o resultado final e o ELO continuam sem autoridade confiável e não devem ser
+ativados em produção.
