@@ -122,6 +122,30 @@
                                 <Button x:Name="JoinRoomButton" Content="ENTRAR COM CÓDIGO" Click="JoinRoom_Click" IsEnabled="False"/>
                             </StackPanel>
                         </TabItem>
+                        <TabItem Header="LEADERBOARD">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="CLASSIFICAÇÃO DA TEMPORADA" FontSize="21" FontWeight="Black" Margin="0,8,0,2"/>
+                                <TextBlock Text="Os melhores jogadores da temporada ranqueada atual."
+                                           Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <Button x:Name="RefreshLeaderboardButton" Content="ATUALIZAR LEADERBOARD"
+                                        Click="RefreshLeaderboard_Click" IsEnabled="False"
+                                        HorizontalContentAlignment="Center"/>
+                                <TextBlock x:Name="LeaderboardStatusText" Text="Conecte sua conta para carregar a classificação."
+                                           Foreground="#C5C4D2" FontSize="11" Margin="2,6,2,8" TextWrapping="Wrap"/>
+                                <ListView x:Name="LeaderboardList" Height="330" Background="#66161A2A"
+                                          Foreground="White" BorderBrush="#44FFFFFF">
+                                    <ListView.View>
+                                        <GridView>
+                                            <GridViewColumn Header="#" DisplayMemberBinding="{Binding Position}" Width="34"/>
+                                            <GridViewColumn Header="JOGADOR" DisplayMemberBinding="{Binding Player}" Width="112"/>
+                                            <GridViewColumn Header="RATING" DisplayMemberBinding="{Binding Rating}" Width="58"/>
+                                            <GridViewColumn Header="DIVISÃO" DisplayMemberBinding="{Binding Division}" Width="75"/>
+                                            <GridViewColumn Header="V/D/E" DisplayMemberBinding="{Binding Record}" Width="62"/>
+                                        </GridView>
+                                    </ListView.View>
+                                </ListView>
+                            </StackPanel>
+                        </TabItem>
                     </TabControl>
                 </StackPanel>
             </Border>
