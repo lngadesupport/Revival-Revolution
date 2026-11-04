@@ -30,6 +30,7 @@ public partial class OnlineMatchWindow : UserControl
     private bool _roomWaiting;
     private bool _queueSearching;
     private string? _acceptingMatchId;
+    private string? _autoStartMatchId;
     private bool _matchActive;
     private bool _guestSessionStarted;
     private bool _hostSessionActive;
@@ -507,6 +508,7 @@ public partial class OnlineMatchWindow : UserControl
         var role = match["room_role"]?.GetValue<string>();
         var roomStatus = match["room_status"]?.GetValue<string>();
         var connectionCode = match["connection_code"]?.GetValue<string>();
+        var matchType = match["match_type"]?.GetValue<string>();
         if (role == "guest")
         {
             OpponentRoleText.Text = "ANFITRIÃO";
@@ -523,6 +525,13 @@ public partial class OnlineMatchWindow : UserControl
         StartRoomButton.Visibility = role == "host" ? Visibility.Visible : Visibility.Collapsed;
         StartRoomButton.IsEnabled = role == "host" && _matchStatus == "ready" && !_hostSessionActive &&
             (roomStatus == "matched" || (roomStatus == "starting" && string.IsNullOrWhiteSpace(connectionCode)));
+        if (matchType == "random" && role == "host" && _matchStatus == "ready" &&
+            StartRoomButton.IsEnabled && !string.IsNullOrWhiteSpace(matchId) &&
+            !string.Equals(_autoStartMatchId, matchId, StringComparison.Ordinal))
+        {
+            _autoStartMatchId = matchId;
+            _ = Dispatcher.InvokeAsync(() => StartRoom_Click(this, new RoutedEventArgs()));
+        }
         if (role == "host" && roomStatus == "starting")
         {
             StartRoomButton.Content = _peerReady ? "JOGO ABERTO"
@@ -708,6 +717,7 @@ public partial class OnlineMatchWindow : UserControl
             }
             else
             {
+                _autoStartMatchId = null;
                 StartRoomButton.IsEnabled = true;
                 StartRoomButton.Content = "TENTAR NOVAMENTE";
                 StatusText.Text = "Não foi possível iniciar o jogo: " + ex.Message;
@@ -808,6 +818,7 @@ public partial class OnlineMatchWindow : UserControl
         _roomWaiting = false;
         _queueSearching = false;
         _acceptingMatchId = null;
+        _autoStartMatchId = null;
         _matchActive = false;
         _activeMatchId = null;
         _matchStatus = null;
