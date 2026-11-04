@@ -37,12 +37,19 @@ public sealed class OnlineGameSessionService : IDisposable
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (_peerProcess is { HasExited: true })
-                throw new InvalidOperationException("A sessão P2P encerrou antes de gerar o código: " + ReadPeerError(statusPath));
+                throw new InvalidOperationException("A sessão P2P encerrou antes de gerar o código: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
             if (File.Exists(codePath))
             {
-                var code = (await File.ReadAllTextAsync(codePath, cancellationToken)).Trim();
-                if (code.StartsWith("MR1-", StringComparison.Ordinal) && code.Length == 46)
-                    return code;
+                try
+                {
+                    var code = (await File.ReadAllTextAsync(codePath, cancellationToken)).Trim();
+                    if (code.StartsWith("MR1-", StringComparison.Ordinal) && code.Length == 46)
+                        return code;
+                }
+                catch (IOException)
+                {
+                    // A transient file lock must not abort creation of the room.
+                }
             }
             var error = ReadPeerError(statusPath);
             if (!string.IsNullOrWhiteSpace(error))
@@ -75,7 +82,7 @@ public sealed class OnlineGameSessionService : IDisposable
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (_peerProcess is { HasExited: true })
-                throw new InvalidOperationException("A sessão P2P encerrou: " + ReadPeerError(statusPath));
+                throw new InvalidOperationException("A sessão P2P encerrou: " + ReadPeerError(statusPath) + " Logs: " + PeerLogPath);
             try
             {
                 using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(statusPath, cancellationToken));
@@ -218,8 +225,48 @@ public sealed class OnlineGameSessionService : IDisposable
             start.ArgumentList.Add(code!);
         }
 
-        _peerProcess = Process.Start(start)
-            ?? throw new InvalidOperationException("O Windows não conseguiu iniciar peer_session.py.");
+        start.RedirectStandardOutput = true;
+        start.RedirectStandardError = true;
+
+        var process = new Process { StartInfo = start, EnableRaisingEvents = true };
+        process.OutputDataReceived += (_, args) =>
+        {
+            if (args.Data is not null) AppendPeerLog("OUT", args.Data);
+        };
+        process.ErrorDataReceived += (_, args) =>
+        {
+            if (args.Data is not null) AppendPeerLog("ERR", args.Data);
+        };
+        process.Exited += (_, _) =>
+        {
+            try { AppendPeerLog("EXIT", "peer_session.py encerrou com código " + process.ExitCode); }
+            catch (InvalidOperationException) { AppendPeerLog("EXIT", "peer_session.py encerrou."); }
+        };
+
+        if (!process.Start())
+        {
+            process.Dispose();
+            throw new InvalidOperationException("O Windows não conseguiu iniciar peer_session.py.");
+        }
+
+        _peerProcess = process;
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        AppendPeerLog("INFO", $"Sessão {mode} iniciada; bind={address}; porta UDP automática.");
+    }
+
+    private string PeerLogPath => Path.Combine(_distributionRoot, "peer-session.log");
+
+    private void AppendPeerLog(string level, string message)
+    {
+        try
+        {
+            lock (_logLock)
+                File.AppendAllText(PeerLogPath,
+                    $"{DateTimeOffset.UtcNow:O} [{level}] {message}{Environment.NewLine}");
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private static bool IsRadminAddress(IPAddress address) =>
@@ -337,7 +384,7 @@ public sealed class OnlineGameSessionService : IDisposable
 
     private void ResetPeerFiles()
     {
-        foreach (var name in new[] { "peer-code.txt", "peer-status.json", "peer-summary.txt", "peer-stop.json" })
+        foreach (var name in new[] { "peer-code.txt", "peer-status.json", "peer-summary.txt", "peer-stop.json", "peer-end.json" })
         {
             var path = Path.Combine(_distributionRoot, name);
             try
