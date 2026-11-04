@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Windows;
@@ -9,7 +8,7 @@ using RevivalRevolution.Services;
 
 namespace RevivalRevolution;
 
-public partial class OnlineMatchWindow : Window
+public partial class OnlineMatchWindow : UserControl
 {
     private static readonly string RankedEndpoint =
         string.IsNullOrWhiteSpace(RankedApiClient.LoadEndpoint())
@@ -33,6 +32,9 @@ public partial class OnlineMatchWindow : Window
     private bool _hostSessionActive;
     private bool _peerReady;
     private bool _closing;
+    private bool _shutdown;
+
+    public event EventHandler? BackRequested;
 
     public OnlineMatchWindow(string distributionRoot, string gameFolder, string pythonExe)
     {
@@ -637,7 +639,7 @@ public partial class OnlineMatchWindow : Window
             Filter = "Imagens PNG/JPEG|*.png;*.jpg;*.jpeg",
             Multiselect = false
         };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
 
         try
         {
@@ -706,8 +708,13 @@ public partial class OnlineMatchWindow : Window
         return (parts[0][0].ToString() + parts[^1][0]).ToUpperInvariant();
     }
 
-    private async void Window_Closing(object? sender, CancelEventArgs e)
+    private void Back_Click(object sender, RoutedEventArgs e)
+        => BackRequested?.Invoke(this, EventArgs.Empty);
+
+    public async Task ShutdownAsync()
     {
+        if (_shutdown) return;
+        _shutdown = true;
         _closing = true;
         _sessionCancellation.Cancel();
         StopRoomSession();
