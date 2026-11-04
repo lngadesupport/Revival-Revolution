@@ -261,11 +261,14 @@ class RankedStore:
         db.execute("UPDATE matches SET status='expired' WHERE status IN ('assigned','ready') AND expires_at<=?", (now,))
         db.execute("UPDATE private_rooms SET status='expired',connection_code=NULL WHERE status IN ('matched','starting') AND match_id IN (SELECT match_id FROM matches WHERE status='expired')")
 
-    def accept_match(self, player_id: str) -> dict:
+    def accept_match(self, player_id: str, mode: str | None = None) -> dict:
         now = self.clock()
         with self.transaction() as db:
             self._expire_matches(db, now)
-            row = db.execute("SELECT * FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            if mode is None:
+                row = db.execute("SELECT * FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            else:
+                row = db.execute("SELECT * FROM matches WHERE status IN ('assigned','ready') AND match_type=? AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (mode, player_id, player_id)).fetchone()
             if row is None: raise ValueError("no active match to accept")
             own = row["player_one"] == player_id
             column = "accepted_one" if own else "accepted_two"
@@ -275,21 +278,27 @@ class RankedStore:
                 db.execute("UPDATE matches SET status='ready',expires_at=? WHERE match_id=? AND status='assigned'", (now + 7200, row["match_id"]))
             return self._match_payload(db, row["match_id"], player_id)
 
-    def decline_match(self, player_id: str) -> dict:
+    def decline_match(self, player_id: str, mode: str | None = None) -> dict:
         now = self.clock()
         with self.transaction() as db:
             self._expire_matches(db, now)
-            row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            if mode is None:
+                row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            else:
+                row = db.execute("SELECT match_id FROM matches WHERE status IN ('assigned','ready') AND match_type=? AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (mode, player_id, player_id)).fetchone()
             if row is None: raise ValueError("no active match to decline")
             db.execute("UPDATE matches SET status='declined' WHERE match_id=?", (row["match_id"],))
             db.execute("UPDATE private_rooms SET status='declined',connection_code=NULL WHERE match_id=?", (row["match_id"],))
             return {"match_id": row["match_id"], "status": "declined"}
 
-    def confirm_match_finished(self, player_id: str) -> dict:
+    def confirm_match_finished(self, player_id: str, mode: str | None = None) -> dict:
         now = self.clock()
         with self.transaction() as db:
             self._expire_matches(db, now)
-            row = db.execute("SELECT * FROM matches WHERE status='ready' AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            if mode is None:
+                row = db.execute("SELECT * FROM matches WHERE status='ready' AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (player_id, player_id)).fetchone()
+            else:
+                row = db.execute("SELECT * FROM matches WHERE status='ready' AND match_type=? AND (player_one=? OR player_two=?) ORDER BY created_at DESC LIMIT 1", (mode, player_id, player_id)).fetchone()
             if row is None: raise ValueError("no ready match to finish")
             own = row["player_one"] == player_id
             column = "completed_one" if own else "completed_two"
