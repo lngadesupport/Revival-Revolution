@@ -125,6 +125,7 @@ public sealed class LauncherSettingsWindow : Window
         root.Children.Add(footer);
 
         var generalTabContent = new StackPanel();
+        var interfaceTabContent = new StackPanel();
         var networkTabContent = new StackPanel();
         var dataTabContent = new StackPanel();
         var supportTabContent = new StackPanel();
@@ -199,11 +200,23 @@ public sealed class LauncherSettingsWindow : Window
         AddCardHeading(app, "APP SETTINGS", "Comportamento do launcher");
         _confirmLaunch = AddSwitchRow(app, "Confirmar antes de iniciar o jogo",
             "Solicita confirmação antes de abrir o modo offline.", current.ConfirmBeforeLaunch);
-        AddRowDivider(app);
-        _reduceMotion = AddSwitchRow(app, "Reduzir animações da interface",
-            "Desativa movimentos de entrada e transições decorativas para maior conforto visual.",
-            current.ReduceMotion);
         generalTabContent.Children.Add(appCard);
+
+        var interfaceCard = MakeCard();
+        var interfaceSettings = CardContent(interfaceCard);
+        AddCardHeading(interfaceSettings, "ACCESSIBILITY", "Conforto e movimento");
+        _reduceMotion = AddSwitchRow(interfaceSettings, "Reduzir animações da interface",
+            "Desativa movimentos de entrada e transições decorativas. A preferência é salva neste computador.",
+            current.ReduceMotion);
+        interfaceSettings.Children.Add(new TextBlock
+        {
+            Text = "A interface mantém a mesma hierarquia e os mesmos comandos quando as animações estão reduzidas.",
+            FontSize = 10,
+            Foreground = Brush(MutedColor),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 8, 0, 0)
+        });
+        interfaceTabContent.Children.Add(interfaceCard);
 
         var networkCard = MakeCard();
         var network = CardContent(networkCard);
@@ -287,6 +300,11 @@ public sealed class LauncherSettingsWindow : Window
         {
             Header = "GERAL",
             Content = CreateTabScrollViewer(generalTabContent)
+        });
+        tabs.Items.Add(new TabItem
+        {
+            Header = "INTERFACE",
+            Content = CreateTabScrollViewer(interfaceTabContent)
         });
         tabs.Items.Add(new TabItem
         {
