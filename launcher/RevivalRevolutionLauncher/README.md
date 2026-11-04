@@ -1,4 +1,4 @@
-# Revival Revolution Launcher — 0.8.1
+# Revival Revolution Launcher — 0.8.4 (branch de desenvolvimento)
 
 Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 .NET 8.
