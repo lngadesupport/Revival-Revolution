@@ -337,8 +337,16 @@ public partial class OnlineMatchWindow : Window
 
     private async Task<bool> RestoreActiveMatchAsync()
     {
-        var result = await _api.GetAsync("/v1/match");
-        if (result["match"] is not JsonObject match) return false;
+        var ranked = await _api.GetAsync("/v1/ranked/match");
+        if (ranked["match"] is JsonObject rankedMatch)
+        {
+            _queueMode = "ranked";
+            ShowMatch(rankedMatch);
+            return true;
+        }
+        var casual = await _api.GetAsync("/v1/match");
+        if (casual["match"] is not JsonObject match) return false;
+        _queueMode = "casual";
         ShowMatch(match);
         return true;
     }
@@ -919,9 +927,18 @@ public partial class OnlineMatchWindow : Window
         _polling?.Cancel();
         if (!string.IsNullOrWhiteSpace(_token))
         {
+            if (_queueActive)
+            {
+                try
+                {
+                    var prefix = _queueMode == "ranked" ? "/v1/ranked" : "/v1";
+                    await _api.PostAsync(prefix + "/queue/leave", new JsonObject());
+                }
+                catch { }
+            }
             if (_matchActive)
             {
-                try { await _api.PostAsync("/v1/match/decline", new JsonObject()); } catch { }
+                try { await _api.PostAsync(MatchApiPrefix + "/match/decline", new JsonObject()); } catch { }
             }
             if (_roomWaiting)
             {
