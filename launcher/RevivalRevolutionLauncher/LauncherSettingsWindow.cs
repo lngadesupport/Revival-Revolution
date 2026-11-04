@@ -176,6 +176,7 @@ public sealed class LauncherSettingsWindow : Window
         AddRowDivider(app);
         _persistLogs = AddSwitchRow(app, "Salvar logs neste computador",
             "Mantém registros locais para facilitar diagnósticos.", current.PersistLogs);
+        app.Children.Add(new TextBlock { Text = "RADMIN VPN — IP avançado", Foreground = Brushes.White, Margin = new Thickness(0, 8, 0, 0) });
         _customRadminIpEnabled = new CheckBox { Content = "Desbloquear IP manual do servidor Radmin", IsChecked = current.UseCustomRadminIp, Foreground = Brushes.White, Margin = new Thickness(0, 10, 0, 6) };
         _customRadminIp = new TextBox { Text = current.CustomRadminIp, IsEnabled = current.UseCustomRadminIp, Height = 34, Padding = new Thickness(8), ToolTip = "IPv4 Radmin 26.x.x.x" };
         _customRadminIpEnabled.Checked += (_, _) => _customRadminIp.IsEnabled = true;
@@ -183,7 +184,6 @@ public sealed class LauncherSettingsWindow : Window
         app.Children.Add(_customRadminIpEnabled);
         app.Children.Add(_customRadminIp);
         content.Children.Add(appCard);
-        app.Children.Add(new TextBlock { Text = "RADMIN VPN — IP avançado", Foreground = Brushes.White, Margin = new Thickness(0, 8, 0, 0) });
 
         var supportCard = MakeCard();
         var support = CardContent(supportCard);
