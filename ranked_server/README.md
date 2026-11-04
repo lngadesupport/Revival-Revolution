@@ -15,6 +15,25 @@ O serviço escuta em loopback por padrão. Em uma VPS, coloque-o atrás de um
 proxy reverso com TLS e mantenha o processo Python em loopback. Não exponha
 este servidor HTTP de desenvolvimento diretamente à internet.
 
+## Host privado pela Radmin VPN (Windows)
+
+Para hospedar a API em uma rede privada Radmin, execute na raiz do repositório:
+
+```powershell
+.\scripts\start-radmin-ranked-host.ps1
+```
+
+O script detecta o IP virtual local 26.x.x.x, vincula a API a esse endereço,
+abre TCP 8765 e UDP 8766 somente para a faixa Radmin 26.0.0.0/8 e guarda o
+SQLite em `%LOCALAPPDATA%\RevivalRevolution\RankedServer`. Todos os jogadores
+devem entrar na mesma rede Radmin e configurar no launcher
+`http://IP-RADMIN-DO-HOST:8765`. HTTP só é permitido no launcher para
+localhost ou IPv4 Radmin; HTTP público continua bloqueado.
+
+O transporte peer UDP é direto pela Radmin, usa MR1 e UDP 8766. STUN, AutoPunch,
+MR2, relay de terceiros e fallback público estão desativados. O script não
+configura `RANKED_RESULT_SECRET`; a adjudicação competitiva permanece bloqueada.
+
 ## Endpoints
 
 - `GET /health` — verificação pública de saúde.
