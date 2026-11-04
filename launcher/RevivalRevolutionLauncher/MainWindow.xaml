@@ -123,9 +123,9 @@
                             <TextBlock Text="JOGAR" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
                             <Button x:Name="OfflineNavButton" Style="{StaticResource NavButton}"
-                                    Content="01   Modo offline" Click="Launch_Click" FontSize="13"/>
+                                    Content="01   Modo offline" Click="Launch_Click" FontSize="13" ToolTip="Atalho: Ctrl+1" AutomationProperties.Name="Iniciar modo offline"/>
                             <Button x:Name="PrivateMatchNavButton" Style="{StaticResource NavButton}"
-                                    Content="02   Sala por código" Click="PrivateMatch_Click" FontSize="13"/>
+                                    Content="02   Sala por código" Click="PrivateMatch_Click" FontSize="13" ToolTip="Atalho: Ctrl+2" AutomationProperties.Name="Abrir sala por código"/>
                             <Border Height="1" Background="#2D3542" Margin="5,17,5,16"/>
                             <TextBlock Text="COMUNIDADE" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
@@ -135,9 +135,9 @@
                             <TextBlock Text="SISTEMA" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
                             <Button x:Name="DiagnosticsNavButton" Style="{StaticResource NavButton}"
-                                    Content="04   Diagnósticos" Click="Diagnostics_Click"/>
+                                    Content="04   Diagnósticos" Click="Diagnostics_Click" ToolTip="Atalho: Ctrl+3" AutomationProperties.Name="Abrir diagnósticos"/>
                             <Button x:Name="SettingsNavButton" Style="{StaticResource NavButton}"
-                                    Content="05   Configurações" Click="Settings_Click"/>
+                                    Content="05   Configurações" Click="Settings_Click" ToolTip="Atalho: Ctrl+4" AutomationProperties.Name="Abrir configurações"/>
                         </StackPanel>
                     </ScrollViewer>
 
