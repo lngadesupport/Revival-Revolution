@@ -76,7 +76,7 @@
                                                    Foreground="#C5C4D2" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </Border>
-                                <Button x:Name="SearchButton" Content="BUSCAR PARTIDA CASUAL" Tag="casual" Click="Search_Click" IsEnabled="False"
+                                <Button x:Name="SearchButton" Content="BUSCAR PARTIDA NÃO RANQUEADA" Tag="casual" Click="Search_Click" IsEnabled="False"
                                         Background="#C52B1F30" BorderBrush="#FFFF6671" Padding="16,14" FontSize="16"
                                         HorizontalContentAlignment="Center"/>
                                 <Button x:Name="CancelButton" Content="CANCELAR BUSCA" Click="Cancel_Click" IsEnabled="False"
