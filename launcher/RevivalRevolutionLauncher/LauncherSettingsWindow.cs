@@ -319,20 +319,17 @@ public sealed class LauncherSettingsWindow : Window
     {
         var style = new Style(typeof(TabItem));
         style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
-        style.Setters.Add(new Setter(Control.BackgroundProperty, Brush(SurfaceRaisedColor)));
-        style.Setters.Add(new Setter(Control.BorderBrushProperty, Brush(BorderColor)));
-        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
-        style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(14, 9, 14, 9)));
-        style.Setters.Add(new Setter(Control.MarginProperty, new Thickness(0, 0, 8, 10)));
         style.Setters.Add(new Setter(Control.FontSizeProperty, 10d));
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Bold));
 
         var border = new FrameworkElementFactory(typeof(Border));
-        border.SetBinding(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
-        border.SetBinding(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+        border.Name = "TabBorder";
+        border.SetValue(Border.BackgroundProperty, Brush(SurfaceRaisedColor));
+        border.SetValue(Border.BorderBrushProperty, Brush(BorderColor));
         border.SetValue(Border.BorderThicknessProperty, new Thickness(1));
         border.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
         border.SetValue(Border.PaddingProperty, new Thickness(14, 9, 14, 9));
+        border.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 8, 10));
 
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.ContentSourceProperty, "Header");
@@ -342,8 +339,8 @@ public sealed class LauncherSettingsWindow : Window
 
         var template = new ControlTemplate(typeof(TabItem)) { VisualTree = border };
         var selected = new Trigger { Property = TabItem.IsSelectedProperty, Value = true };
-        selected.Setters.Add(new Setter(Control.BackgroundProperty, Brush(AccentColor)));
-        selected.Setters.Add(new Setter(Control.BorderBrushProperty, Brush(Color.FromRgb(245, 104, 114))));
+        selected.Setters.Add(new Setter(Border.BackgroundProperty, Brush(AccentColor), "TabBorder"));
+        selected.Setters.Add(new Setter(Border.BorderBrushProperty, Brush(Color.FromRgb(245, 104, 114)), "TabBorder"));
         template.Triggers.Add(selected);
         style.Setters.Add(new Setter(Control.TemplateProperty, template));
         return style;
