@@ -83,13 +83,13 @@ class SelectionSync:
         self.compatibility=normalize_compatibility(c.get('compatibility'))
         self.catalog=c
         self.catalog_hash=catalog_fingerprint(characters,self.stages,self.compatibility)
-        self.local=dict(choice=dict(character=characters[0]['id'],costume=0),stage=stages[0]['id'] if self.slot==0 else -1,ready=False)
+        self.local=dict(choice=dict(character=characters[0]['id'],costume=characters[0]['outfits'][0]),stage=stages[0]['id'] if self.slot==0 else -1,ready=False)
         self.revision+=1;self.state='choosing'
         (self.root/'selection-owner.txt').write_text(str(self.slot)+' '+self.bridge.session,encoding='utf-8')
     def validate_choice(self,choice):
         if not isinstance(choice,dict) or set(choice)!= {'character','costume'} or type(choice.get('character')) is not int or type(choice.get('costume')) is not int:raise RuntimeError('Invalid owned-slot selection')
         char=self.characters.get(choice['character'])
-        if char is None or not 0<=choice['costume']<len(char['outfits']):raise RuntimeError('Unknown character or outfit')
+        if char is None or choice['costume'] not in char['outfits']:raise RuntimeError('Unknown character or outfit')
     def read_local(self):
         try:r=json.loads((self.root/'selection-local.json').read_text(encoding='utf-8-sig'))
         except (OSError,ValueError):return
