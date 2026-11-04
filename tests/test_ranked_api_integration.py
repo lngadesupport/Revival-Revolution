@@ -73,7 +73,7 @@ class RankedApiIntegrationTests(unittest.TestCase):
         status, match = self.request("POST", "/v1/rooms/join", {"code": room["room"]["room_code"]}, guest["token"])
         self.assertEqual(status, 200)
         self.assertEqual(match["match"]["match_type"], "private")
-        with self.assertRaisesRegex(ValueError, "not ranked"):
+        with self.assertRaisesRegex(ValueError, "match_is_not_ranked"):
             from ranked_server.competitive import CompetitiveStore
             CompetitiveStore(self.store.database).record_authoritative_result(
                 match["match"]["match_id"], host["player_id"], authority_event_id="private-room-event"
@@ -111,14 +111,14 @@ class RankedApiIntegrationTests(unittest.TestCase):
                 authority="authority-secret",
             )
             self.assertEqual(status, 200)
-            self.assertEqual(body["result"]["status"], "applied")
+            self.assertFalse(body["result"]["already_recorded"])
             status, repeated = self.request(
                 "POST", f"/internal/v1/matches/{match_id}/result",
                 {"winner_player_id": one["player_id"], "authority_event_id": "ranked-event-1"},
                 authority="authority-secret",
             )
             self.assertEqual(status, 200)
-            self.assertEqual(repeated["result"]["status"], "duplicate")
+            self.assertTrue(repeated["result"]["already_recorded"])
 
 
 if __name__ == "__main__":
