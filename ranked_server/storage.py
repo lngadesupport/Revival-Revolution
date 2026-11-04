@@ -59,6 +59,7 @@ class RankedStore:
                 CREATE TABLE IF NOT EXISTS queue (
                     player_id TEXT PRIMARY KEY REFERENCES players(player_id) ON DELETE CASCADE,
                     region TEXT NOT NULL,
+                    queue_mode TEXT NOT NULL DEFAULT 'casual',
                     joined_at REAL NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS matches (
@@ -69,7 +70,7 @@ class RankedStore:
                     rating_two INTEGER NOT NULL,
                     region TEXT NOT NULL,
                     status TEXT NOT NULL DEFAULT 'assigned',
-                    match_type TEXT NOT NULL DEFAULT 'ranked',
+                    match_type TEXT NOT NULL DEFAULT 'casual',
                     created_at REAL NOT NULL,
                     CHECK(player_one <> player_two)
                 );
@@ -95,8 +96,11 @@ class RankedStore:
             """)
             match_columns = {row["name"] for row in db.execute("PRAGMA table_info(matches)")}
             if "match_type" not in match_columns:
-                db.execute("ALTER TABLE matches ADD COLUMN match_type TEXT NOT NULL DEFAULT 'ranked'")
+                db.execute("ALTER TABLE matches ADD COLUMN match_type TEXT NOT NULL DEFAULT 'casual'")
             db.execute("UPDATE matches SET match_type='private' WHERE match_id IN (SELECT match_id FROM private_rooms WHERE match_id IS NOT NULL)")
+            queue_columns = {row["name"] for row in db.execute("PRAGMA table_info(queue)")}
+            if "queue_mode" not in queue_columns:
+                db.execute("ALTER TABLE queue ADD COLUMN queue_mode TEXT NOT NULL DEFAULT 'casual'")
 
     @staticmethod
     def _token_hash(token: str) -> str:
@@ -148,10 +152,13 @@ class RankedStore:
                 raise ValueError("unknown player")
         return {"player_id": player_id, "token": token}
 
-    def join_queue(self, player_id: str, region: str = "global", *, base_window: int = 100, step: int = 50, widen_seconds: int = 10) -> dict | None:
+    def join_queue(self, player_id: str, region: str = "global", *, mode: str = "casual", base_window: int = 100, step: int = 50, widen_seconds: int = 10) -> dict | None:
         region = str(region).strip().lower()
         if not region or len(region) > 24 or not all(c.isalnum() or c in "-_" for c in region):
             raise ValueError("invalid region")
+        mode = str(mode).strip().lower()
+        if mode not in {"casual", "ranked"}:
+            raise ValueError("invalid queue mode")
         now = self.clock()
         with self.transaction() as db:
             player = db.execute("SELECT rating FROM players WHERE player_id=?", (player_id,)).fetchone()
@@ -169,22 +176,22 @@ class RankedStore:
             ).fetchone()
             if open_room:
                 raise ValueError("player already owns an open private room")
-            existing = db.execute("SELECT region,joined_at FROM queue WHERE player_id=?", (player_id,)).fetchone()
+            existing = db.execute("SELECT region,joined_at,queue_mode FROM queue WHERE player_id=?", (player_id,)).fetchone()
             if existing:
-                if existing["region"] != region:
-                    raise ValueError("player is already queued in another region")
+                if existing["region"] != region or existing["queue_mode"] != mode:
+                    raise ValueError("player is already queued in another mode or region")
                 joined_at = existing["joined_at"]
             else:
                 joined_at = now
-                db.execute("INSERT INTO queue(player_id,region,joined_at) VALUES(?,?,?)", (player_id, region, now))
+                db.execute("INSERT INTO queue(player_id,region,queue_mode,joined_at) VALUES(?,?,?,?)", (player_id, region, mode, now))
             own_rating = int(player["rating"])
             wait = max(0, now - joined_at)
             candidates = db.execute("""
                 SELECT q.player_id,q.joined_at,p.rating,p.display_name
                 FROM queue q JOIN players p USING(player_id)
-                WHERE q.region=? AND q.player_id<>?
+                WHERE q.region=? AND q.queue_mode=? AND q.player_id<>?
                 ORDER BY ABS(p.rating-?), q.joined_at, q.player_id
-            """, (region, player_id, own_rating)).fetchall()
+            """, (region, mode, player_id, own_rating)).fetchall()
             # Use the longer wait of the two players so an older queued player
             # can receive the advertised widening even when a newcomer arrives.
             eligible = []
@@ -203,7 +210,7 @@ class RankedStore:
             match_id = str(uuid.uuid4())
             db.execute(
                 "INSERT INTO matches(match_id,player_one,player_two,rating_one,rating_two,region,status,match_type,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]), region, "assigned", "ranked", now),
+                (match_id, first_id, second_id, int(first["rating"]), int(second["rating"]), region, "assigned", mode, now),
             )
             db.execute("DELETE FROM queue WHERE player_id IN (?,?)", (first_id, second_id))
             return self._match_payload(db, match_id, player_id)
@@ -217,7 +224,7 @@ class RankedStore:
         opponent_id = row["player_two"] if own else row["player_one"]
         opponent = db.execute("SELECT display_name,rating FROM players WHERE player_id=?", (opponent_id,)).fetchone()
         return {
-            "match_id": row["match_id"], "status": row["status"], "region": row["region"],
+            "match_id": row["match_id"], "status": row["status"], "region": row["region"], "match_type": row["match_type"],
             "player_slot": 0 if own else 1, "opponent": dict(opponent),
             "created_at": row["created_at"],
         }
@@ -238,14 +245,14 @@ class RankedStore:
 
     def queue_status(self, player_id: str) -> dict:
         with self._connect() as db:
-            row = db.execute("SELECT region,joined_at FROM queue WHERE player_id=?", (player_id,)).fetchone()
+            row = db.execute("SELECT region,queue_mode,joined_at FROM queue WHERE player_id=?", (player_id,)).fetchone()
             if not row:
                 return {"queued": False}
             position = db.execute(
-                "SELECT COUNT(*) FROM queue WHERE region=? AND (joined_at<? OR (joined_at=? AND player_id<=?))",
-                (row["region"], row["joined_at"], row["joined_at"], player_id),
+                "SELECT COUNT(*) FROM queue WHERE region=? AND queue_mode=? AND (joined_at<? OR (joined_at=? AND player_id<=?))",
+                (row["region"], row["queue_mode"], row["joined_at"], row["joined_at"], player_id),
             ).fetchone()[0]
-            return {"queued": True, "region": row["region"], "joined_at": row["joined_at"], "position": position}
+            return {"queued": True, "region": row["region"], "mode": row["queue_mode"], "joined_at": row["joined_at"], "position": position}
 
 
     @staticmethod
