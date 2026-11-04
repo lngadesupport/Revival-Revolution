@@ -9,15 +9,18 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from .storage import RankedStore
 from .social import SocialStore
+from .competitive import CompetitiveStore
 
 
 def make_handler(store: RankedStore):
     social = SocialStore(store.database, clock=store.clock)
+    competitive = CompetitiveStore(store.database, clock=store.clock)
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "RevivalRanked/0.1"
@@ -67,6 +70,17 @@ def make_handler(store: RankedStore):
             player_id = player["player_id"]
             if path == "/v1/me":
                 return self._json(200, social.profile(player_id))
+            if path == "/v1/ranked/me":
+                summary = competitive.player_summary(player_id)
+                summary["recent_matches"] = competitive.match_history(player_id)
+                return self._json(200, summary)
+            if path == "/v1/ranked/leaderboard":
+                query = parse_qs(parsed.query)
+                try:
+                    limit = int(query.get("limit", ["100"])[0])
+                    return self._json(200, {"season_id": "season-1", "entries": competitive.leaderboard(limit)})
+                except (TypeError, ValueError) as exc:
+                    return self._json(400, {"error": "invalid_request", "message": str(exc)})
             if path == "/v1/friends":
                 return self._json(200, social.friends(player_id))
             if path == "/v1/blocks":
@@ -111,6 +125,22 @@ def make_handler(store: RankedStore):
             path = urlparse(self.path).path
             try:
                 body = self._body()
+                if path.startswith("/internal/v1/matches/") and path.endswith("/result"):
+                    authority_secret = os.environ.get("RANKED_RESULT_SECRET", "")
+                    if not authority_secret:
+                        return self._json(503, {"error": "result_authority_not_configured"})
+                    supplied = self.headers.get("X-Ranked-Authority", "")
+                    if not hmac.compare_digest(supplied, authority_secret):
+                        return self._json(403, {"error": "result_authority_forbidden"})
+                    match_id = path[len("/internal/v1/matches/"):-len("/result")].strip("/")
+                    if not match_id or "/" in match_id:
+                        return self._json(404, {"error": "not_found"})
+                    result = competitive.record_authoritative_result(
+                        match_id, body.get("winner_player_id"),
+                        is_draw=body.get("draw", False),
+                        authority_event_id=body.get("authority_event_id", ""),
+                    )
+                    return self._json(200, {"result": result})
                 if path == "/v1/register":
                     name = body.get("display_name")
                     result = store.register(name)
