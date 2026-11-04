@@ -114,7 +114,7 @@ public sealed class OnlineGameSessionService : IDisposable
         {
             "offline_launcher.py", "inject_offline.py", "inject_overlay.py",
             "peer_session.py", "peer_native.py", "selection_sync.py",
-            "live_fighter.py", "autopunch_transport.py",
+            "live_fighter.py",
             "MetalOfflineBridgeImGuiV3.dll", "MetalNetplayBridgeV8.dll", "MetalImGuiOverlay.dll"
         };
         var missing = required.Where(name =>
