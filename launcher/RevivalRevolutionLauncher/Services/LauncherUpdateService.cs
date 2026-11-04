@@ -12,6 +12,7 @@ public sealed record LauncherUpdateInfo(
     string Sha256,
     string ReleaseNotes,
     IReadOnlyList<string> Files,
+    IReadOnlyDictionary<string, string> FileHashes,
     bool IsRepair);
 
 public sealed record UpdateOperationProgress(string Stage, string Detail);
@@ -110,6 +111,7 @@ public sealed class LauncherUpdateService
             data.GetProperty("sha256").GetString() ?? "",
             data.TryGetProperty("releaseNotes", out var notes) ? notes.GetString() ?? "" : "",
             changedFiles,
+            fileHashes,
             isRepair);
     }
 
@@ -182,7 +184,7 @@ public sealed class LauncherUpdateService
         try
         {
             stageProgress?.Report(new("extract", "Validando o manifesto e preparando os arquivos autorizados..."));
-            ExtractAuthorizedFiles(zip, staging, update.Files, token);
+            ExtractAuthorizedFiles(zip, staging, update.Files, update.FileHashes, token);
             stageProgress?.Report(new("finalize", "Preparando a aplicação segura da atualização..."));
             return await CreateApplyScriptAsync(root, staging, update.Files, token);
         }
@@ -244,6 +246,7 @@ public sealed class LauncherUpdateService
         string zip,
         string staging,
         IReadOnlyList<string> requestedFiles,
+        IReadOnlyDictionary<string, string> expectedHashes,
         CancellationToken token)
     {
         var allowed = requestedFiles.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -282,6 +285,42 @@ public sealed class LauncherUpdateService
         var missing = allowed.Except(extracted, StringComparer.OrdinalIgnoreCase).ToArray();
         if (missing.Length > 0)
             throw new InvalidDataException("Arquivos listados no manifesto não encontrados no pacote: " + string.Join(", ", missing));
+
+        // The package hash authenticates the ZIP as a whole; verify each extracted
+        // payload against the manifest before it can be copied into the installation.
+        VerifyStagedFiles(staging, requestedFiles, expectedHashes);
+    }
+
+    public static void VerifyStagedFiles(
+        string staging,
+        IReadOnlyList<string> files,
+        IReadOnlyDictionary<string, string> expectedHashes)
+    {
+        var root = Path.GetFullPath(staging);
+        if (!Directory.Exists(root) || (File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("A pasta de staging está ausente ou é um link/reparse point.");
+        var prefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        foreach (var relative in files)
+        {
+            ValidateRelativePath(relative);
+            if (IsProtectedPath(relative))
+                throw new InvalidDataException($"O atualizador não pode verificar um arquivo protegido: {relative}");
+            if (!expectedHashes.TryGetValue(relative, out var expectedHash) ||
+                expectedHash.Length != 64 || !expectedHash.All(Uri.IsHexDigit))
+                throw new InvalidDataException($"Hash SHA-256 ausente ou inválido: {relative}");
+
+            var target = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
+            if (!target.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Arquivo fora da staging: {relative}");
+            if (!File.Exists(target) || (File.GetAttributes(target) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"Arquivo extraído ausente ou inseguro: {relative}");
+
+            using var stream = File.OpenRead(target);
+            var actualHash = Convert.ToHexString(SHA256.HashData(stream));
+            if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Hash SHA-256 do arquivo extraído não confere: {relative}");
+        }
     }
 
     private static async Task<string> CreateApplyScriptAsync(
