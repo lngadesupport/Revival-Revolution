@@ -139,9 +139,9 @@
                             <TextBlock Text="SISTEMA" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
                             <Button x:Name="DiagnosticsNavButton" Style="{StaticResource NavButton}"
-                                    Content="04   Diagnósticos" Click="Diagnostics_Click" ToolTip="Atalho: Ctrl+3" AutomationProperties.Name="Abrir diagnósticos"/>
+                                    Content="03   Diagnósticos" Click="Diagnostics_Click" ToolTip="Atalho: Ctrl+3" AutomationProperties.Name="Abrir diagnósticos"/>
                             <Button x:Name="SettingsNavButton" Style="{StaticResource NavButton}"
-                                    Content="05   Configurações" Click="Settings_Click" ToolTip="Atalho: Ctrl+4" AutomationProperties.Name="Abrir configurações"/>
+                                    Content="04   Configurações" Click="Settings_Click" ToolTip="Atalho: Ctrl+4" AutomationProperties.Name="Abrir configurações"/>
                         </StackPanel>
                     </ScrollViewer>
 
