@@ -91,6 +91,9 @@ public partial class OnlineMatchWindow : UserControl
                 if (queue["queued"]?.GetValue<bool>() == true)
                 {
                     _queueSearching = true;
+                    CreateRoomButton.IsEnabled = false;
+                    RoomCodeBox.IsEnabled = false;
+                    UpdateJoinRoomButtonState();
                     UpdateQueueButtons();
                     StatusText.Text = "Busca aleatória restaurada. Aguardando adversário pela Radmin...";
                     StartQueuePolling();
@@ -175,13 +178,13 @@ public partial class OnlineMatchWindow : UserControl
         FindRandomButton.IsEnabled = enabled && !_roomWaiting && !_queueSearching && !_matchActive;
         CreateRoomButton.IsEnabled = enabled && !_roomWaiting && !_queueSearching && !_matchActive;
         RoomCodeBox.IsEnabled = enabled && !_roomWaiting && !_queueSearching && !_matchActive;
-        UpdateQueueButtons();
+        UpdateQueueButtons(enabled);
         UpdateJoinRoomButtonState();
     }
 
-    private void UpdateQueueButtons()
+    private void UpdateQueueButtons(bool enabled = true)
     {
-        FindRandomButton.IsEnabled = !string.IsNullOrWhiteSpace(_token) &&
+        FindRandomButton.IsEnabled = enabled && !string.IsNullOrWhiteSpace(_token) &&
             !_roomWaiting && !_queueSearching && !_matchActive;
         CancelQueueButton.Visibility = _queueSearching ? Visibility.Visible : Visibility.Collapsed;
         CancelQueueButton.IsEnabled = _queueSearching;
@@ -264,6 +267,12 @@ public partial class OnlineMatchWindow : UserControl
         CancelQueueButton.IsEnabled = false;
         try
         {
+            var current = await _api.GetAsync("/v1/match");
+            if (current["match"] is JsonObject assigned)
+            {
+                ShowMatch(assigned);
+                return;
+            }
             await _api.PostAsync("/v1/queue/leave", new JsonObject());
             _queueSearching = false;
             _polling?.Cancel();
@@ -512,7 +521,7 @@ public partial class OnlineMatchWindow : UserControl
         }
 
         StartRoomButton.Visibility = role == "host" ? Visibility.Visible : Visibility.Collapsed;
-        StartRoomButton.IsEnabled = role == "host" && !_hostSessionActive &&
+        StartRoomButton.IsEnabled = role == "host" && _matchStatus == "ready" && !_hostSessionActive &&
             (roomStatus == "matched" || (roomStatus == "starting" && string.IsNullOrWhiteSpace(connectionCode)));
         if (role == "host" && roomStatus == "starting")
         {
