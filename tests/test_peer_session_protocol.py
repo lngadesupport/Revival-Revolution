@@ -118,6 +118,37 @@ class LiveFighterReportTests(unittest.TestCase):
                 live.close()
 
 
+class GameBridgeValidationTests(unittest.TestCase):
+    def test_begin_requires_a_valid_game_process_id(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "netplay-pid.txt").write_text("not-a-pid", encoding="utf-8")
+            bridge = peer_session.GameBridge(root, 0, "session-1")
+            with self.assertRaisesRegex(RuntimeError, "process identity"):
+                bridge.begin("peer_prepare")
+
+    def test_poll_ignores_non_object_bridge_response(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "netplay-pid.txt").write_text("12345", encoding="utf-8")
+            bridge = peer_session.GameBridge(root, 0, "session-1")
+            bridge.begin("peer_prepare")
+            (root / "game-response.json").write_text("[]", encoding="utf-8")
+            self.assertIsNone(bridge.poll())
+
+    def test_poll_rejects_response_for_another_process(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "netplay-pid.txt").write_text("12345", encoding="utf-8")
+            bridge = peer_session.GameBridge(root, 0, "session-1")
+            bridge.begin("peer_prepare")
+            (root / "game-response.json").write_text(
+                '{"id":"' + bridge.command["id"] + '","pid":12346,"state":"peer_prepared"}',
+                encoding="utf-8",
+            )
+            self.assertIsNone(bridge.poll())
+
+
 class PeerPacketBindingTests(unittest.TestCase):
     class FakeBridge:
         def __init__(self, root, slot, session):
