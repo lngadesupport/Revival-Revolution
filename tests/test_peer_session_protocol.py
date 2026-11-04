@@ -24,6 +24,10 @@ class PeerConnectionCodeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             peer_session.decode_connection_code(code[:4] + replacement + code[5:])
 
+    def test_peer_transport_uses_reserved_radmin_udp_port(self):
+        import inspect
+        self.assertEqual(inspect.signature(peer_session.Session).parameters["port"].default, 8766)
+
     def test_module_import_does_not_require_legacy_diagnostic_file(self):
         self.assertTrue(hasattr(peer_session, "Session"))
         self.assertTrue(hasattr(peer_session, "LiveFighter"))
