@@ -19,6 +19,7 @@ public sealed class LauncherSettingsWindow : Window
     private static readonly Color AccentColor = Color.FromRgb(218, 48, 62);
 
     private readonly ToggleButton _confirmLaunch = null!;
+    private readonly ToggleButton _reduceMotion = null!;
     private readonly ToggleButton _persistLogs = null!;
     private readonly CheckBox _customRadminIpEnabled = null!;
     private readonly TextBox _customRadminIp = null!;
@@ -91,6 +92,7 @@ public sealed class LauncherSettingsWindow : Window
         reset.Click += (_, _) =>
         {
             _confirmLaunch.IsChecked = false;
+            _reduceMotion.IsChecked = false;
             _persistLogs.IsChecked = true;
             _customRadminIpEnabled.IsChecked = false;
             _customRadminIp.Text = "";
@@ -103,6 +105,7 @@ public sealed class LauncherSettingsWindow : Window
         {
             Result = CopySettings(current);
             Result.ConfirmBeforeLaunch = _confirmLaunch.IsChecked == true;
+            Result.ReduceMotion = _reduceMotion.IsChecked == true;
             Result.PersistLogs = _persistLogs.IsChecked == true;
             Result.UseCustomRadminIp = _customRadminIpEnabled.IsChecked == true;
             Result.CustomRadminIp = _customRadminIp.Text.Trim();
@@ -196,6 +199,10 @@ public sealed class LauncherSettingsWindow : Window
         AddCardHeading(app, "APP SETTINGS", "Comportamento do launcher");
         _confirmLaunch = AddSwitchRow(app, "Confirmar antes de iniciar o jogo",
             "Solicita confirmação antes de abrir o modo offline.", current.ConfirmBeforeLaunch);
+        AddRowDivider(app);
+        _reduceMotion = AddSwitchRow(app, "Reduzir animações da interface",
+            "Desativa movimentos de entrada e transições decorativas para maior conforto visual.",
+            current.ReduceMotion);
         generalTabContent.Children.Add(appCard);
 
         var networkCard = MakeCard();
@@ -324,6 +331,7 @@ public sealed class LauncherSettingsWindow : Window
         PlayerName = current.PlayerName,
         PlayerTag = current.PlayerTag,
         ConfirmBeforeLaunch = current.ConfirmBeforeLaunch,
+        ReduceMotion = current.ReduceMotion,
         PersistLogs = current.PersistLogs,
         UseCustomRadminIp = current.UseCustomRadminIp,
         CustomRadminIp = current.CustomRadminIp
