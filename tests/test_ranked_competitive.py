@@ -70,6 +70,35 @@ class CompetitiveRatingTests(unittest.TestCase):
             self.competitive.player_summary(self.one["player_id"])["games_played"], 1
         )
 
+    def test_conflicting_result_for_same_match_is_rejected(self):
+        self.competitive.record_authoritative_result(
+            self.match_id, self.one["player_id"], authority_event_id="stable-event"
+        )
+        with self.assertRaisesRegex(ValueError, "match_result_conflict"):
+            self.competitive.record_authoritative_result(
+                self.match_id, self.two["player_id"], authority_event_id="different-event"
+            )
+        self.assertEqual(
+            self.competitive.player_summary(self.one["player_id"])["games_played"], 1
+        )
+
+    def test_authority_event_id_cannot_be_reused_for_another_match(self):
+        self.competitive.record_authoritative_result(
+            self.match_id, self.one["player_id"], authority_event_id="globally-unique-event"
+        )
+        three = self.accounts.register("RANKED-THREE")
+        four = self.accounts.register("RANKED-FOUR")
+        self.accounts.join_queue(three["player_id"], "sa-east", mode="ranked")
+        second_match = self.accounts.join_queue(four["player_id"], "sa-east", mode="ranked")
+        with self.assertRaisesRegex(ValueError, "authority_event_already_used"):
+            self.competitive.record_authoritative_result(
+                second_match["match_id"], three["player_id"],
+                authority_event_id="globally-unique-event"
+            )
+        self.assertEqual(
+            self.competitive.player_summary(three["player_id"])["games_played"], 0
+        )
+
     def test_player_cannot_be_declared_winner_if_not_in_match(self):
         with self.assertRaises(ValueError):
             self.competitive.record_authoritative_result(
