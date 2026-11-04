@@ -168,7 +168,33 @@ try
     }
     Require(nonRadminRejected, "The Radmin launcher must reject public/non-Radmin endpoints.");
 
-    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, staged and apply-time per-file SHA-256 verification, reparse-point protection, managed runtime updates, protected user configuration/game paths, and connection-code validation.");
+    var settingsRoot = Path.Combine(root, "settings-test");
+    var settingsService = new LauncherSettingsService(settingsRoot);
+    settingsService.Save(new LauncherSettings
+    {
+        PlayerName = "  " + new string('P', 40) + "  ",
+        PlayerTag = new string('T', 20),
+        CheckUpdatesOnStartup = false,
+        ConfirmBeforeLaunch = true,
+        PersistLogs = false
+    });
+    var savedSettings = settingsService.Load();
+    Require(savedSettings.PlayerName.Length == 24 && savedSettings.PlayerTag.Length == 12,
+        "Legacy profile fields must be trimmed and bounded during persistence.");
+    Require(!savedSettings.CheckUpdatesOnStartup && savedSettings.ConfirmBeforeLaunch && !savedSettings.PersistLogs,
+        "Launcher preferences did not survive a save/load round trip.");
+
+    await File.WriteAllTextAsync(settingsService.GetSettingsPath(), "{ invalid json");
+    var recoveredSettings = settingsService.Load();
+    Require(recoveredSettings.CheckUpdatesOnStartup && !recoveredSettings.ConfirmBeforeLaunch && recoveredSettings.PersistLogs,
+        "Corrupt settings must recover to safe defaults.");
+    Require(Directory.EnumerateFiles(settingsRoot, "launcher-settings.json.corrupt-*").Any(),
+        "Corrupt settings must be preserved in a recovery copy.");
+    settingsService.Save(new LauncherSettings { CheckUpdatesOnStartup = false });
+    Require(!settingsService.Load().CheckUpdatesOnStartup,
+        "Settings storage must remain writable after corruption recovery.");
+
+    Console.WriteLine("Launcher/network integrity smoke tests passed: selective repair, staged and apply-time per-file SHA-256 verification, reparse-point protection, managed runtime updates, protected user configuration/game paths, and connection-code validation, resilient settings persistence and corruption recovery.");
 }
 finally
 {
