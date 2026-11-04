@@ -4,7 +4,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using System.Windows.Markup;
 using RevivalRevolution.Services;
 
 namespace RevivalRevolution;
@@ -110,6 +109,7 @@ public sealed class LauncherSettingsWindow : Window
         cancel.Margin = new Thickness(10, 0, 0, 0);
         footer.Children.Add(cancel);
         footer.Children.Add(save);
+        DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);
 
         var content = new StackPanel();
@@ -178,6 +178,7 @@ public sealed class LauncherSettingsWindow : Window
         openSettings.Margin = new Thickness(12, 0, 0, 0);
         openSettings.VerticalAlignment = VerticalAlignment.Center;
         openSettings.Click += (_, _) => OpenFolder(Path.GetDirectoryName(settingsPath) ?? settingsPath);
+        Grid.SetColumn(openSettings, 2);
         settingsRow.Children.Add(openSettings);
         AddRowDivider(support);
         var logsRow = AddInfoRow(support, "Logs do launcher", logDirectory);
@@ -186,6 +187,7 @@ public sealed class LauncherSettingsWindow : Window
         openLogs.Margin = new Thickness(12, 0, 0, 0);
         openLogs.VerticalAlignment = VerticalAlignment.Center;
         openLogs.Click += (_, _) => OpenFolder(logDirectory);
+        Grid.SetColumn(openLogs, 2);
         logsRow.Children.Add(openLogs);
         AddRowDivider(support);
         AddInfoRow(support, "Sobre", "Revival Revolution Launcher — interface comunitária para Metal Revolution.");
@@ -281,35 +283,6 @@ public sealed class LauncherSettingsWindow : Window
         });
     }
 
-    private static TextBox AddTextField(Grid parent, int column, string label, string value, int maxLength)
-    {
-        var panel = new StackPanel { Margin = new Thickness(column == 0 ? 0 : 10, 0, column == 0 ? 10 : 0, 0) };
-        panel.Children.Add(new TextBlock
-        {
-            Text = label,
-            FontSize = 10,
-            FontWeight = FontWeights.Bold,
-            Foreground = Brush(MutedColor),
-            Margin = new Thickness(0, 0, 0, 7)
-        });
-        var input = new TextBox
-        {
-            Text = value ?? "",
-            MaxLength = maxLength,
-            Padding = new Thickness(11, 9, 11, 9),
-            Background = Brush(SurfaceRaisedColor),
-            Foreground = Brushes.White,
-            BorderBrush = Brush(BorderColor),
-            BorderThickness = new Thickness(1),
-            CaretBrush = Brushes.White,
-            FontSize = 13
-        };
-        panel.Children.Add(input);
-        Grid.SetColumn(panel, column);
-        parent.Children.Add(panel);
-        return input;
-    }
-
     private static ToggleButton AddSwitchRow(Panel parent, string title, string description, bool isChecked)
     {
         var row = new Grid { Margin = new Thickness(0, 11, 0, 11) };
@@ -390,6 +363,7 @@ public sealed class LauncherSettingsWindow : Window
         var row = new Grid { Margin = new Thickness(0, 10, 0, 10) };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(145) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.Children.Add(new TextBlock
         {
             Text = title,
