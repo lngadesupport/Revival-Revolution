@@ -2,7 +2,7 @@ name: Build Windows launcher
 
 on:
   push:
-    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, integration/radmin-ranked-v1, release/0.8.1-stabilization, ops/windows-local-ranked-host, feature/0.8.1-radmin-room-start ]
+    branches: [ main, feature/modern-wpf-launcher, feature/ranked-match-backend-v2, integration/radmin-ranked-v1, release/0.8.1-stabilization, ops/windows-local-ranked-host, feature/0.8.1-radmin-room-start, feature/0.8.4-interface-controls ]
     paths:
       - "launcher/RevivalRevolutionLauncher/**"
       - "offline_launcher.py"
@@ -71,7 +71,7 @@ jobs:
           $exePath = Join-Path $publish "RevivalRevolution.exe"
           if (!(Test-Path $exePath)) { throw "Launcher executable missing from publish output." }
           $fileVersion = (Get-Item $exePath).VersionInfo.FileVersion
-          if ($fileVersion -ne "0.8.3.0") { throw "Expected launcher FileVersion 0.8.3.0, got $fileVersion." }
+          if ($fileVersion -ne "0.8.4.0") { throw "Expected launcher FileVersion 0.8.4.0, got $fileVersion." }
           $configPath = Join-Path $publish "launcher-update.json"
           if (!(Test-Path $configPath)) { throw "Updater configuration missing from publish output." }
           foreach ($asset in @(
