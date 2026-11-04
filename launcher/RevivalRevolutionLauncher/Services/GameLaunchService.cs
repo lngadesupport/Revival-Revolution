@@ -9,7 +9,7 @@ public sealed class GameLaunchService
         File.Exists(Path.Combine(folder, "ufo.exe")) &&
         Directory.Exists(Path.Combine(folder, "ufo_Data", "Managed"));
 
-    public void StartOffline(string pythonExe, string scriptPath, string workingDirectory)
+    public void StartOffline(string pythonExe, string scriptPath, string workingDirectory, LauncherSettings? settings = null)
     {
         if (!File.Exists(pythonExe)) throw new FileNotFoundException("Python portátil não encontrado.", pythonExe);
         if (!File.Exists(scriptPath)) throw new FileNotFoundException("Script offline não encontrado.", scriptPath);
@@ -39,6 +39,14 @@ public sealed class GameLaunchService
         };
         start.ArgumentList.Add("-u");
         start.ArgumentList.Add(scriptPath);
+
+        if (settings is not null)
+        {
+            var options = UnityPlayerLaunchOptions.FromSettings(settings);
+            start.Environment["REVIVAL_UNITY_SCREEN_FULLSCREEN"] = options.Fullscreen;
+            start.Environment["REVIVAL_UNITY_SCREEN_WIDTH"] = options.Width ?? "";
+            start.Environment["REVIVAL_UNITY_SCREEN_HEIGHT"] = options.Height ?? "";
+        }
 
         var process = new Process { StartInfo = start };
         process.OutputDataReceived += (_, e) => { if (e.Data is not null) WriteLog(e.Data); };
