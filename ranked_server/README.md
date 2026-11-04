@@ -115,3 +115,19 @@ pública nem uma certificação de produção.
   binário sem fonte versionado; portanto, não há validação independente
   dentro do jogo nem prova autoritativa de vencedor. ELO permanece bloqueado
   até existir uma autoridade de jogo confiável e testada.
+
+
+## Estado competitivo — beta sem ELO
+
+O matchmaking chamado Ranked permanece disponível apenas como fila beta de
+pareamento. O perfil e a classificação são provisórios e não representam
+resultados competitivos validados. O launcher identifica a fila como beta e
+não exibe rating/divisão/leaderboard como classificação ativa.
+
+A aplicação do ELO tem duas travas independentes:
+- `RANKED_COMPETITIVE_RESULTS_ENABLED=1` (desativado por padrão); e
+- `RANKED_RESULT_SECRET` configurado apenas para uma autoridade confiável.
+
+Apenas configurar o segredo não habilita resultados. Não habilite a flag até
+existir uma autoridade independente do cliente, integrada e testada. Checksum
+ou consenso dos dois clientes não é prova contra clientes modificados.

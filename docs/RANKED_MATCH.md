@@ -112,3 +112,23 @@ anti-cheat. A bridge nativa está disponível somente como DLL no repositório.
 Não existe fonte para adicionar nela uma validação independente. Por isso,
 o resultado final e o ELO continuam sem autoridade confiável e não devem ser
 ativados em produção.
+
+
+## Decisão de arquitetura — sem fonte da bridge
+
+Como o código-fonte da bridge nativa não está disponível, o projeto não tentará
+alterar ou instrumentar a DLL por engenharia reversa. A integração existente
+será preservada. A confirmação de fim/checksum fornecida pelos peers pode ser
+usada para diagnóstico e detecção de divergência, nunca como prova de vencedor.
+
+A fila chamada Ranked permanece temporariamente em beta para testar
+pareamento, tickets e transporte Radmin. O launcher informa explicitamente
+que ELO/resultados não estão ativos e não apresenta rating ou leaderboard
+como classificação válida.
+
+O endpoint de resultado agora exige duas condições: segredo de autoridade e
+`RANKED_COMPETITIVE_RESULTS_ENABLED=1`. A flag fica desativada por padrão,
+de modo que configurar acidentalmente o segredo não ativa ELO. Não ativar
+essa flag até que exista uma autoridade independente e verificável. Se essa
+autoridade não puder ser construída sem fonte da bridge, a opção correta é
+manter o modo beta sem ELO, em vez de fabricar uma classificação vulnerável.

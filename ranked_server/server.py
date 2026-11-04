@@ -75,12 +75,17 @@ def make_handler(store: RankedStore):
             if path == "/v1/ranked/me":
                 summary = competitive.player_summary(player_id)
                 summary["recent_matches"] = competitive.match_history(player_id)
+                summary["competitive_status"] = "provisional"
+                summary["competitive_enabled"] = False
                 return self._json(200, summary)
             if path == "/v1/ranked/leaderboard":
                 query = parse_qs(parsed.query)
                 try:
                     limit = int(query.get("limit", ["100"])[0])
-                    return self._json(200, {"season_id": "season-1", "entries": competitive.leaderboard(limit)})
+                    return self._json(200, {
+                        "season_id": "season-1", "entries": competitive.leaderboard(limit),
+                        "competitive_status": "provisional", "competitive_enabled": False,
+                    })
                 except (TypeError, ValueError) as exc:
                     return self._json(400, {"error": "invalid_request", "message": str(exc)})
             if path == "/v1/friends":
@@ -131,6 +136,11 @@ def make_handler(store: RankedStore):
                 is_internal_result = path.startswith("/internal/v1/matches/") and path.endswith("/result")
                 if is_internal_result:
                     # Authority must authenticate before an untrusted body is parsed.
+                    # A secret alone is not sufficient: competitive results stay
+                    # hard-disabled until an independent, trusted game authority
+                    # has been integrated and explicitly enabled by an operator.
+                    if os.environ.get("RANKED_COMPETITIVE_RESULTS_ENABLED") != "1":
+                        return self._json(503, {"error": "competitive_results_disabled"})
                     authority_secret = os.environ.get("RANKED_RESULT_SECRET", "")
                     if not authority_secret:
                         return self._json(503, {"error": "result_authority_not_configured"})

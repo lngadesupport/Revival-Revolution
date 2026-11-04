@@ -157,9 +157,13 @@ class RankedApiIntegrationTests(unittest.TestCase):
         status, profile = self.request("GET", "/v1/ranked/me", token=player["token"])
         self.assertEqual(status, 200)
         self.assertEqual(profile["rating"], 1000)
+        self.assertEqual(profile["competitive_status"], "provisional")
+        self.assertFalse(profile["competitive_enabled"])
         status, board = self.request("GET", "/v1/ranked/leaderboard?limit=10", token=player["token"])
         self.assertEqual(status, 200)
         self.assertEqual(board["entries"][0]["display_name"], "Leaderboard Player")
+        self.assertEqual(board["competitive_status"], "provisional")
+        self.assertFalse(board["competitive_enabled"])
 
     def test_result_authority_is_checked_before_request_body(self):
         one = self.register("Authority One")
@@ -173,11 +177,24 @@ class RankedApiIntegrationTests(unittest.TestCase):
         self.assertEqual(self.request("POST", "/v1/ranked/match/finish", {}, one["token"])[0], 200)
         self.assertEqual(self.request("POST", "/v1/ranked/match/finish", {}, two["token"])[0], 200)
         self.assertEqual(self.request("GET", "/v1/ranked/match", token=one["token"])[1]["match"], None)
-        with patch.dict(os.environ, {"RANKED_RESULT_SECRET": ""}):
+        with patch.dict(os.environ, {
+            "RANKED_COMPETITIVE_RESULTS_ENABLED": "0",
+            "RANKED_RESULT_SECRET": "authority-secret",
+        }):
+            status, body = self.request("POST", f"/internal/v1/matches/{match_id}/result")
+            self.assertEqual(status, 503)
+            self.assertEqual(body["error"], "competitive_results_disabled")
+        with patch.dict(os.environ, {
+            "RANKED_COMPETITIVE_RESULTS_ENABLED": "1",
+            "RANKED_RESULT_SECRET": "",
+        }):
             status, body = self.request("POST", f"/internal/v1/matches/{match_id}/result")
             self.assertEqual(status, 503)
             self.assertEqual(body["error"], "result_authority_not_configured")
-        with patch.dict(os.environ, {"RANKED_RESULT_SECRET": "authority-secret"}):
+        with patch.dict(os.environ, {
+            "RANKED_COMPETITIVE_RESULTS_ENABLED": "1",
+            "RANKED_RESULT_SECRET": "authority-secret",
+        }):
             status, body = self.request("POST", f"/internal/v1/matches/{match_id}/result")
             self.assertEqual(status, 403)
             self.assertEqual(body["error"], "result_authority_forbidden")

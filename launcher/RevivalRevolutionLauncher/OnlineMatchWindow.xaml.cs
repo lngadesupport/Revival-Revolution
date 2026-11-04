@@ -167,64 +167,23 @@ public partial class OnlineMatchWindow : Window
         RoomCodeBox.IsEnabled = canSearch;
     }
 
-    private async Task RefreshRankedSummaryAsync()
+    private Task RefreshRankedSummaryAsync()
     {
-        if (string.IsNullOrWhiteSpace(_token)) return;
-        try
-        {
-            var summary = await _api.GetAsync("/v1/ranked/me");
-            var rating = summary["rating"]?.ToString() ?? "1000";
-            var division = summary["division"]?.GetValue<string>() ?? "Bronze";
-            var wins = summary["wins"]?.ToString() ?? "0";
-            var losses = summary["losses"]?.ToString() ?? "0";
-            var draws = summary["draws"]?.ToString() ?? "0";
-            _rankedProfileText = $"RATING {rating} • {division} • V {wins}/D {losses}/E {draws}";
-        }
-        catch
-        {
-            _rankedProfileText = "CONTA CONECTADA • RANKED INDISPONÍVEL";
-        }
+        _rankedProfileText = "RANKED BETA • ELO DESATIVADO • RESULTADOS NÃO CONTABILIZADOS";
         ProfileText.Text = _rankedProfileText;
+        return Task.CompletedTask;
     }
 
     private async void LeaderboardRefresh_Click(object sender, RoutedEventArgs e)
         => await RefreshLeaderboardAsync();
 
-    private async Task RefreshLeaderboardAsync()
+    private Task RefreshLeaderboardAsync()
     {
-        if (string.IsNullOrWhiteSpace(_token)) return;
         LeaderboardRefreshButton.IsEnabled = false;
-        LeaderboardStatusText.Text = "Carregando classificação...";
-        try
-        {
-            var response = await _api.GetAsync("/v1/ranked/leaderboard?limit=100");
-            var entries = response["entries"] as JsonArray;
-            var rows = new List<string>();
-            if (entries is not null)
-            {
-                foreach (var item in entries)
-                {
-                    if (item is not JsonObject entry) continue;
-                    var position = entry["position"]?.ToString() ?? "—";
-                    var name = entry["display_name"]?.GetValue<string>() ?? "Jogador";
-                    var rating = entry["rating"]?.ToString() ?? "—";
-                    var division = entry["division"]?.GetValue<string>() ?? "—";
-                    rows.Add($"{position}. {name} • {rating} • {division}");
-                }
-            }
-            LeaderboardList.ItemsSource = rows;
-            LeaderboardStatusText.Text = rows.Count == 0
-                ? "Nenhum jogador classificado nesta temporada."
-                : $"Temporada {response["season_id"]?.GetValue<string>() ?? "atual"} • {rows.Count} jogadores";
-        }
-        catch (Exception ex)
-        {
-            LeaderboardStatusText.Text = "Falha ao carregar: " + ex.Message;
-        }
-        finally
-        {
-            LeaderboardRefreshButton.IsEnabled = !string.IsNullOrWhiteSpace(_token);
-        }
+        LeaderboardList.ItemsSource = Array.Empty<string>();
+        LeaderboardStatusText.Text =
+            "Leaderboard desativado: ainda não existe autoridade independente para validar os resultados das partidas.";
+        return Task.CompletedTask;
     }
 
     private async void QueueSearch_Click(object sender, RoutedEventArgs e)

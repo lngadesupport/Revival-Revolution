@@ -104,14 +104,14 @@
                             <Grid Margin="0,8,0,4">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <Button x:Name="CasualSearchButton" Content="BUSCA CASUAL" Click="QueueSearch_Click" Tag="casual" IsEnabled="False" Background="#76202A40"/>
-                                <Button x:Name="RankedSearchButton" Grid.Column="1" Content="BUSCA RANQUEADA" Click="QueueSearch_Click" Tag="ranked" IsEnabled="False" Margin="8,5,0,5" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
+                                <Button x:Name="RankedSearchButton" Grid.Column="1" Content="BUSCA RANQUEADA BETA" Click="QueueSearch_Click" Tag="ranked" IsEnabled="False" Margin="8,5,0,5" Background="#C52B1F30" BorderBrush="#FFFF6671"/>
                                 <Button x:Name="CancelQueueButton" Grid.Column="2" Content="CANCELAR" Click="CancelQueue_Click" IsEnabled="False" Margin="8,5,0,5" Padding="10,8"/>
                             </Grid>
-                            <TextBlock x:Name="QueueStateText" Text="Escolha busca casual ou ranqueada. Os jogadores precisam estar na mesma rede Radmin." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="QueueStateText" Text="Busca ranqueada em beta: matchmaking e conexão Radmin disponíveis, mas ELO e resultados competitivos estão desativados. Os jogadores precisam estar na mesma rede Radmin." Foreground="{StaticResource Muted}" FontSize="10" TextWrapping="Wrap"/>
                             <Grid Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <Button x:Name="LeaderboardRefreshButton" Content="ATUALIZAR LEADERBOARD" Click="LeaderboardRefresh_Click" IsEnabled="False" Padding="10,7" Margin="0,0,10,0"/>
-                                <TextBlock x:Name="LeaderboardStatusText" Grid.Column="1" Text="Classificação da temporada ainda não carregada." Foreground="{StaticResource Muted}" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                <Button x:Name="LeaderboardRefreshButton" Content="LEADERBOARD DESATIVADO" Click="LeaderboardRefresh_Click" IsEnabled="False" Padding="10,7" Margin="0,0,10,0"/>
+                                <TextBlock x:Name="LeaderboardStatusText" Grid.Column="1" Text="ELO e leaderboard desativados até existir validação independente dos resultados." Foreground="{StaticResource Muted}" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap"/>
                             </Grid>
                             <ListBox x:Name="LeaderboardList" Height="76" Margin="0,6,0,0" Background="#55080A13" Foreground="White" BorderBrush="#44FFFFFF" FontSize="10" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                         </StackPanel>
