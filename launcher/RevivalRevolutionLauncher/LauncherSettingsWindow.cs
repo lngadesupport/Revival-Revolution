@@ -94,6 +94,8 @@ public sealed class LauncherSettingsWindow : Window
             _startupUpdates.IsChecked = true;
             _confirmLaunch.IsChecked = false;
             _persistLogs.IsChecked = true;
+            _customRadminIpEnabled.IsChecked = false;
+            _customRadminIp.Text = "";
         };
         var cancel = MakeButton("CANCELAR", false);
         cancel.Click += (_, _) => { DialogResult = false; Close(); };
