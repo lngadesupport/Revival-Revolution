@@ -166,7 +166,7 @@ public sealed class LauncherDiagnosticsWindow : Window
         var required = _items.Where(x => !x.Optional).ToArray();
         var passed = required.Count(x => x.Passed);
         var failed = required.Length - passed;
-        var optionalAvailable = _items.Count(x => x.Optional &&
+        var optionalAvailable = _items.Count(x => x.Optional && x.Passed &&
             !x.Detail.StartsWith("Ausente;", StringComparison.OrdinalIgnoreCase) &&
             !x.Detail.StartsWith("Não instalado", StringComparison.OrdinalIgnoreCase));
         var grid = new Grid();
