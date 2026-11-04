@@ -9,6 +9,8 @@ public sealed class LauncherSettings
     public bool CheckUpdatesOnStartup { get; set; } = true;
     public bool ConfirmBeforeLaunch { get; set; } = false;
     public bool PersistLogs { get; set; } = true;
+    public bool UseCustomRadminIp { get; set; } = false;
+    public string CustomRadminIp { get; set; } = "";
 }
 
 public sealed class LauncherSettingsService
@@ -95,7 +97,9 @@ public sealed class LauncherSettingsService
         PlayerTag = BoundedText(settings.PlayerTag, 12),
         CheckUpdatesOnStartup = settings.CheckUpdatesOnStartup,
         ConfirmBeforeLaunch = settings.ConfirmBeforeLaunch,
-        PersistLogs = settings.PersistLogs
+        PersistLogs = settings.PersistLogs,
+        UseCustomRadminIp = settings.UseCustomRadminIp,
+        CustomRadminIp = BoundedText(settings.CustomRadminIp, 15)
     };
 
     private void TryArchiveCorruptSettings()
