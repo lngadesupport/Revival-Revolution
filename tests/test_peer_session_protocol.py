@@ -10,6 +10,14 @@ class PeerConnectionCodeTests(unittest.TestCase):
     def setUp(self):
         self.key = bytes(range(16))
 
+    def test_atomic_text_replaces_complete_invitation_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = pathlib.Path(temp) / "peer-code.txt"
+            target.write_text("stale-invitation", encoding="utf-8")
+            self.assertTrue(peer_session.atomic_text(target, "MR1-valid-invitation"))
+            self.assertEqual(target.read_text(encoding="utf-8"), "MR1-valid-invitation")
+            self.assertEqual([p.name for p in pathlib.Path(temp).iterdir()], ["peer-code.txt"])
+
     def test_mr1_code_round_trip(self):
         code = peer_session.encode_code("203.0.113.10", 27015, self.key)
         endpoint, key, relay = peer_session.decode_connection_code(code)
