@@ -151,13 +151,13 @@ class Session:
             raise ValueError('AutoPunch is disabled. Connect both players to the same Radmin VPN network.')
         local_address=find_radmin_ipv4() if bind in ('', '0.0.0.0') else require_radmin_ipv4(bind)
         self.root=pathlib.Path(root);self.root.mkdir(parents=True,exist_ok=True);self.slot=0 if mode=='host' else 1
-        self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((local_address,port));self.sock.setblocking(False)
-        self.logical_port=self.sock.getsockname()[1];self.autopunch=False
         self.ranked_ticket=ranked_ticket
         if self.ranked_ticket is not None:
             validate_ranked_peer_ticket(self.ranked_ticket)
             if self.ranked_ticket['slot'] != self.slot:
                 raise ValueError('Ranked ticket slot does not match the local host/guest role')
+        self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);self.sock.bind((local_address,port));self.sock.setblocking(False)
+        self.logical_port=self.sock.getsockname()[1];self.autopunch=False
         self.selection=None;self.enable_selection=selection_sync;self.remote_selection=None;self.skip_native_preflight=bool(skip_native_preflight)
         self.fighter_test=None;self.remote_fighter=None;self.live=None;self.remote_live=None
         self.remote_closed=False;self.setup_timeout=max(30,min(int(setup_timeout),900))

@@ -129,6 +129,12 @@ class RankedApiIntegrationTests(unittest.TestCase):
         self.assertEqual(ticket_one["protocol"], peer_session.PROTOCOL)
         self.assertEqual(ticket_one["expires_at"], ticket_two["expires_at"])
         self.assertGreater(ticket_one["expires_at"], self.store.clock())
+        self.assertEqual(
+            self.request("POST", "/v1/ranked/match/ticket", {}, one["token"])[1],
+            ticket_one,
+        )
+        with self.assertRaisesRegex(ValueError, "expired"):
+            peer_session.validate_ranked_peer_ticket(ticket_one, now=ticket_one["expires_at"] + 1)
 
         self.assertEqual(self.request("POST", "/v1/ranked/match/ticket", {}, outsider["token"])[0], 400)
         self.assertTrue(peer_session.validate_ranked_peer_ticket(ticket_one, {
