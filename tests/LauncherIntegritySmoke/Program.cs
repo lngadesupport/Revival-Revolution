@@ -117,6 +117,8 @@ try
             controller.RightStickX is >= -100 and <= 100 &&
             controller.RightStickY is >= -100 and <= 100),
         "XInput controller telemetry returned invalid device or axis data.");
+    Require(!new XInputControllerService().TrySetVibration(9, 18000, 18000),
+        "XInput vibration must reject invalid controller indices.");
 
     Console.WriteLine("Launcher smoke tests passed: legacy settings compatibility, JSON round-trip, selective repair, intact-file preservation, protected game paths, SHA-256 validation, and read-only Unity config discovery.");
 
