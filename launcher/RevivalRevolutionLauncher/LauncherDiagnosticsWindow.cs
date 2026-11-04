@@ -260,7 +260,7 @@ public sealed class LauncherDiagnosticsWindow : Window
             (item.Detail.StartsWith("Ausente;", StringComparison.OrdinalIgnoreCase) ||
              item.Detail.StartsWith("Não instalado", StringComparison.OrdinalIgnoreCase));
         var label = item.Optional
-            ? optionalMissing ? "OPCIONAL AUSENTE" : "OPCIONAL"
+            ? !item.Passed ? "AVISO" : optionalMissing ? "OPCIONAL AUSENTE" : "OPCIONAL"
             : item.Passed ? "APROVADO" : "ATENÇÃO";
         var color = item.Optional
             ? Color.FromRgb(214, 177, 112)
