@@ -372,8 +372,10 @@ public sealed class LauncherSettingsWindow : Window
     private static string Selected(ComboBox combo, string fallback) => combo.SelectedItem as string ?? fallback;
     private static void Select(ComboBox combo, string value)
     {
-        if (combo.Items.Contains(value)) combo.SelectedItem = value;
-        else combo.SelectedIndex = 0;
+        var options = combo.ItemsSource as IEnumerable<string>;
+        combo.SelectedItem = options is not null && options.Contains(value)
+            ? value
+            : options?.FirstOrDefault();
     }
 
     private static StackPanel NewPanel() => new() { Margin = new Thickness(18) };
