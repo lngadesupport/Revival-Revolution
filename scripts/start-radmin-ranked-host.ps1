@@ -44,6 +44,9 @@ if (-not $pythonLauncher -and -not $python) {
     throw 'Python 3 não foi encontrado. Instale Python 3.10+ e marque Add Python to PATH.'
 }
 
+# Share the selected local adapter with any peer-session process started from this host.
+$env:REVIVAL_RADMIN_IP = $RadminAddress
+
 # Never inherit a result-authority secret into this local matchmaking host.
 Remove-Item Env:RANKED_RESULT_SECRET -ErrorAction SilentlyContinue
 
