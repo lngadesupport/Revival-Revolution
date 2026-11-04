@@ -134,7 +134,7 @@
                             <TextBlock Text="COMUNIDADE" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
                             <Button x:Name="ModListNavButton" Style="{StaticResource NavButton}"
-                                    Content="03   Comunidade" Click="ModList_Click" FontSize="12"/>
+                                    Content="03   Comunidade" Click="ModList_Click" FontSize="12" ToolTip="Atalho: Ctrl+5" AutomationProperties.Name="Abrir central da comunidade"/>
                             <Border Height="1" Background="#2D3542" Margin="5,17,5,16"/>
                             <TextBlock Text="SISTEMA" FontSize="9" FontWeight="Bold" Foreground="#737E8E"
                                        Margin="7,0,0,8"/>
@@ -404,6 +404,7 @@
                     </StackPanel>
                     <Grid Grid.Row="2">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel>
                             <StackPanel x:Name="CommunityOverviewPanel">
                                 <Border Background="#E10D111A" BorderBrush="#414A59" BorderThickness="1"
                                         CornerRadius="12" Padding="26" Margin="0,0,0,13">
@@ -505,6 +506,7 @@
                                         </DockPanel>
                                     </StackPanel>
                                 </Border>
+                            </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
