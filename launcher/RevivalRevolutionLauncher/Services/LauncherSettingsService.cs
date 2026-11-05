@@ -58,8 +58,8 @@ public sealed class LauncherSettingsService
         try
         {
             if (!File.Exists(SettingsPath)) return new LauncherSettings();
-            return JsonSerializer.Deserialize<LauncherSettings>(File.ReadAllText(SettingsPath), JsonOptions)
-                ?? new LauncherSettings();
+            return Normalize(JsonSerializer.Deserialize<LauncherSettings>(File.ReadAllText(SettingsPath), JsonOptions)
+                ?? new LauncherSettings());
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -72,9 +72,50 @@ public sealed class LauncherSettingsService
         ArgumentNullException.ThrowIfNull(settings);
         Directory.CreateDirectory(SettingsDirectory);
         var temporary = SettingsPath + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, JsonOptions));
-        File.Move(temporary, SettingsPath, true);
+        try
+        {
+            File.WriteAllText(temporary, JsonSerializer.Serialize(Normalize(settings), JsonOptions));
+            File.Move(temporary, SettingsPath, true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
+
+    private static LauncherSettings Normalize(LauncherSettings value)
+    {
+        value.PlayerName = (value.PlayerName ?? "").Trim();
+        if (value.PlayerName.Length > 24) value.PlayerName = value.PlayerName[..24];
+        value.PlayerTag = (value.PlayerTag ?? "").Trim();
+        if (value.PlayerTag.Length > 12) value.PlayerTag = value.PlayerTag[..12];
+
+        value.ControllerLeftDeadZone = Math.Clamp(value.ControllerLeftDeadZone, 0, 50);
+        value.ControllerRightDeadZone = Math.Clamp(value.ControllerRightDeadZone, 0, 50);
+        value.ControllerTriggerDeadZone = Math.Clamp(value.ControllerTriggerDeadZone, 0, 50);
+        value.ControllerHorizontalSensitivity = Math.Clamp(value.ControllerHorizontalSensitivity, 10, 200);
+        value.ControllerVerticalSensitivity = Math.Clamp(value.ControllerVerticalSensitivity, 10, 200);
+        value.ControllerLeftCurve = OneOf(value.ControllerLeftCurve, "Linear", "Suave", "Agressiva");
+        value.ControllerRightCurve = OneOf(value.ControllerRightCurve, "Linear", "Suave", "Agressiva");
+
+        value.VideoResolution = OneOf(value.VideoResolution, "Padrão do jogo", "1280 × 720",
+            "1600 × 900", "1920 × 1080", "2560 × 1440", "3840 × 2160");
+        value.GraphicsPreset = OneOf(value.GraphicsPreset, "Padrão do jogo", "Baixa", "Média", "Alta", "Personalizada");
+        if (value.FpsLimit is not (60 or 75 or 90 or 120 or 144 or 165 or 180 or 200 or 240))
+            value.FpsLimit = 60;
+
+        value.AudioMasterVolume = Math.Clamp(value.AudioMasterVolume, 0, 100);
+        value.AudioMusicVolume = Math.Clamp(value.AudioMusicVolume, 0, 100);
+        value.AudioEffectsVolume = Math.Clamp(value.AudioEffectsVolume, 0, 100);
+        value.SubtitleSize = OneOf(value.SubtitleSize, "Pequeno", "Médio", "Grande", "Muito grande");
+        value.SubtitleColor = OneOf(value.SubtitleColor, "Branco", "Amarelo", "Ciano", "Verde");
+        value.SubtitleBackground = OneOf(value.SubtitleBackground, "Transparente", "Escuro", "Preto");
+        value.SubtitlePosition = OneOf(value.SubtitlePosition, "Inferior", "Superior");
+        return value;
+    }
+
+    private static string OneOf(string? value, params string[] allowed) =>
+        allowed.FirstOrDefault(option => string.Equals(option, value, StringComparison.Ordinal)) ?? allowed[0];
 
     public string GetSettingsPath() => SettingsPath;
     public string GetLogDirectory() => Path.Combine(SettingsDirectory, "Logs");
