@@ -22,6 +22,14 @@ Launcher comunitário para Windows 10/11 x64, desenvolvido em C# e WPF sobre
 - Instalação/reparo automático de pacotes do jogo permanece bloqueado até
   autenticação dos ZIPs por hashes confiáveis publicados em canal independente.
 
+## Permissões e diagnóstico de inicialização
+
+O executável solicita elevação pelo UAC do Windows (`requireAdministrator`) antes de abrir a interface. A elevação é usada para operações administrativas do launcher, como configurar a regra de firewall e preparar o servidor privado Radmin. Se o usuário cancelar o UAC, o Windows não inicia o processo.
+
+Erros não tratados na inicialização WPF são registrados e apresentados em uma janela de erro, em vez de desaparecerem sem explicação. O diagnóstico persistente fica em `%LOCALAPPDATA%\\RevivalRevolution\\Logs\\startup-diagnostics.log`. O arquivo registra versão/runtime, estado de elevação, etapas da criação da janela e falhas durante a preparação automática do host Radmin. Falhas recuperáveis do Radmin são registradas sem encerrar a interface.
+
+Como o processo do jogo é iniciado pelo launcher elevado, o processo filho também pode herdar o nível de integridade elevado do Windows. Isso precisa ser validado com a instalação real do jogo e com a proteção oficial antes de considerar a build estável.
+
 ## Build
 
 No Windows com .NET 8 SDK:
