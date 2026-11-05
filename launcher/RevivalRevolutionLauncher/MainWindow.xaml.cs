@@ -121,6 +121,7 @@ public partial class MainWindow : Window
             }
 
             await _radminHost.EnsureHostServerAsync(_root, python, hostAddress, CancellationToken.None);
+            App.WriteDiagnostic("Radmin host startup: API service is ready.");
             _radminHostTaskReady = true;
             _radminHostTimer.Stop();
             FooterStatus.Text = $"Servidor privado ativo em http://{hostAddress}:8765";
