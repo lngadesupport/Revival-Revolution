@@ -47,7 +47,6 @@ public partial class MainWindow : Window
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
-        GameFolderBox.Text = _gameFolder ?? "CAMINHO DA PASTA";
         LoadVisualAssets();
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
@@ -186,7 +185,6 @@ public partial class MainWindow : Window
         var folder = dialog.FolderName;
         _gameFolder = folder;
         _distributionRoot = _distributionLocator.Find(_root, folder);
-        GameFolderBox.Text = folder;
         _config.SaveGameFolder(_root, folder, _distributionRoot);
         RefreshGameState();
         FooterStatus.Text = IsValidFolder(folder)
@@ -447,6 +445,14 @@ public partial class MainWindow : Window
 
         try
         {
+            if (!string.Equals(_gameFolder, window.SelectedGameFolder, StringComparison.OrdinalIgnoreCase))
+            {
+                _gameFolder = window.SelectedGameFolder;
+                _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+                _config.SaveGameFolder(_root, _gameFolder, _distributionRoot);
+                RefreshGameState();
+                Log("Pasta do jogo atualizada pelas configurações: " + _gameFolder);
+            }
             _settingsService.Save(window.Result);
             _settings = window.Result;
             Log("Configurações salvas.");
@@ -654,8 +660,6 @@ public partial class MainWindow : Window
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.Invoke(() => Log(message)); return; }
         var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
-        LogBox.AppendText(line);
-        LogBox.ScrollToEnd();
         if (_settings.PersistLogs)
         {
             try
