@@ -95,7 +95,7 @@ public static class LauncherDialog
             BorderThickness = new Thickness(0), FontSize = 22, Cursor = Cursors.Hand,
             VerticalAlignment = VerticalAlignment.Center
         };
-        close.Click += (_, _) => { dialog.DialogResult = MessageBoxResult.None; dialog.Close(); };
+        close.Click += (_, _) => dialog.Close();
         Grid.SetColumn(close, 2);
         header.Children.Add(close);
         header.MouseLeftButtonDown += (_, e) =>
@@ -115,13 +115,13 @@ public static class LauncherDialog
             MessageBoxImage.Question => "?",
             _ => "i"
         };
-        var glyphColor = image switch
-        {
-            MessageBoxImage.Error or MessageBoxImage.Hand or MessageBoxImage.Stop => Color.FromRgb(255, 93, 103),
-            MessageBoxImage.Warning or MessageBoxImage.Exclamation => Color.FromRgb(255, 190, 110),
-            MessageBoxImage.Question => Color.FromRgb(117, 174, 255),
-            _ => Color.FromRgb(104, 208, 157)
-        };
+        var glyphColor = image == MessageBoxImage.Error || image == MessageBoxImage.Hand || image == MessageBoxImage.Stop
+            ? Color.FromRgb(255, 93, 103)
+            : image == MessageBoxImage.Warning || image == MessageBoxImage.Exclamation
+                ? Color.FromRgb(255, 190, 110)
+                : image == MessageBoxImage.Question
+                    ? Color.FromRgb(117, 174, 255)
+                    : Color.FromRgb(104, 208, 157);
         body.Children.Add(new Border
         {
             Width = 38, Height = 38, CornerRadius = new CornerRadius(12),
@@ -172,7 +172,7 @@ public static class LauncherDialog
                 BorderBrush = new SolidColorBrush(primary ? Color.FromRgb(255, 105, 116) : Color.FromRgb(76, 85, 108)),
                 BorderThickness = new Thickness(1)
             };
-            button.Click += (_, _) => { result = value; dialog.DialogResult = value; dialog.Close(); };
+            button.Click += (_, _) => { result = value; dialog.Close(); };
             actions.Children.Add(button);
         }
 
@@ -205,7 +205,6 @@ public static class LauncherDialog
             {
                 result = buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel
                     ? MessageBoxResult.No : MessageBoxResult.Cancel;
-                dialog.DialogResult = result;
                 dialog.Close();
             }
         };
