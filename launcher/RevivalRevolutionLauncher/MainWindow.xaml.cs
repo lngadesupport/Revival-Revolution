@@ -38,6 +38,8 @@ public partial class MainWindow : Window
     private string _lastGameStateFooterStatus = string.Empty;
     private string _lastDashboardState = string.Empty;
 
+    private const int DwmwaWindowCornerPreference = 33;
+    private const int DwmwcpRound = 2;
     private const int DwmwaBorderColor = 34;
     private const int DwmwaColorNone = unchecked((int)0xFFFFFFFE);
 
@@ -52,6 +54,9 @@ public partial class MainWindow : Window
         try
         {
             var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            var cornerPreference = DwmwcpRound;
+            _ = DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference,
+                ref cornerPreference, sizeof(int));
             var color = DwmwaColorNone;
             _ = DwmSetWindowAttribute(handle, DwmwaBorderColor, ref color, sizeof(int));
         }
