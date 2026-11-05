@@ -26,6 +26,10 @@
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform"><Setter.Value><ScaleTransform ScaleX="1" ScaleY="1"/></Setter.Value></Setter>
+            <EventSetter Event="MouseEnter" Handler="Button_MouseEnter"/>
+            <EventSetter Event="MouseLeave" Handler="Button_MouseLeave"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -131,7 +135,7 @@
                             </StackPanel>
                         </StackPanel>
                         <TextBlock Text="MENU PRINCIPAL" Style="{StaticResource SmallCaps}" Margin="7,0,0,9"/>
-                        <Button x:Name="OfflineNavButton" Content="  JOGAR OFFLINE" Click="Launch_Click"
+                        <Button x:Name="OfflineNavButton" Content="  MODO OFFLINE" Click="SelectOfflineMode_Click"
                                 FontSize="17" Padding="13,13"/>
                         <Button x:Name="PrivateMatchNavButton" Content="  PRIVATE MATCH" Click="PrivateMatch_Click"
                                 FontSize="17" Padding="13,13"/>
@@ -221,7 +225,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Background="#75141C2B" BorderBrush="#45FFFFFF" BorderThickness="1"
+                                <Border x:Name="OfflineModeCard" Background="#75141C2B" BorderBrush="#45FFFFFF" BorderThickness="1"
                                         CornerRadius="13" Padding="16" Margin="0,0,7,0">
                                     <StackPanel>
                                         <TextBlock Text="01  /  SINGLE PLAYER" Style="{StaticResource SmallCaps}"/>
@@ -229,7 +233,7 @@
                                         <TextBlock Text="Jogue localmente usando os arquivos originais da sua instalação."
                                                    FontFamily="Segoe UI" FontSize="10" Foreground="#C4C9D7"
                                                    TextWrapping="Wrap" MinHeight="42"/>
-                                        <Button Content="JOGAR OFFLINE  →" Click="Launch_Click"
+                                        <Button Content="SELECIONAR OFFLINE" Click="SelectOfflineMode_Click"
                                                 Style="{StaticResource PrimaryAction}" FontSize="13"
                                                 Padding="12,10" Margin="0,12,0,0"/>
                                     </StackPanel>
