@@ -223,51 +223,131 @@ public sealed class LauncherSettingsWindow : Window
     {
         var panel = NewPanel();
         AddSectionTitle(panel, "DISPOSITIVO");
-        AddText(panel, "As preferências ficam salvas no perfil local. O teste abaixo lê controles compatíveis com XInput em tempo real; a aplicação de dead zones e sensibilidade dentro da partida ainda depende de integração com o jogo.", 11);
-        AddNotice(panel, "TESTE XINPUT ATIVO • AJUSTES DE INPUT NO JOGO PENDENTES", true);
-        AddSectionTitle(panel, "DETECÇÃO E TESTE AO VIVO");
-        AddText(panel, "Compatível com controles que expõem a interface XInput (incluindo controles Xbox e dispositivos mapeados pelo Steam Input). Controles HID genéricos podem não aparecer.", 10, muted: true);
+        AddText(panel, "Monitoramento ao vivo para controles XInput. A leitura rápida melhora a atualização visual do painel, mas não altera a latência do jogo nem injeta comandos no processo.", 11);
+        AddNotice(panel, "LEITURA XINPUT • SEM INTERCEPTAÇÃO DO INPUT DO JOGO", true);
+
         var controllerService = new XInputControllerService();
-        var controllerOutput = new TextBlock
+        var controllerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        var devicePicker = AddCombo(panel, "Controle monitorado", "Automático (primeiro conectado)",
+            "Automático (primeiro conectado)", "Controle 1", "Controle 2", "Controle 3", "Controle 4");
+        var refreshPicker = AddCombo(panel, "Frequência do monitor ao vivo", "16 ms (aprox. 60 Hz)",
+            "8 ms (monitor rápido)", "16 ms (aprox. 60 Hz)", "33 ms (aprox. 30 Hz)");
+        AddText(panel, "8 ms aumenta a frequência de atualização da visualização e pode elevar o uso de CPU. Não representa uma redução garantida de input lag durante a partida.", 10, muted: true);
+        refreshPicker.SelectionChanged += (_, _) =>
         {
-            Text = "Clique em INICIAR TESTE AO VIVO para detectar controles conectados.",
-            TextWrapping = TextWrapping.Wrap,
-            FontSize = 11,
-            Foreground = new SolidColorBrush(Color.FromRgb(190, 198, 213)),
-            Margin = new Thickness(0, 8, 0, 10)
+            controllerTimer.Interval = Selected(refreshPicker, "16 ms (aprox. 60 Hz)") switch
+            {
+                "8 ms (monitor rápido)" => TimeSpan.FromMilliseconds(8),
+                "33 ms (aprox. 30 Hz)" => TimeSpan.FromMilliseconds(33),
+                _ => TimeSpan.FromMilliseconds(16)
+            };
         };
-        var controllerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        var controllerButton = MakeButton("INICIAR TESTE AO VIVO", false);
+
+        var status = new TextBlock
+        {
+            Text = "Monitor parado • conecte o controle e inicie o teste",
+            TextWrapping = TextWrapping.Wrap, FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(190, 198, 213)),
+            Margin = new Thickness(0, 8, 0, 8)
+        };
+        var telemetry = new TextBlock
+        {
+            Text = "Aguardando leitura...",
+            TextWrapping = TextWrapping.Wrap, FontSize = 11,
+            Foreground = Brushes.White, Margin = new Thickness(0, 4, 0, 8)
+        };
+
+        var axisBars = new Dictionary<string, ProgressBar>();
+        var axisLabels = new Dictionary<string, TextBlock>();
+        var axisGrid = new Grid { Margin = new Thickness(0, 4, 0, 10) };
+        axisGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        axisGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        axisGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        axisGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        string[] axisNames = { "ESQUERDO X", "ESQUERDO Y", "DIREITO X", "DIREITO Y" };
+        for (var i = 0; i < axisNames.Length; i++)
+        {
+            var group = new StackPanel { Margin = new Thickness(0, 5, 12, 5) };
+            var label = new TextBlock
+            {
+                Text = axisNames[i] + "  0%",
+                Foreground = new SolidColorBrush(Color.FromRgb(220, 224, 235)),
+                FontSize = 10, FontWeight = FontWeights.Bold
+            };
+            var bar = new ProgressBar
+            {
+                Minimum = 0, Maximum = 100, Height = 9, Value = 0,
+                Background = new SolidColorBrush(Color.FromRgb(39, 43, 59)),
+                Foreground = new SolidColorBrush(Color.FromRgb(255, 105, 118))
+            };
+            group.Children.Add(label);
+            group.Children.Add(bar);
+            Grid.SetColumn(group, i % 2);
+            Grid.SetRow(group, i / 2);
+            axisGrid.Children.Add(group);
+            axisBars[axisNames[i]] = bar;
+            axisLabels[axisNames[i]] = label;
+        }
+
+        var controllerButton = MakeButton("INICIAR MONITORAMENTO", false);
         controllerButton.HorizontalAlignment = HorizontalAlignment.Left;
         controllerButton.Click += (_, _) =>
         {
             if (controllerTimer.IsEnabled)
             {
                 controllerTimer.Stop();
-                controllerButton.Content = "INICIAR TESTE AO VIVO";
-                controllerOutput.Text = "Teste pausado.";
+                controllerButton.Content = "INICIAR MONITORAMENTO";
+                status.Text = "Monitoramento pausado.";
                 return;
             }
             controllerTimer.Start();
-            controllerButton.Content = "PARAR TESTE AO VIVO";
+            controllerButton.Content = "PARAR MONITORAMENTO";
+            status.Text = "Monitoramento ativo.";
         };
+
         controllerTimer.Tick += (_, _) =>
         {
+            var watch = Stopwatch.StartNew();
             var connected = controllerService.ReadConnected();
-            if (connected.Count == 0)
+            watch.Stop();
+            var selectedIndex = Selected(devicePicker, "Automático (primeiro conectado)") switch
             {
-                controllerOutput.Text = "Nenhum controle XInput detectado. Verifique a conexão ou o mapeamento do dispositivo.";
+                "Controle 1" => 0, "Controle 2" => 1, "Controle 3" => 2, "Controle 4" => 3, _ => -1
+            };
+            var selected = connected.FirstOrDefault(item => selectedIndex < 0 || item.UserIndex == selectedIndex);
+            if (selected is null)
+            {
+                status.Text = connected.Count == 0
+                    ? "Nenhum controle XInput detectado. Verifique USB/Bluetooth ou o mapeamento do dispositivo."
+                    : "O controle escolhido não está conectado.";
+                telemetry.Text = "Conectados: " + connected.Count + " • Tempo de leitura: " + watch.Elapsed.TotalMilliseconds.ToString("F2") + " ms";
+                foreach (var key in axisBars.Keys)
+                {
+                    axisBars[key].Value = 0;
+                    axisLabels[key].Text = key + "  —";
+                }
                 return;
             }
-            controllerOutput.Text = string.Join(Environment.NewLine + Environment.NewLine,
-                connected.Select(item =>
-                    "Controle " + (item.UserIndex + 1) + Environment.NewLine +
-                    "Botões: " + item.Buttons + Environment.NewLine +
-                    "Gatilhos L/R: " + item.LeftTrigger + " / " + item.RightTrigger + Environment.NewLine +
-                    "Analógico esquerdo X/Y: " + item.LeftStickX + "% / " + item.LeftStickY + "%" + Environment.NewLine +
-                    "Analógico direito X/Y: " + item.RightStickX + "% / " + item.RightStickY + "%"));
+
+            status.Text = "Conectado • Controle " + (selected.UserIndex + 1) +
+                " • " + controllerTimer.Interval.TotalMilliseconds.ToString("0") + " ms entre amostras";
+            telemetry.Text = "Botões: " + selected.Buttons +
+                Environment.NewLine + "Gatilhos L/R: " + selected.LeftTrigger + " / " + selected.RightTrigger +
+                Environment.NewLine + "Tempo da chamada XInput: " + watch.Elapsed.TotalMilliseconds.ToString("F2") +
+                " ms • Leitura do launcher, não latência física total.";
+
+            UpdateAxis("ESQUERDO X", selected.LeftStickX);
+            UpdateAxis("ESQUERDO Y", selected.LeftStickY);
+            UpdateAxis("DIREITO X", selected.RightStickX);
+            UpdateAxis("DIREITO Y", selected.RightStickY);
         };
-        Closed += (_, _) => controllerTimer.Stop();
+
+        void UpdateAxis(string key, double value)
+        {
+            axisBars[key].Value = Math.Abs(value);
+            axisLabels[key].Text = key + "  " + value.ToString("+0;-0;0") + "%";
+        }
+
         var vibrationTestButton = MakeButton("TESTAR VIBRAÇÃO", false);
         vibrationTestButton.HorizontalAlignment = HorizontalAlignment.Left;
         vibrationTestButton.Margin = new Thickness(0, 0, 0, 8);
@@ -279,25 +359,29 @@ public sealed class LauncherSettingsWindow : Window
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
-            var first = controllerService.ReadConnected().FirstOrDefault();
-            if (first is null)
+            var selectedIndex = Selected(devicePicker, "Automático (primeiro conectado)") switch
             {
-                MessageBox.Show(this, "Nenhum controle XInput foi detectado.", "Controle não encontrado",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            if (!controllerService.TrySetVibration(first.UserIndex, 18000, 18000))
+                "Controle 1" => 0, "Controle 2" => 1, "Controle 3" => 2, "Controle 4" => 3, _ => -1
+            };
+            var selected = controllerService.ReadConnected().FirstOrDefault(item => selectedIndex < 0 || item.UserIndex == selectedIndex);
+            if (selected is null || !controllerService.TrySetVibration(selected.UserIndex, 18000, 18000))
             {
-                MessageBox.Show(this, "Este controle não confirmou suporte à vibração XInput.", "Vibração indisponível",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(this, "O controle selecionado não foi detectado ou não confirmou suporte à vibração XInput.",
+                    "Vibração indisponível", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             try { await Task.Delay(350); }
-            finally { controllerService.TrySetVibration(first.UserIndex, 0, 0); }
+            finally { controllerService.TrySetVibration(selected.UserIndex, 0, 0); }
         };
+
         panel.Children.Add(controllerButton);
+        panel.Children.Add(status);
+        AddSectionTitle(panel, "VISUALIZAÇÃO DOS ANALÓGICOS");
+        panel.Children.Add(axisGrid);
+        panel.Children.Add(telemetry);
         panel.Children.Add(vibrationTestButton);
-        panel.Children.Add(controllerOutput);
+        Closed += (_, _) => controllerTimer.Stop();
+
         AddSectionTitle(panel, "ZONAS MORTAS");
         _leftDeadZone = AddSlider(panel, "Dead zone do analógico esquerdo", current.ControllerLeftDeadZone, 0, 50, "%");
         _rightDeadZone = AddSlider(panel, "Dead zone do analógico direito", current.ControllerRightDeadZone, 0, 50, "%");
@@ -312,9 +396,11 @@ public sealed class LauncherSettingsWindow : Window
         AddSectionTitle(panel, "INVERSÃO E VIBRAÇÃO");
         _invertHorizontal = AddOption(panel, "Inverter eixo horizontal", "", current.ControllerInvertHorizontal);
         _invertVertical = AddOption(panel, "Inverter eixo vertical", "", current.ControllerInvertVertical);
-        _controllerVibration = AddOption(panel, "Permitir vibração", "Habilita o teste manual de vibração XInput nesta aba; ainda não altera a vibração durante a partida.", current.ControllerVibration);
+        _controllerVibration = AddOption(panel, "Permitir vibração",
+            "Habilita o teste manual de vibração XInput nesta aba; ainda não altera a vibração durante a partida.", current.ControllerVibration);
         return MakeTab("CONTROLE", panel);
     }
+
 
     private TabItem BuildVideoTab(LauncherSettings current, string gameFolder)
     {
