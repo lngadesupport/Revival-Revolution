@@ -108,13 +108,11 @@ public static class LauncherDialog
         var body = new Grid { Margin = new Thickness(22, 22, 22, 18) };
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var glyph = image switch
-        {
-            MessageBoxImage.Error or MessageBoxImage.Hand or MessageBoxImage.Stop => "!",
-            MessageBoxImage.Warning or MessageBoxImage.Exclamation => "!",
-            MessageBoxImage.Question => "?",
-            _ => "i"
-        };
+        var glyph = image == MessageBoxImage.Error || image == MessageBoxImage.Hand || image == MessageBoxImage.Stop
+            ? "!"
+            : image == MessageBoxImage.Warning || image == MessageBoxImage.Exclamation
+                ? "!"
+                : image == MessageBoxImage.Question ? "?" : "i";
         var glyphColor = image == MessageBoxImage.Error || image == MessageBoxImage.Hand || image == MessageBoxImage.Stop
             ? Color.FromRgb(255, 93, 103)
             : image == MessageBoxImage.Warning || image == MessageBoxImage.Exclamation
