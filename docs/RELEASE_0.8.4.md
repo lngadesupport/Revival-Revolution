@@ -19,6 +19,9 @@ The current offline bootstrap starts `ufo.exe` directly with fullscreen argument
 ## Current implementation status
 
 - The settings window has dedicated tabs for General, Controller, Video & Graphics, Audio, Subtitles, and About.
+- The Video & Graphics tab is grouped into screen/resolution, performance, visual quality, and read-only installation diagnostics; the FPS range remains a saved preference until a supported in-game mechanism is verified.
+- The Audio tab separates master, music, and effects levels, shows a live local profile summary, and clearly states that these values do not yet control the game's audio mixer.
+- The settings window has a persistent footer identifying the launcher version and that preferences are stored locally.
 - Controller, video, audio, and subtitle presentation preferences are stored in the existing per-user JSON settings file under `%LocalAppData%\\RevivalRevolution`. Existing settings files remain compatible because new fields have defaults.
 - The graphics tab includes a read-only discovery action. It checks a bounded set of Unity/game configuration locations and relevant registry metadata; it does not write game files or change registry values.
 - Resolution choices (1280×720, 1600×900, 1920×1080, 2560×1440, and 3840×2160) and fullscreen are passed to the Unity player on the next offline launch using documented command-line arguments. The default remains fullscreen to preserve the previous launch behavior.
