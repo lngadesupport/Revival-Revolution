@@ -226,29 +226,29 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Border x:Name="OfflineModeCard" Background="#75141C2B" BorderBrush="#45FFFFFF" BorderThickness="1"
-                                        CornerRadius="13" Padding="16" Margin="0,0,7,0">
+                                        CornerRadius="13" Padding="18" Margin="0,0,7,0" MinHeight="238" VerticalAlignment="Stretch">
                                     <StackPanel>
-                                        <TextBlock Text="01  /  SINGLE PLAYER" Style="{StaticResource SmallCaps}"/>
-                                        <TextBlock Text="OFFLINE" FontSize="25" FontWeight="Black" Margin="0,7,0,2"/>
+                                        <TextBlock Text="01  /  SINGLE PLAYER" Style="{StaticResource SmallCaps}" FontSize="11"/>
+                                        <TextBlock Text="OFFLINE" FontSize="29" FontWeight="Black" Margin="0,8,0,3"/>
                                         <TextBlock Text="Jogue localmente usando os arquivos originais da sua instalação."
-                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C4C9D7"
-                                                   TextWrapping="Wrap" MinHeight="42"/>
+                                                   FontFamily="Segoe UI" FontSize="11" Foreground="#C4C9D7"
+                                                   TextWrapping="Wrap" MinHeight="48"/>
                                         <Button Content="SELECIONAR OFFLINE" Click="SelectOfflineMode_Click"
-                                                Style="{StaticResource PrimaryAction}" FontSize="13"
-                                                Padding="12,10" Margin="0,12,0,0"/>
+                                                Style="{StaticResource PrimaryAction}" FontSize="14"
+                                                Height="46" Padding="12,10" Margin="0,12,0,0"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Column="1" Background="#75141C2B" BorderBrush="#65F04452"
-                                        BorderThickness="1.2" CornerRadius="13" Padding="16" Margin="7,0,0,0">
+                                        BorderThickness="1.2" CornerRadius="13" Padding="18" Margin="7,0,0,0" MinHeight="238" VerticalAlignment="Stretch">
                                     <StackPanel>
-                                        <TextBlock Text="02  /  MULTIPLAYER" Style="{StaticResource SmallCaps}" Foreground="#FF8D98AA"/>
-                                        <TextBlock Text="PRIVATE MATCH" FontSize="24" FontWeight="Black" Margin="0,7,0,2"/>
+                                        <TextBlock Text="02  /  MULTIPLAYER" Style="{StaticResource SmallCaps}" FontSize="11" Foreground="#FF8D98AA"/>
+                                        <TextBlock Text="PRIVATE MATCH" FontSize="29" FontWeight="Black" Margin="0,8,0,3"/>
                                         <TextBlock Text="Crie uma sala ou entre com o código de outro jogador pela rede Radmin."
-                                                   FontFamily="Segoe UI" FontSize="10" Foreground="#C4C9D7"
-                                                   TextWrapping="Wrap" MinHeight="42"/>
+                                                   FontFamily="Segoe UI" FontSize="11" Foreground="#C4C9D7"
+                                                   TextWrapping="Wrap" MinHeight="48"/>
                                         <Button Content="ABRIR SALA PRIVADA  →" Click="PrivateMatch_Click"
-                                                Style="{StaticResource PrimaryAction}" FontSize="12"
-                                                Padding="12,10" Margin="0,12,0,0"/>
+                                                Style="{StaticResource PrimaryAction}" FontSize="14"
+                                                Height="46" Padding="12,10" Margin="0,12,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -276,12 +276,12 @@
                                 Padding="19" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Text="STATUS DO SISTEMA" Style="{StaticResource SmallCaps}"/>
-                                <TextBlock Text="SEU SETUP" FontSize="23" FontWeight="Black" Margin="0,4,0,14"/>
+                                <TextBlock Text="SEU SETUP" FontSize="25" FontWeight="Black" Margin="0,4,0,14"/>
                                 <Border Background="#70131B2B" CornerRadius="10" Padding="12" Margin="0,0,0,9">
                                     <StackPanel>
                                         <TextBlock Text="INSTALAÇÃO DO JOGO" Style="{StaticResource SmallCaps}"/>
                                         <TextBlock x:Name="DashboardLocalStatus" Text="NÃO CONFIGURADA"
-                                                   FontSize="19" FontWeight="Bold" Margin="0,4,0,0"
+                                                   FontSize="21" FontWeight="Bold" Margin="0,4,0,0"
                                                    TextWrapping="Wrap"/>
                                         <TextBlock x:Name="DashboardBuildStatus" Text="Versão do jogo: aguardando detecção"
                                                    FontFamily="Segoe UI" FontSize="9" Foreground="#B9BECE"
@@ -291,7 +291,7 @@
                                 <Border Background="#70131B2B" CornerRadius="10" Padding="12">
                                     <StackPanel>
                                         <TextBlock Text="CONEXÃO" Style="{StaticResource SmallCaps}"/>
-                                        <TextBlock Text="RADMIN VPN" FontSize="19" FontWeight="Bold" Margin="0,4,0,0"/>
+                                        <TextBlock Text="RADMIN VPN" FontSize="21" FontWeight="Bold" Margin="0,4,0,0"/>
                                         <TextBlock Text="Mesma rede para todos os jogadores • UDP 8766"
                                                    FontFamily="Segoe UI" FontSize="9" Foreground="#B9BECE"
                                                    TextWrapping="Wrap" Margin="0,2,0,0"/>
