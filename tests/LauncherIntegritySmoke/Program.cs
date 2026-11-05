@@ -145,8 +145,10 @@ try
     await File.WriteAllTextAsync(Path.Combine(gameRoot, "ufo.exe"), "test executable metadata placeholder");
     var bootConfig = Path.Combine(gameData, "boot.config");
     await File.WriteAllTextAsync(bootConfig, "gfx-enable-gfx-jobs=1\nvSyncCount=1\n");
+    var streamingAssets = Path.Combine(gameData, "StreamingAssets");
+    Directory.CreateDirectory(streamingAssets);
     for (var i = 0; i < 120; i++)
-        await File.WriteAllTextAsync(Path.Combine(gameRoot, $"candidate-{i:D3}.ini"), "quality=high");
+        await File.WriteAllTextAsync(Path.Combine(streamingAssets, $"candidate-{i:D3}.ini"), "quality=high");
     var beforeScan = Hash(await File.ReadAllTextAsync(bootConfig));
     var discovery = new GameSettingsDiscoveryService().Inspect(gameRoot);
     Require(discovery.InstallationFound, "Read-only discovery did not recognize a minimal Unity game layout.");
