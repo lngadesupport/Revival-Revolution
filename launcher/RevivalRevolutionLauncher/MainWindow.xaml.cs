@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -36,6 +37,27 @@ public partial class MainWindow : Window
     private const int LaunchDetectionTimeoutSeconds = 45;
     private string _lastGameStateFooterStatus = string.Empty;
     private string _lastDashboardState = string.Empty;
+
+    private const int DwmwaBorderColor = 34;
+    private const int DwmwaColorNone = unchecked((int)0xFFFFFFFE);
+
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(
+        IntPtr hwnd, int attribute, ref int value, int valueSize);
+
+    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        // Windows 11 may draw a bright DWM resize border around borderless WPF windows.
+        // Disable only that system border; keep the custom chrome and native resize behavior.
+        try
+        {
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            var color = DwmwaColorNone;
+            _ = DwmSetWindowAttribute(handle, DwmwaBorderColor, ref color, sizeof(int));
+        }
+        catch (DllNotFoundException) { }
+        catch (EntryPointNotFoundException) { }
+    }
 
     public MainWindow()
     {
