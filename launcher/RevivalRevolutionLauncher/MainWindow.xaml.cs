@@ -193,6 +193,43 @@ public partial class MainWindow : Window
 
     private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
 
+    private void SelectOfflineMode_Click(object sender, RoutedEventArgs e)
+    {
+        SetActiveNavigation("offline");
+        OfflineModeCard.BorderBrush = new SolidColorBrush(Color.FromRgb(240, 68, 82));
+        OfflineModeCard.BorderThickness = new Thickness(1.8);
+        FooterStatus.Text = "Modo OFFLINE selecionado. O jogo só abrirá quando você clicar em PLAY.";
+        Log("Modo OFFLINE selecionado; nenhuma inicialização foi solicitada.");
+    }
+
+    private void Button_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        => AnimateButtonScale(sender as UIElement, 1.025);
+
+    private void Button_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        => AnimateButtonScale(sender as UIElement, 1.0);
+
+    private static void AnimateButtonScale(UIElement? element, double target)
+    {
+        if (element is null) return;
+        if (element.RenderTransform is not ScaleTransform scale)
+        {
+            scale = new ScaleTransform(1, 1);
+            element.RenderTransform = scale;
+            element.RenderTransformOrigin = new Point(0.5, 0.5);
+        }
+
+        var easing = new System.Windows.Media.Animation.CubicEase
+        {
+            EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+        };
+        var animationX = new System.Windows.Media.Animation.DoubleAnimation(target,
+            TimeSpan.FromMilliseconds(140)) { EasingFunction = easing };
+        var animationY = new System.Windows.Media.Animation.DoubleAnimation(target,
+            TimeSpan.FromMilliseconds(140)) { EasingFunction = easing };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, animationX);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, animationY);
+    }
+
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("offline");
