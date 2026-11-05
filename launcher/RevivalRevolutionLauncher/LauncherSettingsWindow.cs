@@ -945,11 +945,90 @@ public sealed class LauncherSettingsWindow : Window
             Padding = new Thickness(7), Background = dark,
             Foreground = lightText, BorderBrush = new SolidColorBrush(Color.FromRgb(75, 80, 100)),
             ItemContainerStyle = itemStyle, MaxDropDownHeight = 260,
-            SnapsToDevicePixels = true
+            SnapsToDevicePixels = true,
+            Template = new ControlTemplate(typeof(ComboBox))
+            {
+                VisualTree = BuildDarkComboTemplate()
+            }
         };
         group.Children.Add(combo);
         parent.Children.Add(group);
         return combo;
+    }
+
+    private static FrameworkElementFactory BuildDarkComboTemplate()
+    {
+        var grid = new FrameworkElementFactory(typeof(Grid));
+        var surface = new FrameworkElementFactory(typeof(Border));
+        surface.Name = "ComboSurface";
+        surface.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+        surface.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+        surface.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+        surface.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+        grid.AppendChild(surface);
+
+        var columns = new FrameworkElementFactory(typeof(Grid));
+        var definitions = new FrameworkElementFactory(typeof(ColumnDefinition));
+        definitions.SetValue(ColumnDefinition.WidthProperty, new GridLength(1, GridUnitType.Star));
+        columns.AppendChild(definitions);
+        var arrowColumn = new FrameworkElementFactory(typeof(ColumnDefinition));
+        arrowColumn.SetValue(ColumnDefinition.WidthProperty, new GridLength(28));
+        columns.AppendChild(arrowColumn);
+
+        var selected = new FrameworkElementFactory(typeof(ContentPresenter));
+        selected.SetValue(ContentPresenter.MarginProperty, new Thickness(8, 0, 4, 0));
+        selected.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+        selected.SetValue(ContentPresenter.ContentProperty, new TemplateBindingExtension(ComboBox.SelectionBoxItemProperty));
+        selected.SetValue(ContentPresenter.ContentTemplateProperty, new TemplateBindingExtension(ComboBox.SelectionBoxItemTemplateProperty));
+        selected.SetValue(ContentPresenter.ContentStringFormatProperty, new TemplateBindingExtension(ComboBox.SelectionBoxItemStringFormatProperty));
+        selected.SetValue(UIElement.IsHitTestVisibleProperty, false);
+        columns.AppendChild(selected);
+
+        var toggle = new FrameworkElementFactory(typeof(ToggleButton));
+        toggle.SetValue(Grid.ColumnProperty, 1);
+        toggle.SetValue(Control.FocusableProperty, false);
+        toggle.SetValue(ToggleButton.ClickModeProperty, ClickMode.Press);
+        toggle.SetValue(ToggleButton.IsCheckedProperty, new Binding(nameof(ComboBox.IsDropDownOpen))
+        {
+            RelativeSource = RelativeSource.TemplatedParent,
+            Mode = BindingMode.TwoWay
+        });
+        toggle.SetValue(Control.BackgroundProperty, Brushes.Transparent);
+        toggle.SetValue(Control.BorderThicknessProperty, new Thickness(0));
+        var arrow = new FrameworkElementFactory(typeof(TextBlock));
+        arrow.SetValue(TextBlock.TextProperty, "▾");
+        arrow.SetValue(Control.ForegroundProperty, new SolidColorBrush(Color.FromRgb(220, 225, 238)));
+        arrow.SetValue(Control.FontSizeProperty, 13d);
+        arrow.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        arrow.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+        toggle.AppendChild(arrow);
+        columns.AppendChild(toggle);
+        grid.AppendChild(columns);
+
+        var popup = new FrameworkElementFactory(typeof(Popup));
+        popup.Name = "PART_Popup";
+        popup.SetValue(Popup.PlacementProperty, PlacementMode.Bottom);
+        popup.SetValue(Popup.AllowsTransparencyProperty, true);
+        popup.SetValue(Popup.FocusableProperty, false);
+        popup.SetValue(Popup.PopupAnimationProperty, PopupAnimation.Fade);
+        popup.SetValue(Popup.IsOpenProperty, new Binding(nameof(ComboBox.IsDropDownOpen))
+        {
+            RelativeSource = RelativeSource.TemplatedParent
+        });
+        var popupBorder = new FrameworkElementFactory(typeof(Border));
+        popupBorder.SetValue(Border.BackgroundProperty, new SolidColorBrush(Color.FromRgb(25, 28, 43)));
+        popupBorder.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(75, 80, 100)));
+        popupBorder.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        popupBorder.SetValue(Border.MaxHeightProperty, new TemplateBindingExtension(ComboBox.MaxDropDownHeightProperty));
+        var scroll = new FrameworkElementFactory(typeof(ScrollViewer));
+        scroll.SetValue(ScrollViewer.CanContentScrollProperty, true);
+        var items = new FrameworkElementFactory(typeof(ItemsPresenter));
+        items.SetValue(ItemsPresenter.KeyboardNavigationDirectionalNavigationProperty, KeyboardNavigationMode.Contained);
+        scroll.AppendChild(items);
+        popupBorder.AppendChild(scroll);
+        popup.AppendChild(popupBorder);
+        grid.AppendChild(popup);
+        return grid;
     }
 
     private static Button MakeChromeButton(string glyph) => new()
