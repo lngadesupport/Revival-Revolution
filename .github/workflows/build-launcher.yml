@@ -65,6 +65,13 @@ jobs:
         run: |
           python -m py_compile .\offline_launcher.py
           python .\tests\test_offline_launcher_options.py
+      - name: Verify launcher requests UAC elevation
+        shell: pwsh
+        run: |
+          $manifest = Get-Content ".\\launcher\\RevivalRevolutionLauncher\\app.manifest" -Raw
+          if ($manifest -notmatch 'requestedExecutionLevel\\s+level="requireAdministrator"') {
+            throw "Launcher manifest must request requireAdministrator."
+          }
       - name: Restore
         run: dotnet restore .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj
       - name: Build
