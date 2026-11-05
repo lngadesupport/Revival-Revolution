@@ -108,9 +108,9 @@ public sealed class LauncherSettingsService
         value.AudioMasterVolume = Math.Clamp(value.AudioMasterVolume, 0, 100);
         value.AudioMusicVolume = Math.Clamp(value.AudioMusicVolume, 0, 100);
         value.AudioEffectsVolume = Math.Clamp(value.AudioEffectsVolume, 0, 100);
-        value.SubtitleSize = OneOf(value.SubtitleSize, "Pequeno", "Médio", "Grande", "Muito grande");
+        value.SubtitleSize = OneOf(value.SubtitleSize, "Médio", "Pequeno", "Grande", "Muito grande");
         value.SubtitleColor = OneOf(value.SubtitleColor, "Branco", "Amarelo", "Ciano", "Verde");
-        value.SubtitleBackground = OneOf(value.SubtitleBackground, "Transparente", "Escuro", "Preto");
+        value.SubtitleBackground = OneOf(value.SubtitleBackground, "Escuro", "Transparente", "Preto");
         value.SubtitlePosition = OneOf(value.SubtitlePosition, "Inferior", "Superior");
         return value;
     }
