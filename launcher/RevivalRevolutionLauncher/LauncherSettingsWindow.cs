@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Microsoft.Win32;
 using System.Windows.Threading;
 using RevivalRevolution.Services;
 
@@ -45,10 +46,14 @@ public sealed class LauncherSettingsWindow : Window
     private CheckBox _controllerVibration = null!;
 
     public LauncherSettings Result { get; private set; }
+    public string SelectedGameFolder { get; private set; }
+    private TextBlock _gameFolderValue = null!;
+    private TextBox _logViewer = null!;
 
     public LauncherSettingsWindow(LauncherSettings current, string gameFolder, string settingsPath, string logDirectory)
     {
         Result = Copy(current);
+        SelectedGameFolder = gameFolder;
 
         Title = "Configurações — Revival Revolution";
         Width = 850;
@@ -214,9 +219,87 @@ public sealed class LauncherSettingsWindow : Window
             "Mantém um histórico local para facilitar diagnósticos.", current.PersistLogs);
 
         AddSectionTitle(panel, "INSTALAÇÃO DO JOGO");
-        AddText(panel, string.IsNullOrWhiteSpace(gameFolder) ? "Nenhuma pasta selecionada." : gameFolder, 11);
-        AddText(panel, "Configurações: " + settingsPath + Environment.NewLine + "Logs: " + logDirectory, 10, muted: true);
+        AddText(panel, "A pasta selecionada é usada para localizar o executável e os arquivos originais do jogo.", 10, muted: true);
+        _gameFolderValue = new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(gameFolder) ? "Nenhuma pasta selecionada." : gameFolder,
+            TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = Brushes.White,
+            Margin = new Thickness(0, 4, 0, 8)
+        };
+        panel.Children.Add(_gameFolderValue);
+        var chooseFolder = MakeButton("LOCALIZAR / ALTERAR PASTA DO JOGO", false);
+        chooseFolder.HorizontalAlignment = HorizontalAlignment.Left;
+        chooseFolder.Click += (_, _) => SelectGameFolder();
+        panel.Children.Add(chooseFolder);
+
+        AddSectionTitle(panel, "LOGS E DIAGNÓSTICOS");
+        AddText(panel, "Visualize o histórico recente do launcher ou abra a pasta onde os arquivos de log são guardados.", 10, muted: true);
+        _logViewer = new TextBox
+        {
+            Text = ReadLogPreview(logDirectory), IsReadOnly = true, AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MinHeight = 150, MaxHeight = 240, Background = new SolidColorBrush(Color.FromRgb(8, 11, 19)),
+            Foreground = new SolidColorBrush(Color.FromRgb(215, 220, 234)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(65, 70, 91)),
+            Padding = new Thickness(10), FontSize = 10
+        };
+        panel.Children.Add(_logViewer);
+        var logActions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+        var refreshLogs = MakeButton("ATUALIZAR LOG", false);
+        refreshLogs.Click += (_, _) => _logViewer.Text = ReadLogPreview(logDirectory);
+        var openLogs = MakeButton("ABRIR PASTA DE LOGS", false);
+        openLogs.Margin = new Thickness(8, 0, 0, 0);
+        openLogs.Click += (_, _) => OpenLogDirectory(logDirectory);
+        logActions.Children.Add(refreshLogs);
+        logActions.Children.Add(openLogs);
+        panel.Children.Add(logActions);
+        AddText(panel, "Arquivo de preferências: " + settingsPath + Environment.NewLine + "Pasta dos logs: " + logDirectory, 9, muted: true);
         return MakeTab("GERAL", panel);
+    }
+
+
+    private void SelectGameFolder()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Selecione a pasta Metal Revolution",
+            Multiselect = false,
+            FolderName = Directory.Exists(SelectedGameFolder)
+                ? SelectedGameFolder
+                : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        SelectedGameFolder = dialog.FolderName;
+        _gameFolderValue.Text = SelectedGameFolder;
+    }
+
+    private static string ReadLogPreview(string directory)
+    {
+        try
+        {
+            var path = Path.Combine(directory, "launcher.log");
+            if (!File.Exists(path)) return "Ainda não há arquivo de log salvo. Ative 'Salvar logs no computador' para registrar o histórico.";
+            var lines = File.ReadAllLines(path);
+            return string.Join(Environment.NewLine, lines.TakeLast(250));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return "Não foi possível ler o log: " + ex.Message;
+        }
+    }
+
+    private void OpenLogDirectory(string directory)
+    {
+        try
+        {
+            Directory.CreateDirectory(directory);
+            Process.Start(new ProcessStartInfo { FileName = directory, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            LauncherDialog.Show(this, "Não foi possível abrir a pasta de logs: " + ex.Message,
+                "Pasta de logs", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private TabItem BuildControllerTab(LauncherSettings current)
