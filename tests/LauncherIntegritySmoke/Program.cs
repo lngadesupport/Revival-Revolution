@@ -29,6 +29,49 @@ var roundTrip = JsonSerializer.Deserialize<LauncherSettings>(JsonSerializer.Seri
 Require(roundTrip is not null && roundTrip.FpsLimit == 144 &&
     roundTrip.ControllerLeftDeadZone == 12 && !roundTrip.SubtitlesEnabled &&
     roundTrip.AudioMusicVolume == 65, "0.8.4 settings did not survive JSON round-trip.");
+
+var malformedSettings = LauncherSettingsService.Normalize(new LauncherSettings
+{
+    PlayerName = "  " + new string('N', 30) + "  ",
+    PlayerTag = "  " + new string('T', 20) + "  ",
+    ControllerLeftDeadZone = -5,
+    ControllerRightDeadZone = 99,
+    ControllerTriggerDeadZone = 51,
+    ControllerHorizontalSensitivity = 0,
+    ControllerVerticalSensitivity = 999,
+    ControllerLeftCurve = "InjectedCurve",
+    ControllerRightCurve = "Agressiva",
+    VideoResolution = "3440 × 1440",
+    GraphicsPreset = "Ultra",
+    FpsLimit = 999,
+    AudioMasterVolume = -1,
+    AudioMusicVolume = 150,
+    AudioEffectsVolume = 55,
+    SubtitleSize = "Gigante",
+    SubtitleColor = "Roxo",
+    SubtitleBackground = "Imagem",
+    SubtitlePosition = "Centro"
+});
+Require(malformedSettings.PlayerName.Length == 24 && malformedSettings.PlayerName.All(ch => ch == 'N') &&
+    malformedSettings.PlayerTag.Length == 12 && malformedSettings.PlayerTag.All(ch => ch == 'T'),
+    "Player identity fields were not trimmed and bounded.");
+Require(malformedSettings.ControllerLeftDeadZone == 0 &&
+    malformedSettings.ControllerRightDeadZone == 50 &&
+    malformedSettings.ControllerTriggerDeadZone == 50 &&
+    malformedSettings.ControllerHorizontalSensitivity == 10 &&
+    malformedSettings.ControllerVerticalSensitivity == 200,
+    "Controller values were not clamped to supported ranges.");
+Require(malformedSettings.ControllerLeftCurve == "Linear" &&
+    malformedSettings.ControllerRightCurve == "Agressiva" &&
+    malformedSettings.VideoResolution == "Padrão do jogo" &&
+    malformedSettings.GraphicsPreset == "Padrão do jogo" &&
+    malformedSettings.FpsLimit == 60,
+    "Unsupported controller/video presets were not reset safely.");
+Require(malformedSettings.AudioMasterVolume == 0 &&
+    malformedSettings.AudioMusicVolume == 100 && malformedSettings.AudioEffectsVolume == 55 &&
+    malformedSettings.SubtitleSize == "Médio" && malformedSettings.SubtitleColor == "Branco" &&
+    malformedSettings.SubtitleBackground == "Escuro" && malformedSettings.SubtitlePosition == "Inferior",
+    "Audio/subtitle settings were not normalized to supported values.");
 var defaultVideoOptions = UnityPlayerLaunchOptions.FromSettings(new LauncherSettings());
 Require(defaultVideoOptions.Fullscreen == "1" && defaultVideoOptions.Width is null &&
     defaultVideoOptions.Height is null, "Default display settings must preserve the existing fullscreen launch.");
