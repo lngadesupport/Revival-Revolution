@@ -76,10 +76,10 @@ jobs:
         shell: pwsh
         run: |
           $source = Get-Content ".\\launcher\\RevivalRevolutionLauncher\\MainWindow.xaml.cs" -Raw
-          if ($source -notmatch 'var scale = new ScaleTransform\\(1, 1\\);') {
+          if (!$source.Contains('var scale = new ScaleTransform(1, 1);')) {
             throw "Button animation must create a fresh ScaleTransform for each control."
           }
-          if ($source -match 'element\\.RenderTransform is not ScaleTransform') {
+          if ($source.Contains('element.RenderTransform is not ScaleTransform')) {
             throw "Button animation must not reuse the shared Style Setter transform."
           }
       - name: Restore
