@@ -270,7 +270,20 @@ public sealed class LauncherSettingsWindow : Window
                 : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
         };
         if (dialog.ShowDialog(this) != true) return;
-        SelectedGameFolder = dialog.FolderName;
+
+        var selectedFolder = Path.GetFullPath(dialog.FolderName);
+        var executable = Path.Combine(selectedFolder, "ufo.exe");
+        var managed = Path.Combine(selectedFolder, "ufo_Data", "Managed");
+        if (!File.Exists(executable) || !Directory.Exists(managed))
+        {
+            LauncherDialog.Show(this,
+                "A pasta escolhida não parece ser uma instalação completa do Metal Revolution. " +
+                "Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.",
+                "Pasta do jogo inválida", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        SelectedGameFolder = selectedFolder;
         _gameFolderValue.Text = SelectedGameFolder;
     }
 
@@ -280,8 +293,29 @@ public sealed class LauncherSettingsWindow : Window
         {
             var path = Path.Combine(directory, "launcher.log");
             if (!File.Exists(path)) return "Ainda não há arquivo de log salvo. Ative 'Salvar logs no computador' para registrar o histórico.";
-            var lines = File.ReadAllLines(path);
-            return string.Join(Environment.NewLine, lines.TakeLast(250));
+            const int maxTailBytes = 512 * 1024;
+            const int maxLines = 250;
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            if (stream.Length > maxTailBytes)
+                stream.Position = stream.Length - maxTailBytes;
+
+            using var reader = new StreamReader(stream, System.Text.Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: true, leaveOpen: false);
+            if (stream.Position > 0)
+                _ = reader.ReadLine(); // Discard a possibly truncated first line.
+
+            var tail = new Queue<string>(maxLines);
+            while (reader.ReadLine() is { } line)
+            {
+                if (tail.Count == maxLines) tail.Dequeue();
+                tail.Enqueue(line);
+            }
+
+            var prefix = stream.Length > maxTailBytes
+                ? "[Prévia limitada aos últimos 512 KB do arquivo]" + Environment.NewLine
+                : "";
+            return prefix + string.Join(Environment.NewLine, tail);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
