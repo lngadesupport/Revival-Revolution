@@ -204,14 +204,14 @@ public partial class MainWindow : Window
         RefreshGameState();
         if (!IsValidFolder(_gameFolder))
         {
-            MessageBox.Show(this, "Escolha primeiro a pasta correta do jogo.", "Pasta não configurada",
+            LauncherDialog.Show(this, "Escolha primeiro a pasta correta do jogo.", "Pasta não configurada",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         if (_settings.ConfirmBeforeLaunch)
         {
-            var choice = MessageBox.Show(this, "Iniciar Metal Revolution no modo offline agora?",
+            var choice = LauncherDialog.Show(this, "Iniciar Metal Revolution no modo offline agora?",
                 "Confirmar inicialização", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (choice != MessageBoxResult.Yes) return;
         }
@@ -221,7 +221,7 @@ public partial class MainWindow : Window
         {
             Log("Distribuição incompleta: não encontrei offline_launcher.py junto ao launcher nem na pasta acima do jogo.");
             FooterStatus.Text = "Arquivos de inicialização ausentes.";
-            MessageBox.Show(this,
+            LauncherDialog.Show(this,
                 "Não encontrei os scripts da distribuição (offline_launcher.py, inject_offline.py e inject_overlay.py). " +
                 "Mantenha esses arquivos na pasta do launcher ou na pasta que contém a pasta do jogo.",
                 "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -234,7 +234,7 @@ public partial class MainWindow : Window
         if (missingScripts.Length > 0)
         {
             Log("Scripts essenciais ausentes: " + string.Join(", ", missingScripts));
-            MessageBox.Show(this, "A distribuição está incompleta. Faltam: " + string.Join(", ", missingScripts),
+            LauncherDialog.Show(this, "A distribuição está incompleta. Faltam: " + string.Join(", ", missingScripts),
                 "Arquivos ausentes", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -246,7 +246,7 @@ public partial class MainWindow : Window
         if (offlineBridge is null)
         {
             Log("MetalOfflineBridgeImGuiV3.dll não encontrado na distribuição nem na pasta do jogo.");
-            MessageBox.Show(this, "A bridge offline (MetalOfflineBridgeImGuiV3.dll) não foi encontrada. Não é seguro iniciar.",
+            LauncherDialog.Show(this, "A bridge offline (MetalOfflineBridgeImGuiV3.dll) não foi encontrada. Não é seguro iniciar.",
                 "Dependência ausente", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -261,7 +261,7 @@ public partial class MainWindow : Window
                 string.Join(", ", emptyManagedDlls));
 
         var python = _python.FindRuntime(_root);
-        if (python is null && MessageBox.Show(this, "O Python portátil não está instalado. Deseja baixá-lo agora?",
+        if (python is null && LauncherDialog.Show(this, "O Python portátil não está instalado. Deseja baixá-lo agora?",
             "Runtime necessário", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
@@ -454,14 +454,14 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "Não foi possível salvar as configurações: " + ex.Message,
+            LauncherDialog.Show(this, "Não foi possível salvar as configurações: " + ex.Message,
                 "Erro ao salvar", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     private void Install_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(this,
+        LauncherDialog.Show(this,
             "A instalação e o reparo automáticos estão temporariamente bloqueados por segurança. " +
             "Os pacotes ZIP ainda não possuem hashes SHA-256 autenticados por um canal independente. " +
             "Um manifesto de checksums dentro do próprio pacote não comprova sua origem. " +
@@ -552,7 +552,7 @@ public partial class MainWindow : Window
             var prompt = update.IsRepair
                 ? $"Foram encontrados {update.Files.Count} arquivo(s) do launcher ausentes ou com SHA-256 diferente.\n\nA versão instalada é {update.Version}. Somente os arquivos divergentes serão substituídos.\n\nDeseja reparar agora?"
                 : $"A versão {update.Version} está disponível.\n\n{update.ReleaseNotes}\n\nDeseja baixar e instalar agora?";
-            var choice = MessageBox.Show(this, prompt,
+            var choice = LauncherDialog.Show(this, prompt,
                 update.IsRepair ? "Reparo do launcher" : "Atualização disponível",
                 MessageBoxButton.YesNo, MessageBoxImage.Information);
             if (choice != MessageBoxResult.Yes)
@@ -699,7 +699,7 @@ public partial class MainWindow : Window
             while (!_radminHostTaskReady && !_radminHostDisabled) await Task.Delay(200);
             if (_radminHostDisabled)
             {
-                MessageBox.Show(this, "O servidor privado não foi inicializado. Confira o log do launcher e autorize a configuração única do firewall do Windows.",
+                LauncherDialog.Show(this, "O servidor privado não foi inicializado. Confira o log do launcher e autorize a configuração única do firewall do Windows.",
                     "Servidor Radmin indisponível", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -708,7 +708,7 @@ public partial class MainWindow : Window
         var python = _python.FindRuntime(_root);
         if (string.IsNullOrWhiteSpace(_gameFolder) || distributionRoot is null)
         {
-            MessageBox.Show(this, "Configure a pasta do jogo e mantenha os scripts/DLLs da distribuição junto ao launcher antes de abrir o PRIVATE MATCH.",
+            LauncherDialog.Show(this, "Configure a pasta do jogo e mantenha os scripts/DLLs da distribuição junto ao launcher antes de abrir o PRIVATE MATCH.",
                 "Distribuição incompleta", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -721,14 +721,14 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Não foi possível preparar o runtime Python: " + ex.Message,
+                LauncherDialog.Show(this, "Não foi possível preparar o runtime Python: " + ex.Message,
                     "Runtime necessário", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
         }
         if (!RadminHostService.HasRadminAddress())
         {
-            MessageBox.Show(this, "Ligue o Radmin VPN e confirme que este computador está conectado à rede privada antes de abrir o PRIVATE MATCH.",
+            LauncherDialog.Show(this, "Ligue o Radmin VPN e confirme que este computador está conectado à rede privada antes de abrir o PRIVATE MATCH.",
                 "Radmin VPN desconectada", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -740,7 +740,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "Não foi possível preparar a comunicação P2P pela Radmin: " + ex.Message,
+            LauncherDialog.Show(this, "Não foi possível preparar a comunicação P2P pela Radmin: " + ex.Message,
                 "Firewall Radmin", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
@@ -764,7 +764,7 @@ public partial class MainWindow : Window
             : "Radmin VPN desconectada. Conecte-se à mesma rede Radmin dos outros jogadores.";
         FooterStatus.Text = message;
         Log(message);
-        MessageBox.Show(this, message, "Rede Radmin", MessageBoxButton.OK,
+        LauncherDialog.Show(this, message, "Rede Radmin", MessageBoxButton.OK,
             connected ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
