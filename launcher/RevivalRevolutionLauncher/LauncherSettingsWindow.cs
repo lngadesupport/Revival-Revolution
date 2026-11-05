@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shell;
 using Microsoft.Win32;
@@ -978,9 +980,9 @@ public sealed class LauncherSettingsWindow : Window
         var selected = new FrameworkElementFactory(typeof(ContentPresenter));
         selected.SetValue(ContentPresenter.MarginProperty, new Thickness(8, 0, 4, 0));
         selected.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-        selected.SetValue(ContentPresenter.ContentProperty, new TemplateBindingExtension(ComboBox.SelectionBoxItemProperty));
-        selected.SetValue(ContentPresenter.ContentTemplateProperty, new TemplateBindingExtension(ComboBox.SelectionBoxItemTemplateProperty));
-        selected.SetValue(ContentPresenter.ContentStringFormatProperty, new TemplateBindingExtension(ComboBox.SelectionBoxItemStringFormatProperty));
+        selected.SetValue(ContentPresenter.ContentProperty, new TemplateBindingExtension(ComboBox.SelectedItemProperty));
+        selected.SetValue(ContentPresenter.ContentTemplateProperty, new TemplateBindingExtension(ComboBox.ItemTemplateProperty));
+        selected.SetValue(ContentPresenter.ContentStringFormatProperty, new TemplateBindingExtension(ComboBox.ItemStringFormatProperty));
         selected.SetValue(UIElement.IsHitTestVisibleProperty, false);
         columns.AppendChild(selected);
 
@@ -1023,7 +1025,7 @@ public sealed class LauncherSettingsWindow : Window
         var scroll = new FrameworkElementFactory(typeof(ScrollViewer));
         scroll.SetValue(ScrollViewer.CanContentScrollProperty, true);
         var items = new FrameworkElementFactory(typeof(ItemsPresenter));
-        items.SetValue(ItemsPresenter.KeyboardNavigationDirectionalNavigationProperty, KeyboardNavigationMode.Contained);
+        items.SetValue(KeyboardNavigation.DirectionalNavigationProperty, KeyboardNavigationMode.Contained);
         scroll.AppendChild(items);
         popupBorder.AppendChild(scroll);
         popup.AppendChild(popupBorder);
