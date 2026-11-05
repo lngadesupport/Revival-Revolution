@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Shell;
 using Microsoft.Win32;
 using System.Windows.Threading;
 using RevivalRevolution.Services;
@@ -62,12 +63,57 @@ public sealed class LauncherSettingsWindow : Window
         MinWidth = 760;
         MinHeight = 680;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.CanResize;
         Background = new SolidColorBrush(Color.FromRgb(12, 14, 25));
         Foreground = Brushes.White;
         FontFamily = new FontFamily("Segoe UI");
+        WindowChrome.SetWindowChrome(this, new WindowChrome
+        {
+            CaptionHeight = 38,
+            ResizeBorderThickness = new Thickness(6),
+            GlassFrameThickness = new Thickness(0),
+            UseAeroCaptionButtons = false
+        });
+        var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "metal-revolution-logo.png");
+        if (File.Exists(logoPath))
+            Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri(logoPath));
 
-        var root = new DockPanel { Margin = new Thickness(24) };
+        var root = new DockPanel();
+        var titleBar = new Border
+        {
+            Height = 38,
+            Background = new SolidColorBrush(Color.FromRgb(8, 11, 20)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(55, 61, 80)),
+            BorderThickness = new Thickness(0, 0, 0, 1)
+        };
+        var titleGrid = new Grid();
+        titleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        titleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var titleContent = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
+        if (File.Exists(logoPath))
+            titleContent.Children.Add(new Image { Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(logoPath)), Width = 22, Height = 22, Stretch = System.Windows.Media.Stretch.Uniform, Margin = new Thickness(0, 0, 8, 0) });
+        titleContent.Children.Add(new TextBlock { Text = "CONFIGURAÇÕES  /  REVIVAL REVOLUTION", FontSize = 10, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(225, 229, 239)), VerticalAlignment = VerticalAlignment.Center });
+        titleGrid.Children.Add(titleContent);
+        var windowButtons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Stretch };
+        var minimizeWindow = MakeChromeButton("—");
+        minimizeWindow.Click += (_, _) => WindowState = WindowState.Minimized;
+        var maximizeWindow = MakeChromeButton("□");
+        maximizeWindow.Click += (_, _) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        var closeWindow = MakeChromeButton("×");
+        closeWindow.Click += (_, _) => Close();
+        closeWindow.Width = 46;
+        closeWindow.MouseEnter += (_, _) => closeWindow.Background = new SolidColorBrush(Color.FromRgb(213, 45, 59));
+        closeWindow.MouseLeave += (_, _) => closeWindow.Background = Brushes.Transparent;
+        windowButtons.Children.Add(minimizeWindow);
+        windowButtons.Children.Add(maximizeWindow);
+        windowButtons.Children.Add(closeWindow);
+        Grid.SetColumn(windowButtons, 1);
+        titleGrid.Children.Add(windowButtons);
+        titleBar.Child = titleGrid;
+        DockPanel.SetDock(titleBar, Dock.Top);
+        root.Children.Add(titleBar);
+        var contentRoot = new DockPanel { Margin = new Thickness(24) };
         var header = new StackPanel();
         header.Children.Add(new TextBlock
         {
@@ -83,7 +129,7 @@ public sealed class LauncherSettingsWindow : Window
             Foreground = new SolidColorBrush(Color.FromRgb(190, 192, 205))
         });
         DockPanel.SetDock(header, Dock.Top);
-        root.Children.Add(header);
+        contentRoot.Children.Add(header);
 
         var buttons = new StackPanel
         {
@@ -149,7 +195,7 @@ public sealed class LauncherSettingsWindow : Window
             Child = footerGrid
         };
         DockPanel.SetDock(footer, Dock.Bottom);
-        root.Children.Add(footer);
+        contentRoot.Children.Add(footer);
 
         var tabs = new TabControl
         {
@@ -197,7 +243,8 @@ public sealed class LauncherSettingsWindow : Window
         tabs.Items.Add(BuildSubtitlesTab(current));
         tabs.Items.Add(BuildAboutTab());
 
-        root.Children.Add(tabs);
+        contentRoot.Children.Add(tabs);
+        root.Children.Add(contentRoot);
         Content = root;
     }
 
@@ -643,6 +690,8 @@ public sealed class LauncherSettingsWindow : Window
         AddSectionTitle(about, "CRÉDITOS");
         AddCredit(about, "CRIADOR ORIGINAL DO PROJETO COMUNITÁRIO", "@NC_KuroRaiden (Twitter / X)", "https://x.com/NC_KuroRaiden");
         AddCredit(about, "LAUNCHER • DESENVOLVIMENTO E MANUTENÇÃO", "@lngadesupport (GitHub)", "https://github.com/lngadesupport");
+        AddText(about, "APOIO E CONTRIBUIÇÃO", 10, bold: true, muted: true);
+        AddText(about, "Gouki  •  Discord: goukigaucho", 13, bold: true);
         AddSectionTitle(about, "VERSÃO");
         var version = typeof(LauncherSettingsWindow).Assembly.GetName().Version;
         AddText(about, version is null ? "Versão não identificada" : $"v{version.Major}.{version.Minor}.{version.Build}", 14, bold: true);
@@ -876,16 +925,42 @@ public sealed class LauncherSettingsWindow : Window
     {
         var group = new StackPanel { Margin = new Thickness(0, 7, 0, 5) };
         group.Children.Add(new TextBlock { Text = title, Foreground = Brushes.White, FontSize = 12, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
+        var dark = new SolidColorBrush(Color.FromRgb(25, 28, 43));
+        var lightText = new SolidColorBrush(Color.FromRgb(238, 241, 248));
+        var itemStyle = new Style(typeof(ComboBoxItem));
+        itemStyle.Setters.Add(new Setter(Control.BackgroundProperty, dark));
+        itemStyle.Setters.Add(new Setter(Control.ForegroundProperty, lightText));
+        itemStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(9, 7, 9, 7)));
+        itemStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
+        var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+        hover.Setters.Add(new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(54, 61, 82))));
+        itemStyle.Triggers.Add(hover);
+        var selected = new Trigger { Property = ComboBoxItem.IsSelectedProperty, Value = true };
+        selected.Setters.Add(new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(145, 30, 45))));
+        selected.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        itemStyle.Triggers.Add(selected);
         var combo = new ComboBox
         {
             ItemsSource = options, SelectedItem = options.Contains(selected) ? selected : options[0],
-            Padding = new Thickness(7), Background = new SolidColorBrush(Color.FromRgb(25, 28, 43)),
-            Foreground = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(75, 80, 100))
+            Padding = new Thickness(7), Background = dark,
+            Foreground = lightText, BorderBrush = new SolidColorBrush(Color.FromRgb(75, 80, 100)),
+            ItemContainerStyle = itemStyle, MaxDropDownHeight = 260,
+            SnapsToDevicePixels = true
         };
         group.Children.Add(combo);
         parent.Children.Add(group);
         return combo;
     }
+
+    private static Button MakeChromeButton(string glyph) => new()
+    {
+        Content = glyph, Width = 42, Margin = new Thickness(0), Padding = new Thickness(0),
+        Background = Brushes.Transparent, Foreground = Brushes.White,
+        BorderThickness = new Thickness(0), FontFamily = new FontFamily("Segoe UI"),
+        FontSize = 14, Cursor = System.Windows.Input.Cursors.Hand,
+        HorizontalContentAlignment = HorizontalAlignment.Center,
+        VerticalContentAlignment = VerticalAlignment.Center
+    };
 
     private static Button MakeButton(string text, bool primary) => new()
     {
