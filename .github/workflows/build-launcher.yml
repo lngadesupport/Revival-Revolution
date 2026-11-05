@@ -72,6 +72,16 @@ jobs:
           if ($manifest -notmatch 'requestedExecutionLevel\s+level="requireAdministrator"') {
             throw "Launcher manifest must request requireAdministrator."
           }
+      - name: Verify WPF button animation uses an instance transform
+        shell: pwsh
+        run: |
+          $source = Get-Content ".\\launcher\\RevivalRevolutionLauncher\\MainWindow.xaml.cs" -Raw
+          if ($source -notmatch 'var scale = new ScaleTransform\\(1, 1\\);') {
+            throw "Button animation must create a fresh ScaleTransform for each control."
+          }
+          if ($source -match 'element\\.RenderTransform is not ScaleTransform') {
+            throw "Button animation must not reuse the shared Style Setter transform."
+          }
       - name: Restore
         run: dotnet restore .\launcher\RevivalRevolutionLauncher\RevivalRevolutionLauncher.csproj
       - name: Build
