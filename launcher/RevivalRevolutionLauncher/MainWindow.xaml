@@ -282,8 +282,6 @@
                                 CornerRadius="18" Padding="18">
                             <StackPanel>
                                 <TextBlock Text="ACESSO RÁPIDO" Style="{StaticResource SmallCaps}"/>
-                                <Button Content="LOCALIZAR INSTALAÇÃO" Click="ChooseFolder_Click"
-                                        HorizontalContentAlignment="Center" FontSize="10" Padding="11,10"/>
                                 <Button Content="EXECUTAR DIAGNÓSTICO" Click="Diagnostics_Click"
                                         HorizontalContentAlignment="Center" FontSize="10" Padding="11,10"/>
                                 <TextBlock Text="Sem relay externo, STUN ou fallback público. Private Match funciona somente na rede Radmin compartilhada."
@@ -299,30 +297,6 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="210"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <Grid Margin="0,0,0,9">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="178"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="GameFolderBox" IsReadOnly="True" VerticalContentAlignment="Center"
-                                     Text="CAMINHO DA PASTA DO JOGO" Background="#B8070A13"
-                                     BorderBrush="#42FFFFFF" Margin="0,0,9,0"/>
-                            <Button Grid.Column="1" Content="SELECIONAR PASTA" Click="ChooseFolder_Click"
-                                    HorizontalContentAlignment="Center" FontSize="9" Margin="0"/>
-                        </Grid>
-                        <Border Background="#B9080D18" BorderBrush="#42FFFFFF" BorderThickness="1"
-                                CornerRadius="11" Padding="11">
-                            <StackPanel>
-                                <TextBlock Text="LOG DE ATIVIDADE" Style="{StaticResource SmallCaps}" Margin="0,0,0,5"/>
-                                <TextBox x:Name="LogBox" IsReadOnly="True" TextWrapping="Wrap"
-                                         AcceptsReturn="True" MinHeight="54" MaxHeight="78"
-                                         Background="Transparent" BorderThickness="0" Padding="0"
-                                         Foreground="#D9DEEA" FontSize="9" FontFamily="Segoe UI"
-                                         VerticalScrollBarVisibility="Auto"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
                     <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="13,0,0,0">
                         <Border x:Name="GameStateBorder" Background="#FF555B66" CornerRadius="9"
                                 Padding="12,8" HorizontalAlignment="Stretch">
