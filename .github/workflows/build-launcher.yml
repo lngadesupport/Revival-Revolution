@@ -69,7 +69,7 @@ jobs:
         shell: pwsh
         run: |
           $manifest = Get-Content ".\\launcher\\RevivalRevolutionLauncher\\app.manifest" -Raw
-          if ($manifest -notmatch 'requestedExecutionLevel\\s+level="requireAdministrator"') {
+          if ($manifest -notmatch 'requestedExecutionLevel\s+level="requireAdministrator"') {
             throw "Launcher manifest must request requireAdministrator."
           }
       - name: Restore
