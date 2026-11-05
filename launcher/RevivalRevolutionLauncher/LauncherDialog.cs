@@ -100,7 +100,7 @@ public static class LauncherDialog
         header.Children.Add(close);
         header.MouseLeftButtonDown += (_, e) =>
         {
-            if (e.ButtonState == MouseButtonState.Pressed) dialog.DragMove();
+            if (ReferenceEquals(e.OriginalSource, header) && e.ButtonState == MouseButtonState.Pressed) dialog.DragMove();
         };
         Grid.SetRow(header, 0);
         layout.Children.Add(header);
