@@ -87,7 +87,7 @@ public sealed class LauncherSettingsWindow : Window
         var reset = MakeButton("RESTAURAR PADRÕES", false);
         reset.Click += (_, _) =>
         {
-            var answer = MessageBox.Show(this,
+            var answer = LauncherDialog.Show(this,
                 "Restaurar todas as preferências desta janela para os valores padrão?",
                 "Restaurar padrões", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (answer == MessageBoxResult.Yes)
@@ -107,7 +107,7 @@ public sealed class LauncherSettingsWindow : Window
             var playerTag = _playerTag.Text.Trim();
             if (playerName.Length > 24 || playerTag.Length > 12)
             {
-                MessageBox.Show(this, "O nome aceita até 24 caracteres e a tag até 12.",
+                LauncherDialog.Show(this, "O nome aceita até 24 caracteres e a tag até 12.",
                     "Perfil inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -355,7 +355,7 @@ public sealed class LauncherSettingsWindow : Window
         {
             if (_controllerVibration.IsChecked != true)
             {
-                MessageBox.Show(this, "Ative Permitir vibração antes do teste.", "Vibração desativada",
+                LauncherDialog.Show(this, "Ative Permitir vibração antes do teste.", "Vibração desativada",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -366,7 +366,7 @@ public sealed class LauncherSettingsWindow : Window
             var selected = controllerService.ReadConnected().FirstOrDefault(item => selectedIndex < 0 || item.UserIndex == selectedIndex);
             if (selected is null || !controllerService.TrySetVibration(selected.UserIndex, 18000, 18000))
             {
-                MessageBox.Show(this, "O controle selecionado não foi detectado ou não confirmou suporte à vibração XInput.",
+                LauncherDialog.Show(this, "O controle selecionado não foi detectado ou não confirmou suporte à vibração XInput.",
                     "Vibração indisponível", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -459,7 +459,7 @@ public sealed class LauncherSettingsWindow : Window
                 lines.Add("TERMOS/CHAVES ENCONTRADOS:");
                 lines.AddRange(report.RelevantKeys);
             }
-            MessageBox.Show(this, string.Join(Environment.NewLine, lines),
+            LauncherDialog.Show(this, string.Join(Environment.NewLine, lines),
                 "Diagnóstico somente leitura", MessageBoxButton.OK,
                 report.InstallationFound ? MessageBoxImage.Information : MessageBoxImage.Warning);
         };
@@ -656,7 +656,7 @@ public sealed class LauncherSettingsWindow : Window
             try { Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true }); }
             catch (Exception ex)
             {
-                MessageBox.Show("Não foi possível abrir o link: " + ex.Message,
+                LauncherDialog.Show("Não foi possível abrir o link: " + ex.Message,
                     "Abrir perfil", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         };
