@@ -228,12 +228,13 @@ public partial class MainWindow : Window
     private static void AnimateButtonScale(UIElement? element, double target)
     {
         if (element is null) return;
-        if (element.RenderTransform is not ScaleTransform scale)
-        {
-            scale = new ScaleTransform(1, 1);
-            element.RenderTransform = scale;
-            element.RenderTransformOrigin = new Point(0.5, 0.5);
-        }
+
+        // ScaleTransform declared in a WPF Style Setter is shared and may be
+        // frozen by the framework. Never animate that shared Freezable instance.
+        // Assign a fresh per-control transform before starting the animation.
+        var scale = new ScaleTransform(1, 1);
+        element.RenderTransformOrigin = new Point(0.5, 0.5);
+        element.RenderTransform = scale;
 
         var easing = new System.Windows.Media.Animation.CubicEase
         {
