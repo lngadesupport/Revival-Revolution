@@ -66,22 +66,29 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        App.WriteDiagnostic("MainWindow constructor: begin.");
         InitializeComponent();
+        App.WriteDiagnostic("MainWindow constructor: XAML initialized.");
         _settings = _settingsService.Load();
+        App.WriteDiagnostic("MainWindow constructor: settings loaded.");
         SetActiveNavigation("offline");
         var version = typeof(MainWindow).Assembly.GetName().Version;
         VersionLabel.Text = version is null ? "versão desconhecida" : $"v{version.Major}.{version.Minor}.{version.Build}";
         _gameFolder = _config.GetConfiguredGameFolder(_root);
         if (!IsValidFolder(_gameFolder)) _gameFolder = null;
         _distributionRoot = _distributionLocator.Find(_root, _gameFolder);
+        App.WriteDiagnostic("MainWindow constructor: game and distribution paths resolved.");
         LoadVisualAssets();
+        App.WriteDiagnostic("MainWindow constructor: visual assets loaded.");
         _gameStateTimer.Tick += (_, _) => RefreshGameState();
         _gameStateTimer.Start();
         _radminHostTimer.Tick += RadminHostTimer_Tick;
         _radminHostTimer.Start();
         RefreshGameState();
+        App.WriteDiagnostic("MainWindow constructor: timers started and initial game state refreshed.");
         Log("Revival Revolution Launcher iniciado.");
         Log("Selecione a pasta que contém ufo.exe e ufo_Data\\Managed.");
+        App.WriteDiagnostic("MainWindow constructor: completed.");
     }
 
     private async void RadminHostTimer_Tick(object? sender, EventArgs e)
@@ -100,7 +107,9 @@ public partial class MainWindow : Window
             {
                 FooterStatus.Text = "Preparando o servidor privado Radmin pela primeira vez...";
                 Log("Este computador é o anfitrião Radmin. Instalando o runtime necessário para iniciar a API automaticamente.");
+                App.WriteDiagnostic("Radmin host startup: Python runtime installation required.");
                 python = await _python.InstallAsync(_root, CreateProgress(), CancellationToken.None);
+                App.WriteDiagnostic("Radmin host startup: Python runtime installation completed.");
             }
 
             if (!_radminHostFirewallReady)
@@ -108,6 +117,7 @@ public partial class MainWindow : Window
                 FooterStatus.Text = "Configurando o firewall privado Radmin (autorização única)...";
                 await _radminHost.EnsureFirewallAsync(python, hostAddress, CancellationToken.None);
                 _radminHostFirewallReady = true;
+                App.WriteDiagnostic("Radmin host startup: firewall configuration completed.");
             }
 
             await _radminHost.EnsureHostServerAsync(_root, python, hostAddress, CancellationToken.None);
@@ -121,6 +131,7 @@ public partial class MainWindow : Window
             _radminHostDisabled = true;
             FooterStatus.Text = "Não foi possível iniciar o servidor Radmin automaticamente.";
             Log("ERRO ao iniciar o servidor Radmin em segundo plano: " + ex.Message);
+            App.WriteDiagnostic("Radmin host startup failed; launcher will remain open.", ex);
         }
         finally
         {
