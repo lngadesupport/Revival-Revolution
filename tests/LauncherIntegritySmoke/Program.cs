@@ -145,10 +145,13 @@ try
     await File.WriteAllTextAsync(Path.Combine(gameRoot, "ufo.exe"), "test executable metadata placeholder");
     var bootConfig = Path.Combine(gameData, "boot.config");
     await File.WriteAllTextAsync(bootConfig, "gfx-enable-gfx-jobs=1\nvSyncCount=1\n");
+    for (var i = 0; i < 120; i++)
+        await File.WriteAllTextAsync(Path.Combine(gameRoot, $"candidate-{i:D3}.ini"), "quality=high");
     var beforeScan = Hash(await File.ReadAllTextAsync(bootConfig));
     var discovery = new GameSettingsDiscoveryService().Inspect(gameRoot);
     Require(discovery.InstallationFound, "Read-only discovery did not recognize a minimal Unity game layout.");
     Require(discovery.CandidateFiles.Contains(bootConfig), "Read-only discovery did not identify Unity boot.config.");
+    Require(discovery.CandidateFiles.Count <= 100, "Read-only discovery exceeded its global candidate-file budget.");
     Require(discovery.RelevantKeys.Contains("vsync"), "Read-only discovery did not recognize a relevant graphics token.");
     Require(Hash(await File.ReadAllTextAsync(bootConfig)) == beforeScan,
         "Read-only discovery unexpectedly modified a game configuration file.");
