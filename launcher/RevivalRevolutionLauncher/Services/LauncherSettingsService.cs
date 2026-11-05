@@ -83,8 +83,9 @@ public sealed class LauncherSettingsService
         }
     }
 
-    private static LauncherSettings Normalize(LauncherSettings value)
+    public static LauncherSettings Normalize(LauncherSettings value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         value.PlayerName = (value.PlayerName ?? "").Trim();
         if (value.PlayerName.Length > 24) value.PlayerName = value.PlayerName[..24];
         value.PlayerTag = (value.PlayerTag ?? "").Trim();
