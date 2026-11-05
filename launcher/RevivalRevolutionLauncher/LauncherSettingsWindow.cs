@@ -82,8 +82,7 @@ public sealed class LauncherSettingsWindow : Window
         var buttons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 14, 0, 0)
+            HorizontalAlignment = HorizontalAlignment.Right
         };
         var reset = MakeButton("RESTAURAR PADRÕES", false);
         reset.Click += (_, _) =>
@@ -120,8 +119,31 @@ public sealed class LauncherSettingsWindow : Window
         buttons.Children.Add(reset);
         buttons.Children.Add(cancel);
         buttons.Children.Add(save);
-        DockPanel.SetDock(buttons, Dock.Bottom);
-        root.Children.Add(buttons);
+
+        var footerGrid = new Grid { Margin = new Thickness(0, 12, 0, 0) };
+        footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        footerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var footerText = new TextBlock
+        {
+            Text = "REVIVAL REVOLUTION  •  LAUNCHER 0.8.4  •  Preferências locais",
+            Foreground = new SolidColorBrush(Color.FromRgb(145, 152, 171)),
+            FontSize = 10,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 12, 0)
+        };
+        footerGrid.Children.Add(footerText);
+        Grid.SetColumn(buttons, 1);
+        footerGrid.Children.Add(buttons);
+        var footer = new Border
+        {
+            BorderBrush = new SolidColorBrush(Color.FromRgb(55, 61, 80)),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(0, 12, 0, 0),
+            Child = footerGrid
+        };
+        DockPanel.SetDock(footer, Dock.Bottom);
+        root.Children.Add(footer);
 
         var tabs = new TabControl
         {
@@ -298,11 +320,35 @@ public sealed class LauncherSettingsWindow : Window
     {
         var panel = NewPanel();
         AddSectionTitle(panel, "VÍDEO E GRÁFICOS");
-        AddText(panel, "Resolução e tela cheia são aplicadas na inicialização pelos argumentos documentados do Unity. Qualidade gráfica, V-Sync e FPS continuam em investigação.", 11);
-        AddNotice(panel, "RESOLUÇÃO E TELA CHEIA ATIVAS • QUALIDADE, V-SYNC E FPS PENDENTES", true);
+        AddText(panel, "Ajuste a apresentação do jogo. As alterações são guardadas no perfil local e aplicadas somente quando existe suporte confirmado no executável.", 11);
+        AddNotice(panel, "APLICAÇÃO CONFIRMADA: RESOLUÇÃO E TELA CHEIA • DEMAIS AJUSTES: PREFERÊNCIAS SALVAS", true);
+
+        AddSectionTitle(panel, "TELA E RESOLUÇÃO");
+        _resolution = AddCombo(panel, "Resolução de saída", current.VideoResolution,
+            "Padrão do jogo", "1280 × 720", "1600 × 900", "1920 × 1080", "2560 × 1440", "3840 × 2160");
+        AddText(panel, "A resolução escolhida é enviada ao ufo.exe na próxima inicialização. Use “Padrão do jogo” para manter a configuração atual da instalação.", 10, muted: true);
+        _fullscreen = AddOption(panel, "Iniciar em tela cheia",
+            "Aplicado na próxima inicialização pelo argumento oficial -screen-fullscreen.", current.VideoFullscreen);
+
+        AddSectionTitle(panel, "DESEMPENHO");
+        _fpsLimit = AddCombo(panel, "Preferência de limite de FPS", current.FpsLimit.ToString(),
+            "60", "75", "90", "120", "144", "165", "180", "200", "240");
+        AddText(panel, "Faixa disponível: 60–240 FPS. O valor fica salvo, mas ainda não altera o limite real do jogo; depende de uma opção comprovada no executável ou no patch.", 10, muted: true);
+        _vSync = AddOption(panel, "Preferir sincronização vertical (V-Sync)",
+            "Preferência salva. Ainda não foi confirmada uma integração que altere o V-Sync durante a partida.", current.VideoVSync);
+        _showFps = AddOption(panel, "Preferir contador de FPS",
+            "Preferência salva. O launcher ainda não desenha um contador sobre a janela do jogo.", current.VideoShowFps);
+
+        AddSectionTitle(panel, "QUALIDADE VISUAL");
+        _graphicsPreset = AddCombo(panel, "Predefinição gráfica desejada", current.GraphicsPreset,
+            "Padrão do jogo", "Baixa", "Média", "Alta", "Personalizada");
+        AddText(panel, "As predefinições ficam registradas para a integração futura. Não alteram sombras, texturas, efeitos ou antialiasing nesta versão.", 10, muted: true);
+
+        AddSectionTitle(panel, "DIAGNÓSTICO DA INSTALAÇÃO");
+        AddText(panel, "Faça uma varredura somente leitura para localizar arquivos de configuração e possíveis opções gráficas. Nenhum arquivo do jogo ou valor do Registro será modificado.", 10, muted: true);
         var inspect = MakeButton("ANALISAR CONFIGURAÇÃO DA INSTALAÇÃO", false);
         inspect.HorizontalAlignment = HorizontalAlignment.Left;
-        inspect.Margin = new Thickness(0, 0, 0, 10);
+        inspect.Margin = new Thickness(0, 2, 0, 10);
         inspect.Click += (_, _) =>
         {
             var report = new GameSettingsDiscoveryService().Inspect(gameFolder);
@@ -328,33 +374,44 @@ public sealed class LauncherSettingsWindow : Window
                 lines.AddRange(report.RelevantKeys);
             }
             MessageBox.Show(this, string.Join(Environment.NewLine, lines),
-                "Análise somente leitura", MessageBoxButton.OK,
+                "Diagnóstico somente leitura", MessageBoxButton.OK,
                 report.InstallationFound ? MessageBoxImage.Information : MessageBoxImage.Warning);
         };
         panel.Children.Add(inspect);
-
-        _resolution = AddCombo(panel, "Resolução", current.VideoResolution, "Padrão do jogo", "1280 × 720", "1600 × 900", "1920 × 1080", "2560 × 1440", "3840 × 2160");
-        AddText(panel, "A resolução selecionada é enviada ao ufo.exe na próxima inicialização.", 10, muted: true);
-        _graphicsPreset = AddCombo(panel, "Qualidade gráfica", current.GraphicsPreset, "Padrão do jogo", "Baixa", "Média", "Alta", "Personalizada");
-        _fpsLimit = AddCombo(panel, "Limite de FPS", current.FpsLimit.ToString(), "60", "75", "90", "120", "144", "165", "180", "200", "240");
-        _fullscreen = AddOption(panel, "Tela cheia", "Aplicada ao iniciar o jogo pelo argumento oficial -screen-fullscreen.", current.VideoFullscreen);
-        _vSync = AddOption(panel, "Sincronização vertical (V-Sync)", "Preferência salva; aplicação depende do suporte do jogo.", current.VideoVSync);
-        _showFps = AddOption(panel, "Exibir contador de FPS", "Não cria overlay nesta etapa.", current.VideoShowFps);
-        AddSectionTitle(panel, "OBSERVAÇÃO SOBRE FPS");
-        AddText(panel, "O limite de 60 a 240 FPS ainda é apenas uma preferência salva. A documentação do Unity não oferece um argumento de inicialização equivalente para limitar FPS; precisamos identificar uma opção real do jogo ou do patch. Não será instalado mod, patch binário ou injetor sem validação.", 11);
         return MakeTab("VÍDEO E GRÁFICOS", panel);
     }
 
     private TabItem BuildAudioTab(LauncherSettings current)
     {
         var panel = NewPanel();
-        AddSectionTitle(panel, "ÁUDIO");
-        AddText(panel, "Níveis e preferências ficam salvos localmente. A aplicação no jogo depende de encontrarmos os controles de áudio oficiais do patch.", 11);
-        AddNotice(panel, "CONFIGURAÇÕES DE ÁUDIO AINDA NÃO CONECTADAS AO JOGO", true);
-        _muteAudio = AddOption(panel, "Silenciar áudio", "Preferência geral.", current.AudioMuted);
+        AddSectionTitle(panel, "MIXAGEM DE ÁUDIO");
+        AddText(panel, "Configure o perfil de volume que deseja utilizar. Os níveis são armazenados no launcher; a aplicação nos canais do jogo aguarda uma integração de áudio suportada pelo patch.", 11);
+        AddNotice(panel, "PREFERÊNCIAS SALVAS LOCALMENTE • CONTROLE DE ÁUDIO NO JOGO PENDENTE", true);
+
+        _muteAudio = AddOption(panel, "Preferir jogo sem áudio",
+            "Registra sua preferência de silêncio. Não silencia o processo do jogo nesta versão.", current.AudioMuted);
         _masterVolume = AddSlider(panel, "Volume geral", current.AudioMasterVolume, 0, 100, "%");
-        _musicVolume = AddSlider(panel, "Volume da música", current.AudioMusicVolume, 0, 100, "%");
-        _effectsVolume = AddSlider(panel, "Volume dos efeitos", current.AudioEffectsVolume, 0, 100, "%");
+        _musicVolume = AddSlider(panel, "Música", current.AudioMusicVolume, 0, 100, "%");
+        _effectsVolume = AddSlider(panel, "Efeitos sonoros", current.AudioEffectsVolume, 0, 100, "%");
+
+        var audioSummary = new TextBlock
+        {
+            Text = "Perfil atual: Geral " + current.AudioMasterVolume + "%  •  Música " +
+                current.AudioMusicVolume + "%  •  Efeitos " + current.AudioEffectsVolume + "%",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(190, 198, 213)),
+            Margin = new Thickness(0, 14, 0, 8)
+        };
+        panel.Children.Add(audioSummary);
+        void UpdateAudioSummary()
+        {
+            audioSummary.Text = "Perfil atual: Geral " + (int)_masterVolume.Value + "%  •  Música " +
+                (int)_musicVolume.Value + "%  •  Efeitos " + (int)_effectsVolume.Value + "%";
+        }
+        _masterVolume.ValueChanged += (_, _) => UpdateAudioSummary();
+        _musicVolume.ValueChanged += (_, _) => UpdateAudioSummary();
+        _effectsVolume.ValueChanged += (_, _) => UpdateAudioSummary();
         return MakeTab("ÁUDIO", panel);
     }
 
