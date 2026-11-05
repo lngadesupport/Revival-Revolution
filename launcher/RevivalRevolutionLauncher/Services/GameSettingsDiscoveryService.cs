@@ -30,6 +30,8 @@ public sealed class GameSettingsDiscoveryService
     };
 
     private const int MaximumTextFileBytes = 512 * 1024;
+    private const int MaximumCandidateFilesToInspect = 100;
+    private const long MaximumTotalCandidateBytes = 8 * 1024 * 1024;
 
     public GameSettingsDiscoveryResult Inspect(string? gameFolder)
     {
@@ -52,6 +54,8 @@ public sealed class GameSettingsDiscoveryService
 
         var files = new List<string>();
         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var inspectedCandidates = 0;
+        long inspectedBytes = 0;
         foreach (var directory in directories)
         {
             IEnumerable<string> entries;
@@ -60,6 +64,8 @@ public sealed class GameSettingsDiscoveryService
 
             foreach (var file in entries)
             {
+                if (inspectedCandidates >= MaximumCandidateFilesToInspect ||
+                    inspectedBytes >= MaximumTotalCandidateBytes) break;
                 var name = Path.GetFileName(file);
                 var extension = Path.GetExtension(file);
                 if (!CandidateNames.Contains(name, StringComparer.OrdinalIgnoreCase) &&
@@ -69,8 +75,11 @@ public sealed class GameSettingsDiscoveryService
 
                 try
                 {
+                    inspectedCandidates++;
                     var info = new FileInfo(file);
-                    if (info.Length > MaximumTextFileBytes) continue;
+                    if (info.Length > MaximumTextFileBytes ||
+                        info.Length > MaximumTotalCandidateBytes - inspectedBytes) continue;
+                    inspectedBytes += info.Length;
                     var text = File.ReadAllText(file);
                     var foundTokens = RelevantTokens.Where(token =>
                         text.Contains(token, StringComparison.OrdinalIgnoreCase)).ToArray();
