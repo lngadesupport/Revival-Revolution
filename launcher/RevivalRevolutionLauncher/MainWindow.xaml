@@ -125,7 +125,6 @@
                         <TextBlock Text="FERRAMENTAS" Style="{StaticResource SmallCaps}" Margin="7,0,0,9"/>
                         <Button x:Name="DiagnosticsNavButton" Content="DIAGNÓSTICOS" Click="Diagnostics_Click" FontSize="11"/>
                         <Button x:Name="UpdatesNavButton" Content="ATUALIZAÇÕES" Click="Updates_Click" FontSize="11"/>
-                        <Button x:Name="SettingsNavButton" Content="CONFIGURAÇÕES" Click="Settings_Click" FontSize="11"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -156,6 +155,11 @@
                             <TextBlock x:Name="VersionLabel" FontFamily="Segoe UI" FontSize="10"
                                        FontWeight="Bold" Foreground="#FFFFFF"/>
                         </Border>
+                        <Button x:Name="SettingsNavButton" Content="&#xE713;" FontFamily="Segoe MDL2 Assets"
+                                FontSize="18" Width="42" Height="42" Margin="10,0,0,0" Padding="0"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                Background="#B90B1220" BorderBrush="#42FFFFFF" Click="Settings_Click"
+                                ToolTip="Configurações"/>
                         <Image x:Name="MetalLogo" Width="112" Height="54" Stretch="Uniform"
                                Visibility="Collapsed" Margin="14,0,0,0"/>
                         <StackPanel x:Name="LogoFallback" Margin="14,0,0,0" VerticalAlignment="Center">
@@ -324,8 +328,10 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
                             IsHitTestVisible="False">
+                    <Image Width="25" Height="25" Stretch="Uniform" Source="Assets/metal-revolution-logo.png"
+                           Margin="0,0,8,0"/>
                     <Ellipse Width="7" Height="7" Fill="#F04452" Margin="0,0,9,0"/>
                     <TextBlock Text="REVIVAL REVOLUTION  /  GAME LAUNCHER" FontFamily="Segoe UI"
                                FontSize="9" FontWeight="Bold" Foreground="#E1E5EF"
