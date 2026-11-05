@@ -297,12 +297,13 @@ public sealed class LauncherSettingsWindow : Window
             const int maxLines = 250;
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
                 FileShare.ReadWrite | FileShare.Delete);
-            if (stream.Length > maxTailBytes)
+            var truncated = stream.Length > maxTailBytes;
+            if (truncated)
                 stream.Position = stream.Length - maxTailBytes;
 
             using var reader = new StreamReader(stream, System.Text.Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: true, leaveOpen: false);
-            if (stream.Position > 0)
+                detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: false);
+            if (truncated)
                 _ = reader.ReadLine(); // Discard a possibly truncated first line.
 
             var tail = new Queue<string>(maxLines);
@@ -312,7 +313,7 @@ public sealed class LauncherSettingsWindow : Window
                 tail.Enqueue(line);
             }
 
-            var prefix = stream.Length > maxTailBytes
+            var prefix = truncated
                 ? "[Prévia limitada aos últimos 512 KB do arquivo]" + Environment.NewLine
                 : "";
             return prefix + string.Join(Environment.NewLine, tail);
