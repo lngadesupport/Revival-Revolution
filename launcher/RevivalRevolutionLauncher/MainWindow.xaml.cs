@@ -171,30 +171,6 @@ public partial class MainWindow : Window
 
     private bool IsValidFolder(string? folder) => _gameLaunch.IsValidGameFolder(folder);
 
-    private void ChooseFolder_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFolderDialog
-        {
-            Title = "Selecione a pasta Metal Revolution",
-            Multiselect = false,
-            FolderName = _gameFolder is not null && Directory.Exists(_gameFolder)
-                ? _gameFolder
-                : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
-        };
-        if (dialog.ShowDialog(this) != true) return;
-        var folder = dialog.FolderName;
-        _gameFolder = folder;
-        _distributionRoot = _distributionLocator.Find(_root, folder);
-        _config.SaveGameFolder(_root, folder, _distributionRoot);
-        RefreshGameState();
-        FooterStatus.Text = IsValidFolder(folder)
-            ? "Pasta do jogo salva e validada."
-            : "Pasta salva, mas a instalação não passou na validação.";
-        Log(IsValidFolder(folder)
-            ? $"Pasta selecionada e validada: {folder}"
-            : $"Pasta selecionada, mas inválida: {folder}");
-    }
-
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
         SetActiveNavigation("offline");
