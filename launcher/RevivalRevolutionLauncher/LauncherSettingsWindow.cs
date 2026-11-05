@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shell;
 using Microsoft.Win32;
@@ -937,10 +938,10 @@ public sealed class LauncherSettingsWindow : Window
         var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
         hover.Setters.Add(new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(54, 61, 82))));
         itemStyle.Triggers.Add(hover);
-        var selected = new Trigger { Property = ComboBoxItem.IsSelectedProperty, Value = true };
-        selected.Setters.Add(new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(145, 30, 45))));
-        selected.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
-        itemStyle.Triggers.Add(selected);
+        var selectedItemTrigger = new Trigger { Property = ComboBoxItem.IsSelectedProperty, Value = true };
+        selectedItemTrigger.Setters.Add(new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(145, 30, 45))));
+        selectedItemTrigger.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        itemStyle.Triggers.Add(selectedItemTrigger);
         var combo = new ComboBox
         {
             ItemsSource = options, SelectedItem = options.Contains(selected) ? selected : options[0],
