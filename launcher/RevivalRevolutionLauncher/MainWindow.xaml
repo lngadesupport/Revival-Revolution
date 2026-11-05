@@ -7,6 +7,13 @@
         WindowStyle="None" ResizeMode="CanResize" Background="#070910" Foreground="#FFFFFF"
         FontFamily="pack://application:,,,/Assets/Fonts/#Bebas Neue">
     <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" BlurRadius="1.6" ShadowDepth="0" Opacity="1"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <SolidColorBrush x:Key="Muted" Color="#B9BECE"/>
         <SolidColorBrush x:Key="Accent" Color="#F04452"/>
         <Style TargetType="Button">
@@ -27,7 +34,11 @@
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="9" Padding="{TemplateBinding Padding}">
                             <ContentPresenter VerticalAlignment="Center"
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                                <ContentPresenter.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="1.6" ShadowDepth="0" Opacity="1"/>
+                                </ContentPresenter.Effect>
+                            </ContentPresenter>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -55,6 +66,11 @@
             <Setter Property="Margin" Value="0"/>
         </Style>
         <Style x:Key="SmallCaps" TargetType="TextBlock">
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" BlurRadius="1.6" ShadowDepth="0" Opacity="1"/>
+                </Setter.Value>
+            </Setter>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="Bold"/>
